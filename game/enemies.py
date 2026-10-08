@@ -1,5 +1,6 @@
 from collections import deque
 
+from game import daylight
 from game.camera import OBJECT, on_screen
 from game.constants import (
     DIFFICULTY_TIERS,
@@ -10,6 +11,7 @@ from game.constants import (
     MAP_WIDTH,
     MAX_ENEMIES_BASE,
 )
+from game.daylight import mix, shade, tint_at
 from game.geography import biome_at, in_town
 from game.objects.registry import ENEMY_CATALOG
 
@@ -271,6 +273,7 @@ def update_enemies(state, dt: float) -> None:
 
 
 def render_enemies(renderer, state, view) -> None:
+    now = daylight.phase(state)
     for enemy in state.enemies:
         tile_vis = state.world_tiles.meta.get((enemy.x, enemy.y), {}).get("visibility", "visible")
         if tile_vis != "visible":
@@ -284,6 +287,7 @@ def render_enemies(renderer, state, view) -> None:
         if enemy.flash_timer > 0:
             color = ((255, 255, 255), (200, 0, 0))
 
-        renderer.set_cell(screen_x, screen_y, enemy.char, color)
+        light = tint_at(state, now, enemy.x, enemy.y)
+        renderer.set_cell(screen_x, screen_y, enemy.char, shade(color, light))
         tint = HIT_TINT if enemy.flash_timer > 0 else None
-        renderer.set_sprite(screen_x, screen_y, OBJECT, enemy.name, tint)
+        renderer.set_sprite(screen_x, screen_y, OBJECT, enemy.name, mix(tint, light))

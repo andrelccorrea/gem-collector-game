@@ -1,3 +1,4 @@
+from game import daylight
 from game.camera import OBJECT
 from game.constants import (
     COLOR_PLAYER,
@@ -12,6 +13,7 @@ from game.constants import (
     TOWN_CENTER_X,
     TOWN_CENTER_Y,
 )
+from game.daylight import shade, tint_at
 from game.events import HEAL, HEAL_COLOR, emit
 from game.geography import in_town
 from game.input import Action, InputState
@@ -139,8 +141,9 @@ def render_player(renderer, state, view) -> None:
         return
     if view.contains(state.player_x, state.player_y):
         sx, sy = state.player_x - view.x, state.player_y - view.y
-        renderer.set_cell(sx, sy, PLAYER_CHAR, COLOR_PLAYER)
-        renderer.set_sprite(sx, sy, OBJECT, "player", None)
+        light = tint_at(state, daylight.phase(state), state.player_x, state.player_y)
+        renderer.set_cell(sx, sy, PLAYER_CHAR, shade(COLOR_PLAYER, light))
+        renderer.set_sprite(sx, sy, OBJECT, "player", light)
 
 
 def set_hud_message(state, msg: str, duration: float = 2.0) -> None:
