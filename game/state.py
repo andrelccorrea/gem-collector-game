@@ -74,6 +74,9 @@ class GameState:
     # Fog of war: set of (x, y) coords currently marked "visible"
     visible_tiles: set = field(default_factory=set)
 
+    # Bag upgrade level (index into the catalog's bag capacities)
+    bag_level: int = 0
+
     # Lapidary level
     lapidary_level: int = 1
 

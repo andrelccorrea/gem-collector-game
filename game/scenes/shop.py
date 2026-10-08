@@ -7,9 +7,18 @@ from game.constants import (
     COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
 )
-from game.gems import get_gem_raw_value, polished_prices, take_polished_gem
+from game.gems import bag_capacity, get_gem_raw_value, polished_prices, take_polished_gem
 from game.input import Action, InputState
-from game.objects.registry import ENEMY_CATALOG, TOOL_CATALOG, TOOL_MAX_LEVEL, TOOL_UPGRADE_COSTS
+from game.objects.registry import (
+    BAG_CAPACITIES,
+    BAG_COSTS,
+    BAG_UNLOCK_AT,
+    ENEMY_CATALOG,
+    TOOL_CATALOG,
+    TOOL_MAX_LEVEL,
+    TOOL_UPGRADE_COSTS,
+    TOOL_UPGRADE_UNLOCK_AT,
+)
 from game.player import set_hud_message
 from game.ui import clear_screen, render_list, write_str
 
@@ -64,8 +73,13 @@ def _build_shop_items(state) -> list:
             else:
                 next_level = level + 1
                 cost = TOOL_UPGRADE_COSTS.get(next_level, 9999)
-                label = f"  {tool_name.title():16s}  Lv{level} -> Lv{next_level}  ${cost}"
-                enabled = state.player_gold >= cost
+                unlock = TOOL_UPGRADE_UNLOCK_AT.get(next_level, 0)
+                if state.lifetime_earnings < unlock:
+                    label = f"  {tool_name.title():16s}  Lv{next_level} unlocks at ${unlock} earned"
+                    enabled = False
+                else:
+                    label = f"  {tool_name.title():16s}  Lv{level} -> Lv{next_level}  ${cost}"
+                    enabled = state.player_gold >= cost
             items.append(
                 {
                     "label": label,
@@ -76,6 +90,7 @@ def _build_shop_items(state) -> list:
                     "value": 0,
                 }
             )
+        items.append(_bag_upgrade_item(state))
         if not items:
             items.append(
                 {
@@ -198,6 +213,23 @@ def _build_shop_items(state) -> list:
     return items
 
 
+def _bag_upgrade_item(state) -> dict:
+    """Shop row for the next bag size (or a disabled row when none is available)."""
+    next_level = state.bag_level + 1
+    current = BAG_CAPACITIES[state.bag_level]
+    item = {"action": "upgrade_bag", "key": "bag", "cost": 0, "value": 0, "enabled": False}
+    if next_level >= len(BAG_CAPACITIES):
+        item["label"] = f"  {'Bag':16s}  {current} items  (Largest)"
+    elif state.lifetime_earnings < BAG_UNLOCK_AT[next_level]:
+        item["label"] = f"  {'Bag':16s}  bigger bag unlocks at ${BAG_UNLOCK_AT[next_level]} earned"
+    else:
+        cost = BAG_COSTS[next_level]
+        item["label"] = f"  {'Bag':16s}  {current} -> {BAG_CAPACITIES[next_level]} items  ${cost}"
+        item["cost"] = cost
+        item["enabled"] = state.player_gold >= cost
+    return item
+
+
 def render_shop(renderer, state) -> None:
     clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
 
@@ -294,6 +326,8 @@ def update_shop(inp: InputState, state) -> None:
             set_hud_message(state, "Tool not owned!", 1.5)
         elif tools[tool_name].get("level", 1) >= TOOL_MAX_LEVEL:
             set_hud_message(state, "Already at max level!", 1.5)
+        elif not item["enabled"] and state.player_gold >= cost:
+            set_hud_message(state, "Not available yet: earn more first!", 1.5)
         elif state.player_gold < cost:
             set_hud_message(state, "Not enough gold!", 1.5)
         else:
@@ -301,6 +335,14 @@ def update_shop(inp: InputState, state) -> None:
             tools[tool_name]["level"] += 1
             new_level = tools[tool_name]["level"]
             set_hud_message(state, f"{tool_name.title()} upgraded to Lv{new_level}!", 2.0)
+
+    elif action == "upgrade_bag":
+        if not item["enabled"]:
+            set_hud_message(state, "Can't buy that bag yet!", 1.5)
+        else:
+            state.player_gold -= item["cost"]
+            state.bag_level += 1
+            set_hud_message(state, f"New bag: carries {bag_capacity(state)} items!", 2.0)
 
     elif action == "sell_gem":
         gem_key = item["key"]

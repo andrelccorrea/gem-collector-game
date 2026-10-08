@@ -11,6 +11,7 @@ char = "o"
 color = [[140, 0, 180], [0, 0, 0]]
 biomes = ["cave"]
 rarity_weight = 6
+min_tier = 2
 
 [[gems]]
 name = "amethyst"
@@ -21,6 +22,7 @@ char = "o"
 color = [[180, 0, 255], [0, 0, 0]]
 biomes = ["hillside", "cave"]
 rarity_weight = 30
+min_tier = 1
 
 [[gems]]
 name = "aquamarine"
@@ -31,6 +33,7 @@ char = "o"
 color = [[60, 200, 220], [0, 0, 0]]
 biomes = ["cave", "river"]
 rarity_weight = 10
+min_tier = 2
 
 [[gems]]
 name = "chrysoberyl"
@@ -41,6 +44,7 @@ char = "o"
 color = [[200, 200, 0], [0, 0, 0]]
 biomes = ["cave"]
 rarity_weight = 5
+min_tier = 2
 
 [[gems]]
 name = "citrine"
@@ -51,6 +55,7 @@ char = "o"
 color = [[255, 185, 0], [0, 0, 0]]
 biomes = ["meadow", "hillside", "river"]
 rarity_weight = 45
+min_tier = 1
 
 [[gems]]
 name = "diamond"
@@ -61,6 +66,7 @@ char = "o"
 color = [[100, 200, 255], [0, 0, 0]]
 biomes = ["cave"]
 rarity_weight = 1
+min_tier = 3
 
 [[gems]]
 name = "emerald"
@@ -71,6 +77,7 @@ char = "o"
 color = [[0, 200, 80], [0, 0, 0]]
 biomes = ["cave", "hillside"]
 rarity_weight = 8
+min_tier = 2
 
 [[gems]]
 name = "garnet"
@@ -81,6 +88,7 @@ char = "o"
 color = [[180, 20, 20], [0, 0, 0]]
 biomes = ["hillside", "cave"]
 rarity_weight = 25
+min_tier = 1
 
 [[gems]]
 name = "imperial_topaz"
@@ -91,6 +99,7 @@ char = "o"
 color = [[255, 120, 40], [0, 0, 0]]
 biomes = ["cave"]
 rarity_weight = 2
+min_tier = 3
 
 [[gems]]
 name = "opal"
@@ -101,6 +110,7 @@ char = "o"
 color = [[255, 140, 0], [0, 0, 0]]
 biomes = ["cave", "river"]
 rarity_weight = 3
+min_tier = 2
 
 [[gems]]
 name = "paraiba_tourmaline"
@@ -111,6 +121,7 @@ char = "o"
 color = [[0, 255, 210], [0, 0, 0]]
 biomes = ["cave"]
 rarity_weight = 1
+min_tier = 3
 
 [[gems]]
 name = "quartz"
@@ -121,6 +132,7 @@ char = "o"
 color = [[220, 220, 220], [0, 0, 0]]
 biomes = ["meadow", "hillside", "river"]
 rarity_weight = 50
+min_tier = 1
 
 [[gems]]
 name = "ruby"
@@ -131,6 +143,7 @@ char = "o"
 color = [[220, 0, 50], [0, 0, 0]]
 biomes = ["cave"]
 rarity_weight = 4
+min_tier = 3
 
 [[gems]]
 name = "sapphire"
@@ -141,6 +154,7 @@ char = "o"
 color = [[0, 60, 220], [0, 0, 0]]
 biomes = ["cave"]
 rarity_weight = 3
+min_tier = 3
 
 [[gems]]
 name = "topaz"
@@ -151,6 +165,7 @@ char = "o"
 color = [[200, 165, 50], [0, 0, 0]]
 biomes = ["hillside", "cave"]
 rarity_weight = 20
+min_tier = 1
 
 [[gems]]
 name = "tourmaline"
@@ -161,6 +176,7 @@ char = "o"
 color = [[0, 180, 90], [0, 0, 0]]
 biomes = ["hillside", "cave"]
 rarity_weight = 40
+min_tier = 1
 
 [[gems]]
 name = "turquoise"
@@ -171,6 +187,7 @@ char = "o"
 color = [[64, 224, 208], [0, 0, 0]]
 biomes = ["hillside", "river"]
 rarity_weight = 15
+min_tier = 1
 
 [[tools]]
 name = "gold_pan"
@@ -178,7 +195,7 @@ cost = 60
 compatible_biomes = ["river"]
 compatible_types = ["stream", "lake", "shallow"]
 melee_damage = 2
-base_yield = 1
+tier = 2
 desc = "Scoops gems from streams and lakes"
 
 [[tools]]
@@ -187,7 +204,7 @@ cost = 80
 compatible_biomes = ["hillside", "cave"]
 compatible_types = ["mineable_rock", "mineable_dirt"]
 melee_damage = 5
-base_yield = 1
+tier = 2
 desc = "Breaks rocky seams to expose valuable gems"
 
 [[tools]]
@@ -196,7 +213,7 @@ cost = 0
 compatible_biomes = ["meadow", "hillside", "river"]
 compatible_types = ["mineable_grass", "mineable_dirt"]
 melee_damage = 3
-base_yield = 1
+tier = 1
 desc = "Digs promising patches of grass and dirt"
 
 [[enemies]]
@@ -241,3 +258,14 @@ attack_cooldown = 2.0
 max_level = 5
 # Gold to reach each level: "level" = cost
 costs = { "2" = 40, "3" = 80, "4" = 120, "5" = 160 }
+# Lifetime earnings needed before the shop offers a level (levels not listed: always)
+unlock_at = { "4" = 2500, "5" = 5000 }
+
+# Effective digging tier of a tool = its tier + (level - 1) // 2.
+# A gem with min_tier N is only found with an effective tier of at least N.
+
+[bag]
+# Items (gems and loot) the player can carry, per bag level
+capacities = [15, 25, 40, 60]
+costs = [0, 120, 300, 600]
+unlock_at = [0, 0, 2500, 5000]

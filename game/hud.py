@@ -4,6 +4,7 @@ from game.constants import (
     COLOR_HUD_HP_LOW,
     COLOR_HUD_HP_MID,
 )
+from game.gems import bag_capacity, bag_count
 from game.geography import region_name
 
 
@@ -35,10 +36,10 @@ def render_hud(renderer, state) -> None:
         f"  Tool:[{tool}]"
         f"  Biome:{biome}"
     )
-    row2_gems = sum(state.inventory.get("gems", {}).values())
+    carried, capacity = bag_count(state), bag_capacity(state)
     row2 = (
         f" [Arrow]Move [Space]Use [F]Attack [E]Equip [ESC]Menu"
-        f"  |  Gems:{row2_gems}  Earned:${state.lifetime_earnings}"
+        f"  |  Bag:{carried}/{capacity}  Earned:${state.lifetime_earnings}"
     )
 
     if state.hud_message and state.hud_message_timer > 0:

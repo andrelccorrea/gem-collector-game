@@ -20,11 +20,11 @@ from game.constants import (
     WIN_LIFETIME_EARNINGS,
 )
 from game.enemies import find_path_bfs
-from game.gems import get_gem_raw_value
+from game.gems import bag_capacity, bag_count, get_gem_raw_value
 from game.geography import biome_at
 from game.input import Action, InputState
 from game.loop import STEP
-from game.objects.registry import TOOL_CATALOG, TOOL_MAX_LEVEL, TOOL_UPGRADE_COSTS
+from game.objects.registry import TOOL_CATALOG
 from game.simulation import new_run, step_game
 
 _MOVES = {
@@ -34,6 +34,7 @@ _MOVES = {
     (0, 1): Action.MOVE_DOWN,
 }
 _WORKABLE_EXTRA = {TYPE_STREAM, TYPE_LAKE}
+_PURCHASES = {"buy_tool", "upgrade_tool", "upgrade_bag"}
 
 
 @dataclass
@@ -97,10 +98,10 @@ class Bot:
 
     def _should_go_home(self) -> bool:
         s = self.state
-        carried = sum(s.inventory["gems"].values()) + sum(s.inventory["loot"].values())
+        full = bag_count(s) >= min(self.bag_limit, bag_capacity(s))
         low_hp = s.player_hp < s.player_max_hp * self.retreat_hp
         healing = low_hp and (s.player_x, s.player_y) == (SHOP_X, SHOP_Y)
-        return carried >= self.bag_limit or low_hp or healing
+        return full or low_hp or healing
 
     # ── World queries ─────────────────────────────────────────────────────────
 
@@ -209,21 +210,17 @@ class Bot:
             if s.active_scene == "win":
                 return
         for _ in range(10):
-            options = [
-                (TOOL_CATALOG[t].cost, 0, t)
-                for t in TOOL_CATALOG
-                if t not in s.inventory["tools"] and TOOL_CATALOG[t].cost <= s.player_gold
-            ]
-            options += [
-                (TOOL_UPGRADE_COSTS[lvl["level"] + 1], 1, t)
-                for t, lvl in s.inventory["tools"].items()
-                if lvl["level"] < TOOL_MAX_LEVEL
-                and TOOL_UPGRADE_COSTS[lvl["level"] + 1] <= s.player_gold
-            ]
-            if not options:
+            # Cheapest purchase the shop currently offers (enabled = affordable and unlocked).
+            offers = []
+            for tab in (0, 1):
+                s.shop_tab = tab
+                for i, item in enumerate(_build_shop_items(s)):
+                    if item["enabled"] and item["action"] in _PURCHASES:
+                        offers.append((item["cost"], tab, i))
+            if not offers:
                 break
-            _cost, tab, tool = min(options)
-            choose(tab, "buy_tool" if tab == 0 else "upgrade_tool", tool)
+            _cost, s.shop_tab, s.shop_cursor = min(offers)
+            update_shop(confirm, s)
         s.active_scene = "game"
         self._known_gems = dict(s.inventory["gems"])
 

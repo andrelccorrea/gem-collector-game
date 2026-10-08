@@ -38,3 +38,17 @@ Observations:
 - **Biomes unbalanced:** the River Delta pays the most; the Meadow is nearly worthless
   (its gems are cheap), so there is no reason to go there after the first minutes.
 - **No reason to go home:** inventory is unlimited; only HP sends the player back.
+
+## After tool tiers, bag capacity, loot-only kills and staged stock
+
+```
+
+won 10/10, died 0
+median minutes to win: 15.3
+median gold/min: 663
+```
+
+Barely changed (median 15.0 -> 15.3 min). Most income comes from gems lying visible on
+the map and from panning river water, which tool tiers do not gate, and the bot already
+sold every 12 items (below the new 15-item bag). Pacing has to come from prices that
+react to flooding the market, the lantern and enemy pressure.

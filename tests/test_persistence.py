@@ -319,3 +319,17 @@ def test_v1_polished_prices_become_one_price_per_gem(monkeypatch):
         json.dump(v1, f)
     loaded = load_game()
     assert loaded.polished_gem_values == {"ruby_polished": [400, 400, 400]}
+
+
+def test_bag_level_round_trips_and_older_saves_get_the_basic_bag(played):
+    played.bag_level = 2
+    save_game(played)
+    assert load_game().bag_level == 2
+
+    with open(save_path()) as f:
+        data = json.load(f)
+    data["schema_version"] = 2
+    del data["bag_level"]
+    with open(save_path(), "w") as f:
+        json.dump(data, f)
+    assert load_game().bag_level == 0

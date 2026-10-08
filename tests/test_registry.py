@@ -43,7 +43,7 @@ def make_tool_def(**overrides):
         compatible_biomes=("meadow",),
         compatible_types=("grass",),
         melee_damage=3,
-        base_yield=1,
+        tier=1,
         desc="test",
     )
     defaults.update(overrides)
@@ -115,7 +115,7 @@ def test_tool_def_fields():
     assert tool.compatible_biomes == ("meadow",)
     assert tool.compatible_types == ("grass",)
     assert tool.melee_damage == 3
-    assert tool.base_yield == 1
+    assert tool.tier == 1
     assert tool.desc == "test"
 
 

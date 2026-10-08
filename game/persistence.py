@@ -1,9 +1,9 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 2, compact JSON):
+Save format (``schema_version`` 3, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
-    lapidary_level, depleted_tiles [[x, y]...],
+    lapidary_level, bag_level, depleted_tiles [[x, y]...],
     world_gems [[x, y, name]...], fog (run-length string, row-major),
     rng_state (gameplay RNG state, so a continued run keeps its roll sequence)
 
@@ -20,7 +20,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 APP_DIR_NAME = "GemCollector"
@@ -153,8 +153,14 @@ def _migrate_v1_to_v2(data: dict) -> dict:
     return data
 
 
+def _migrate_v2_to_v3(data: dict) -> dict:
+    """v3 adds bag upgrades; older saves start with the basic bag."""
+    data["bag_level"] = 0
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
-MIGRATIONS = {0: _migrate_v0_to_v1, 1: _migrate_v1_to_v2}
+MIGRATIONS = {0: _migrate_v0_to_v1, 1: _migrate_v1_to_v2, 2: _migrate_v2_to_v3}
 
 
 def migrate(data: dict) -> dict:
@@ -199,6 +205,7 @@ def save_game(state) -> str | None:
         },
         "polished_gem_values": state.polished_gem_values,
         "lapidary_level": state.lapidary_level,
+        "bag_level": state.bag_level,
         "depleted_tiles": [[x, y] for x, y in sorted(state.depleted_tiles)],
         "world_gems": [[x, y, name] for (x, y), name in sorted(state.world_gems.items())],
         "fog": _encode_fog(state.world_tiles.meta),
@@ -286,6 +293,7 @@ def _state_from_save(data: dict):
     }
     state.polished_gem_values = data.get("polished_gem_values", {})
     state.lapidary_level = data.get("lapidary_level", 1)
+    state.bag_level = data["bag_level"]
 
     if data["worldgen_version"] == world_module.WORLDGEN_VERSION:
         _restore_map(state, data)

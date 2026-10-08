@@ -11,7 +11,7 @@ from game.constants import (
     WIN_LIFETIME_EARNINGS,
 )
 from game.enemies import Enemy
-from game.gems import get_gem_raw_value
+from game.gems import bag_capacity, get_gem_raw_value
 from game.input import EMPTY_INPUT, Action, InputState
 from game.loop import STEP
 from game.objects.registry import ENEMY_CATALOG, TOOL_CATALOG, TOOL_UPGRADE_COSTS
@@ -100,7 +100,7 @@ def test_attack_without_an_adjacent_enemy_says_so():
     assert state.enemies[0].hp == state.enemies[0].max_hp
 
 
-def test_killing_an_enemy_gives_its_loot_and_gold():
+def test_killing_an_enemy_gives_its_loot_but_no_gold():
     state = make_state()
     enemy = _snake(5, 4)
     enemy.hp = 1
@@ -109,7 +109,18 @@ def test_killing_an_enemy_gives_its_loot_and_gold():
     snake = ENEMY_CATALOG["snake"]
     assert state.enemies == []
     assert state.inventory["loot"] == {snake.loot: 1}
-    assert state.player_gold == 50 + snake.loot_value
+    assert state.player_gold == 50  # loot is paid for only when sold
+
+
+def test_loot_is_lost_when_the_bag_is_full():
+    state = make_state()
+    state.inventory["gems"] = {"quartz": bag_capacity(state)}
+    enemy = _snake(5, 4)
+    enemy.hp = 1
+    state.enemies = [enemy]
+    player_attack(press(Action.ATTACK), state)
+    assert state.inventory["loot"] == {}
+    assert "lost" in state.hud_message
 
 
 def test_held_attack_key_is_rate_limited():

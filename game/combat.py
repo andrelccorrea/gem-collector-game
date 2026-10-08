@@ -58,18 +58,16 @@ def _kill_enemy(state, enemy) -> None:
 
     state.enemies.remove(enemy)
 
-    # Add loot
-    if enemy.loot:
+    # Loot is the only reward; it is worth its value when sold at the shop.
+    loot_name = (enemy.loot or "").replace("_", " ")
+    if not enemy.loot:
+        message = f"Defeated {enemy.name}!"
+    elif gems_module.bag_has_room(state):
         gems_module.add_loot_to_inventory(state, enemy.loot)
-
-    # Award gold (loot value goes to gold directly on kill)
-    state.player_gold += enemy.loot_value
-
-    set_hud_message(
-        state,
-        f"Defeated {enemy.name}! +${enemy.loot_value} and got {enemy.loot or 'nothing'}.",
-        3.0,
-    )
+        message = f"Defeated {enemy.name}! Got {loot_name}."
+    else:
+        message = f"Defeated {enemy.name}! Bag full, the {loot_name} is lost."
+    set_hud_message(state, message, 3.0)
 
 
 def enemy_attacks(state, dt: float) -> None:

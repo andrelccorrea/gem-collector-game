@@ -8,6 +8,7 @@ from game.constants import (
     TYPE_SHOP,
     TYPE_STREAM,
 )
+from game.gems import bag_has_room
 from game.geography import biome_at
 from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
@@ -15,6 +16,7 @@ from game.player import set_hud_message
 
 _MINEABLE_TYPES = {TYPE_MINEABLE_GRASS, TYPE_MINEABLE_DIRT, TYPE_MINEABLE_ROCK}
 _WATER_GEM_TYPES = {TYPE_STREAM, TYPE_LAKE}
+_DIGGABLE = _MINEABLE_TYPES | _WATER_GEM_TYPES
 
 
 def update_tools(inp: InputState, state) -> None:
@@ -58,6 +60,10 @@ def use_tool(inp: InputState, state) -> None:
     compatible_types = tool_def.compatible_types if tool_def is not None else ()
 
     pos = (state.player_x, state.player_y)
+
+    if not bag_has_room(state) and (pos in state.world_gems or tile_type in _DIGGABLE):
+        set_hud_message(state, "Your bag is full! Sell at the shop.", 2.0)
+        return
 
     # Priority 1: visible gem at player tile
     if pos in state.world_gems:
@@ -110,7 +116,7 @@ def _dig_mineable_tile(state, x: int, y: int, tile_type: str) -> None:
     from game import gems as gems_module
 
     biome = biome_at(x, y)
-    gem_name = gems_module.roll_gem_drop(biome, state.equipped_tool, state.rng)
+    gem_name = gems_module.roll_gem_drop(biome, _equipped_tier(state), state.rng)
 
     if gem_name:
         gems_module.add_gem_to_inventory(state, gem_name)
@@ -125,12 +131,19 @@ def _pan_water(state, x: int, y: int, tile_type: str) -> None:
 
     from game import gems as gems_module
 
-    gem_name = gems_module.roll_gem_drop("river", state.equipped_tool, state.rng)
+    gem_name = gems_module.roll_gem_drop("river", _equipped_tier(state), state.rng)
     if gem_name:
         gems_module.add_gem_to_inventory(state, gem_name)
         set_hud_message(state, f"Panned up a {gem_name.title()}!", 3.0)
     else:
         set_hud_message(state, "You pan the water... nothing.", 1.5)
+
+
+def _equipped_tier(state) -> int:
+    from game import gems as gems_module
+
+    level = state.inventory.get("tools", {}).get(state.equipped_tool, {}).get("level", 1)
+    return gems_module.effective_tier(state.equipped_tool, level)
 
 
 def _deplete_tile(state, x: int, y: int) -> None:

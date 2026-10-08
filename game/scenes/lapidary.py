@@ -53,10 +53,16 @@ def _build_lapidary_items(state) -> list:
     if state.lapidary_level < max_level:
         next_level = state.lapidary_level + 1
         upgrade_cost = LAPIDARY_UPGRADES[next_level]["cost"]
-        enabled = state.player_gold >= upgrade_cost
+        unlock = LAPIDARY_UPGRADES[next_level].get("unlock_at", 0)
+        if state.lifetime_earnings < unlock:
+            label = f"  >> Machine level {next_level} unlocks at ${unlock} earned"
+            enabled = False
+        else:
+            label = f"  >> Upgrade Machine (${upgrade_cost})"
+            enabled = state.player_gold >= upgrade_cost
         items.append(
             {
-                "label": f"  >> Upgrade Machine (${upgrade_cost})",
+                "label": label,
                 "enabled": enabled,
                 "action": "upgrade_lapidary",
                 "key": None,
@@ -176,6 +182,8 @@ def update_lapidary(inp: InputState, state) -> None:
 
         if state.lapidary_level >= max_level:
             set_hud_message(state, "Already at max level!", 1.5)
+        elif not item["enabled"] and state.player_gold >= upgrade_cost:
+            set_hud_message(state, "Not available yet: earn more first!", 1.5)
         elif state.player_gold < upgrade_cost:
             set_hud_message(state, "Not enough gold!", 1.5)
         else:

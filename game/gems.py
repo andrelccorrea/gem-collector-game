@@ -1,27 +1,58 @@
 import random
 
 from game.constants import LAPIDARY_UPGRADES
-from game.objects.registry import GEM_CATALOG
+from game.objects.registry import BAG_CAPACITIES, GEM_CATALOG, TOOL_CATALOG
 
-# No-drop weight: 65% chance of nothing
+# Weight of "found nothing" for a tier-1 tool, and how much each extra tier removes
 NO_DROP_WEIGHT = 65
+NO_DROP_REDUCTION_PER_TIER = 8
 
 # Lapidary base multiplier (level 1) — used to normalise upgrade bonuses
 _LAPIDARY_BASE_MULT = LAPIDARY_UPGRADES[1]["mult_min"]
 
 
-def roll_gem_drop(biome: str, tool_name: str, rng: random.Random) -> str | None:
-    """Roll for a gem drop based on biome and tool. Returns gem name or None."""
-    eligible = {name: gem for name, gem in GEM_CATALOG.items() if biome in gem.biomes}
+def effective_tier(tool_name: str | None, level: int = 1) -> int:
+    """Digging quality of a tool: its tier, plus one for every two upgrade levels."""
+    tool = TOOL_CATALOG.get(tool_name)
+    return (tool.tier if tool is not None else 1) + (level - 1) // 2
+
+
+def roll_gem_drop(biome: str, tier: int, rng: random.Random) -> str | None:
+    """Roll for a gem drop in a biome with a tool of the given effective tier.
+
+    Rarer gems need a higher tier (``GemDef.min_tier``), and each tier above the
+    first makes empty digs less likely. Returns the gem name or None.
+    """
+    eligible = {
+        name: gem
+        for name, gem in GEM_CATALOG.items()
+        if biome in gem.biomes and gem.min_tier <= tier
+    }
 
     if not eligible:
         return None
 
     names = [""] + list(eligible.keys())
-    weights = [NO_DROP_WEIGHT] + [eligible[n].rarity_weight for n in eligible]
+    no_drop = max(NO_DROP_WEIGHT - NO_DROP_REDUCTION_PER_TIER * (tier - 1), 0)
+    weights = [no_drop] + [eligible[n].rarity_weight for n in eligible]
 
     result = rng.choices(names, weights=weights, k=1)[0]
     return result if result else None
+
+
+def bag_capacity(state) -> int:
+    return BAG_CAPACITIES[state.bag_level]
+
+
+def bag_count(state) -> int:
+    """Items carried: every gem (raw and polished) and every piece of loot."""
+    return sum(state.inventory.get("gems", {}).values()) + sum(
+        state.inventory.get("loot", {}).values()
+    )
+
+
+def bag_has_room(state) -> bool:
+    return bag_count(state) < bag_capacity(state)
 
 
 def add_gem_to_inventory(state, gem_name: str) -> None:

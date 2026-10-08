@@ -54,3 +54,9 @@ TOOL_MAX_LEVEL: int = _DATA["tool_upgrades"]["max_level"]
 TOOL_UPGRADE_COSTS: dict[int, int] = {
     int(level): cost for level, cost in _DATA["tool_upgrades"]["costs"].items()
 }
+TOOL_UPGRADE_UNLOCK_AT: dict[int, int] = {
+    int(level): earned for level, earned in _DATA["tool_upgrades"].get("unlock_at", {}).items()
+}
+BAG_CAPACITIES: list[int] = _DATA["bag"]["capacities"]
+BAG_COSTS: list[int] = _DATA["bag"]["costs"]
+BAG_UNLOCK_AT: list[int] = _DATA["bag"]["unlock_at"]

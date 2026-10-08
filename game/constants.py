@@ -162,8 +162,8 @@ LAPIDARY_UPGRADES = {
     1: {"cost": 0, "mult_min": 2.0, "mult_max": 2.0},
     2: {"cost": 150, "mult_min": 2.0, "mult_max": 2.5},
     3: {"cost": 300, "mult_min": 2.25, "mult_max": 2.75},
-    4: {"cost": 500, "mult_min": 2.5, "mult_max": 3.0},
-    5: {"cost": 800, "mult_min": 2.75, "mult_max": 3.25},
+    4: {"cost": 500, "mult_min": 2.5, "mult_max": 3.0, "unlock_at": 2500},
+    5: {"cost": 800, "mult_min": 2.75, "mult_max": 3.25, "unlock_at": 5000},
 }
 LAPIDARY_CUT_FEE_RATIO = 0.30  # 30% of raw value
 

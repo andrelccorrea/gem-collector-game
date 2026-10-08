@@ -101,11 +101,10 @@ def test_roll_gem_drop_cave():
     catalog = build_gem_catalog()
     cave_gem_names = {name for name, gem in catalog.items() if "cave" in gem.biomes}
     for _ in range(100):
-        result = roll_gem_drop("cave", "pickaxe", rng)
+        result = roll_gem_drop("cave", 3, rng)
         if result is not None:
             assert result in cave_gem_names, (
-                f"roll_gem_drop('cave', 'pickaxe') returned '{result}', "
-                f"which is not in the cave biome"
+                f"roll_gem_drop('cave', 3) returned '{result}', which is not in the cave biome"
             )
 
 
@@ -115,25 +114,24 @@ def test_roll_gem_drop_meadow():
     catalog = build_gem_catalog()
     meadow_gem_names = {name for name, gem in catalog.items() if "meadow" in gem.biomes}
     for _ in range(100):
-        result = roll_gem_drop("meadow", "shovel", rng)
+        result = roll_gem_drop("meadow", 1, rng)
         if result is not None:
             assert result in meadow_gem_names, (
-                f"roll_gem_drop('meadow', 'shovel') returned '{result}', "
-                f"which is not in the meadow biome"
+                f"roll_gem_drop('meadow', 1) returned '{result}', which is not in the meadow biome"
             )
 
 
 def test_roll_gem_drop_returns_none_sometimes():
     """200 cave rolls must include at least one None (no-drop weight applies)."""
     rng = random.Random(99)
-    results = [roll_gem_drop("cave", "pickaxe", rng) for _ in range(200)]
+    results = [roll_gem_drop("cave", 3, rng) for _ in range(200)]
     none_count = results.count(None)
     assert none_count > 0, "Expected at least one None in 200 cave rolls, but got zero Nones"
 
 
 def test_roll_gem_drop_unknown_biome_returns_none():
     """An unknown biome has an empty eligible pool so roll_gem_drop returns None."""
-    result = roll_gem_drop("nonexistent_biome", "shovel", random.Random(0))
+    result = roll_gem_drop("nonexistent_biome", 1, random.Random(0))
     assert result is None
 
 
