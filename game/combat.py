@@ -1,12 +1,13 @@
 import time
 
+from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
 from game.player import set_hud_message
 
 
-def player_attack(window, state) -> None:
+def player_attack(inp: InputState, state) -> None:
     """Handle F key: attack the closest adjacent enemy."""
-    if "f" not in window.keyboard.pressed:
+    if Action.ATTACK not in inp.pressed:
         return
 
     px, py = state.player_x, state.player_y

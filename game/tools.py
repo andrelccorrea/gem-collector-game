@@ -12,6 +12,7 @@ from game.constants import (
     TYPE_SHOP,
     TYPE_STREAM,
 )
+from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
 from game.player import set_hud_message
 
@@ -19,9 +20,9 @@ _MINEABLE_TYPES = {TYPE_MINEABLE_GRASS, TYPE_MINEABLE_DIRT, TYPE_MINEABLE_ROCK}
 _WATER_GEM_TYPES = {TYPE_STREAM, TYPE_LAKE}
 
 
-def update_tools(window, state) -> None:
+def update_tools(inp: InputState, state) -> None:
     """Handle E key: cycle through owned tools."""
-    if "e" not in window.keyboard.pressed:
+    if Action.CYCLE_TOOL not in inp.pressed:
         return
 
     owned = list(state.inventory.get("tools", {}).keys())
@@ -37,9 +38,9 @@ def update_tools(window, state) -> None:
     state.equipped_tool = owned[(idx + 1) % len(owned)]
 
 
-def use_tool(window, state) -> None:
+def use_tool(inp: InputState, state) -> None:
     """Handle Space key: pickup visible gem, or dig mineable tile, or dig water gem."""
-    if "space" not in window.keyboard.pressed:
+    if Action.USE not in inp.pressed:
         return
 
     if state.world_tiles is None:

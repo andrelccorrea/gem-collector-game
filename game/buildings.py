@@ -13,6 +13,7 @@ from game.constants import (
     WIN_LIFETIME_EARNINGS,
 )
 from game.gems import get_gem_polished_value, get_gem_raw_value
+from game.input import Action, InputState
 from game.objects.registry import ENEMY_CATALOG, TOOL_CATALOG
 from game.objects.tools.upgrades import TOOL_MAX_LEVEL, TOOL_UPGRADE_COSTS
 from game.player import set_hud_message
@@ -22,9 +23,9 @@ from game.player import set_hud_message
 # ---------------------------------------------------------------------------
 
 
-def check_building_interaction(window, state) -> None:
+def check_building_interaction(inp: InputState, state) -> None:
     """Check if player is on a building tile and Space was pressed."""
-    if "space" not in window.keyboard.pressed:
+    if Action.USE not in inp.pressed:
         return
     if state.world_tiles is None:
         return
@@ -287,41 +288,41 @@ def render_shop(renderer, state) -> None:
     )
 
 
-def update_shop(window, state) -> None:
-    """Handle keyboard input for the shop scene."""
-    pressed = window.keyboard.pressed
+def update_shop(inp: InputState, state) -> None:
+    """Handle input for the shop scene."""
+    pressed = inp.pressed
 
-    # Tab switching: Left/Right arrows or Tab key
-    if "left" in pressed or "tab" in pressed:
+    # Tab switching: Left/Right or Tab (next tab)
+    if Action.MOVE_LEFT in pressed:
         state.shop_tab = (state.shop_tab - 1) % 4
         state.shop_cursor = 0
         return
-    if "right" in pressed:
+    if Action.MOVE_RIGHT in pressed or Action.NEXT_TAB in pressed:
         state.shop_tab = (state.shop_tab + 1) % 4
         state.shop_cursor = 0
         return
 
     items = _build_shop_items(state)
     if not items:
-        if "esc" in pressed:
+        if Action.CANCEL in pressed:
             state.active_scene = "game"
         return
 
     # Clamp cursor
     state.shop_cursor = max(0, min(state.shop_cursor, len(items) - 1))
 
-    if "up" in pressed:
+    if Action.MOVE_UP in pressed:
         state.shop_cursor = max(0, state.shop_cursor - 1)
         return
-    if "down" in pressed:
+    if Action.MOVE_DOWN in pressed:
         state.shop_cursor = min(len(items) - 1, state.shop_cursor + 1)
         return
 
-    if "esc" in pressed:
+    if Action.CANCEL in pressed:
         state.active_scene = "game"
         return
 
-    if "enter" not in pressed:
+    if Action.CONFIRM not in pressed:
         return
 
     item = items[state.shop_cursor]
@@ -550,11 +551,11 @@ def render_lapidary(renderer, state) -> None:
     )
 
 
-def update_lapidary(window, state) -> None:
-    """Handle keyboard input for the lapidary scene."""
-    pressed = window.keyboard.pressed
+def update_lapidary(inp: InputState, state) -> None:
+    """Handle input for the lapidary scene."""
+    pressed = inp.pressed
 
-    if "esc" in pressed:
+    if Action.CANCEL in pressed:
         state.active_scene = "game"
         return
 
@@ -565,14 +566,14 @@ def update_lapidary(window, state) -> None:
     # Clamp cursor
     state.lapidary_cursor = max(0, min(state.lapidary_cursor, len(items) - 1))
 
-    if "up" in pressed:
+    if Action.MOVE_UP in pressed:
         state.lapidary_cursor = max(0, state.lapidary_cursor - 1)
         return
-    if "down" in pressed:
+    if Action.MOVE_DOWN in pressed:
         state.lapidary_cursor = min(len(items) - 1, state.lapidary_cursor + 1)
         return
 
-    if "enter" not in pressed:
+    if Action.CONFIRM not in pressed:
         return
 
     item = items[state.lapidary_cursor]
@@ -643,11 +644,11 @@ def render_save_point(renderer, state) -> None:
     )
 
 
-def update_save_point(window, state) -> None:
+def update_save_point(inp: InputState, state) -> None:
     """Handle save point input."""
-    if "esc" in window.keyboard.pressed:
+    if Action.CANCEL in inp.pressed:
         state.active_scene = "game"
-    elif "enter" in window.keyboard.pressed:
+    elif Action.CONFIRM in inp.pressed:
         from game import persistence
 
         persistence.save_game(state)

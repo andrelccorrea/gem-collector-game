@@ -1,56 +1,43 @@
-import pynput
+import curses
+
+_SPECIAL_KEYS = {
+    curses.KEY_UP: "up",
+    curses.KEY_DOWN: "down",
+    curses.KEY_LEFT: "left",
+    curses.KEY_RIGHT: "right",
+    curses.KEY_ENTER: "enter",
+    10: "enter",
+    13: "enter",
+    27: "esc",
+    32: "space",
+    9: "tab",
+}
+
+
+def key_name(code: int) -> str | None:
+    """Map a curses getch() code to a lowercase key name, or None if unsupported."""
+    if code in _SPECIAL_KEYS:
+        return _SPECIAL_KEYS[code]
+    if 33 <= code <= 126:
+        return chr(code).lower()
+    return None
 
 
 class Keyboard:
-    def __init__(self, window):
-        self.pressed = set()
-        self.released = set()
-        self.held = set()
-        self.listener = pynput.keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
-        self.listener.start()
+    """Terminal keyboard read through curses getch(); no OS-level key hooks.
 
-    def on_press(self, key):
-        try:
-            key = key.char
-        except AttributeError:
-            key = key.name
-        self.pressed.add(key)
-        self.held.add(key)
-        if key in self.released:
-            self.released.remove(key)
+    Terminals report key presses and OS auto-repeats but never releases, so there is
+    no reliable "held" state: holding a key shows up as a stream of pressed events.
+    """
 
-    def on_release(self, key):
-        try:
-            key = key.char
-        except AttributeError:
-            key = key.name
-        self.released.add(key)
-        if key in self.held:
-            self.held.remove(key)
-        if key in self.pressed:
-            self.pressed.remove(key)
-
-    def clear_events(self):
-        self.pressed = set()
-        self.released = set()
-
-    def clear_pressed_events(self):
+    def __init__(self, screen):
+        self.screen = screen
         self.pressed = set()
 
-    def clear_released_events(self):
-        self.released = set()
-
-    def get_events(self):
-        return {
-            "pressed": self.pressed,
-            "released": self.released,
-        }
-
-    def get_pressed(self):
-        return self.pressed
-
-    def get_released(self):
-        return self.released
-
-    def get_held(self) -> set:
-        return self.held
+    def poll(self) -> None:
+        """Drain all pending key events; call exactly once per frame."""
+        self.pressed = set()
+        while (code := self.screen.getch()) != -1:
+            name = key_name(code)
+            if name is not None:
+                self.pressed.add(name)

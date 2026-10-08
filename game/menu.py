@@ -7,6 +7,7 @@ from game.constants import (
     COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
 )
+from game.input import Action, InputState
 
 MENU_ITEMS = ["New Game", "Continue", "Leaderboard"]
 
@@ -60,25 +61,25 @@ def render_menu(renderer, state) -> None:
     _write_str(renderer, mid_y + 7, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
-def update_menu(window, state) -> None:
+def update_menu(inp: InputState, state) -> None:
     save_exists = os.path.exists("save.json")
-    pressed = window.keyboard.pressed
+    pressed = inp.pressed
 
-    if "up" in pressed and state.menu_cursor > 0:
+    if Action.MOVE_UP in pressed and state.menu_cursor > 0:
         state.menu_cursor -= 1
         if state.menu_cursor == 1 and not save_exists:
             state.menu_cursor = 0
-    elif "down" in pressed and state.menu_cursor < len(MENU_ITEMS) - 1:
+    elif Action.MOVE_DOWN in pressed and state.menu_cursor < len(MENU_ITEMS) - 1:
         state.menu_cursor += 1
         if state.menu_cursor == 1 and not save_exists:
             state.menu_cursor = 2
-    elif "enter" in pressed:
-        _select_menu_item(window, state, save_exists)
-    elif "esc" in pressed:
-        window.exit()
+    elif Action.CONFIRM in pressed:
+        _select_menu_item(state, save_exists)
+    elif Action.CANCEL in pressed:
+        state.quit_requested = True
 
 
-def _select_menu_item(window, state, save_exists: bool) -> None:
+def _select_menu_item(state, save_exists: bool) -> None:
     from game import persistence
     from game import world as world_module
 
@@ -135,8 +136,8 @@ def render_death_screen(renderer, state) -> None:
     _write_str(renderer, mid_y + 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
-def update_death_screen(window, state) -> None:
-    if "enter" in window.keyboard.pressed:
+def update_death_screen(inp: InputState, state) -> None:
+    if Action.CONFIRM in inp.pressed:
         state.active_scene = "menu"
         state.menu_cursor = 0
 
@@ -153,8 +154,8 @@ def render_win_screen(renderer, state) -> None:
     _write_str(renderer, mid_y + 1, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
-def update_win_screen(window, state) -> None:
-    if "enter" in window.keyboard.pressed:
+def update_win_screen(inp: InputState, state) -> None:
+    if Action.CONFIRM in inp.pressed:
         from game import persistence
 
         persistence.save_leaderboard_entry(state.lifetime_earnings)
@@ -188,6 +189,6 @@ def render_leaderboard(renderer, state) -> None:
     )
 
 
-def update_leaderboard(window, state) -> None:
-    if "esc" in window.keyboard.pressed:
+def update_leaderboard(inp: InputState, state) -> None:
+    if Action.CANCEL in inp.pressed:
         state.active_scene = "menu"

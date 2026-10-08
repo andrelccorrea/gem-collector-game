@@ -8,6 +8,7 @@ class GameState:
     active_scene: str = "menu"
     menu_cursor: int = 0
     has_won: bool = False
+    quit_requested: bool = False
 
     # Map
     seed: int = 0
@@ -44,6 +45,8 @@ class GameState:
     spawn_timer: float = 0.0
     regen_timer: float = 0.0
     move_cooldown: float = 0.0
+    last_move: Any = None  # Action of the last step taken
+    queued_move: Any = None  # direction change pressed during the move cooldown
     last_combat_time: float = 0.0
 
     # Difficulty

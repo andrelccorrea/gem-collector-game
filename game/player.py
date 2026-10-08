@@ -16,6 +16,7 @@ from game.constants import (
     VIEWPORT_HEIGHT,
     VIEWPORT_WIDTH,
 )
+from game.input import Action, InputState
 
 
 def init_player(state) -> None:
@@ -35,37 +36,49 @@ def init_player(state) -> None:
         "loot": {},
     }
     state.move_cooldown = 0.0
+    state.last_move = None
+    state.queued_move = None
     state.regen_timer = 0.0
     state.last_combat_time = 0.0
 
 
-def update_player(window, state, dt: float) -> None:
+def update_player(inp: InputState, state, dt: float) -> None:
     """Handle movement, HP regen, HUD message timer."""
-    _handle_movement(window, state, dt)
+    _handle_movement(inp, state, dt)
     _handle_hp_regen(state, dt)
     _handle_hud_message(state, dt)
     _check_death(state)
 
 
-def _handle_movement(window, state, dt: float) -> None:
-    """Discrete tile movement with cooldown timer using keyboard.held."""
+_MOVE_DELTAS = {
+    Action.MOVE_LEFT: (-1, 0),
+    Action.MOVE_RIGHT: (1, 0),
+    Action.MOVE_UP: (0, -1),
+    Action.MOVE_DOWN: (0, 1),
+}
+
+
+def _requested_move(actions):
+    return next((a for a in _MOVE_DELTAS if a in actions), None)
+
+
+def _handle_movement(inp: InputState, state, dt: float) -> None:
+    """Discrete tile movement, one step per move press (or while held), rate-limited."""
     state.move_cooldown = max(0.0, state.move_cooldown - dt)
+    requested = _requested_move(inp.pressed) or _requested_move(inp.held)
+
     if state.move_cooldown > 0:
+        # Keep a direction change pressed mid-step so quick turns are not lost; repeats
+        # of the current direction are dropped so the player never overshoots on release.
+        if requested is not None and requested != state.last_move:
+            state.queued_move = requested
         return
 
-    held = window.keyboard.held
-    dx, dy = 0, 0
-    if "left" in held or "a" in held:
-        dx = -1
-    elif "right" in held or "d" in held:
-        dx = 1
-    elif "up" in held or "w" in held:
-        dy = -1
-    elif "down" in held or "s" in held:
-        dy = 1
-
-    if dx == 0 and dy == 0:
+    action = requested or state.queued_move
+    state.queued_move = None
+    if action is None:
         return
+    dx, dy = _MOVE_DELTAS[action]
 
     new_x = state.player_x + dx
     new_y = state.player_y + dy
@@ -82,6 +95,7 @@ def _handle_movement(window, state, dt: float) -> None:
 
     state.player_x = new_x
     state.player_y = new_y
+    state.last_move = action
     state.move_cooldown = MOVE_COOLDOWN
 
 

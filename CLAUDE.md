@@ -42,11 +42,7 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 
 **`surface.py`** — Off-screen tile buffer. `Surface(width, height)` with `set_tile(x, y, char, cp)`, `get_tile(x, y)`, `fill()`, and `blit(window, cam_x, cam_y, vp_w, vp_h, dest_y)` which copies a viewport slice into `screen_array` respecting dirty flags. Game code attaches a `surface.meta` dict: `(x,y) -> {"type", "walkable", "interactable", "depleted"}`.
 
-**`keyboard.py`** — pynput listener with three sets:
-- `pressed` — keys fired this frame (cleared by `clear_events()`)
-- `released` — keys released this frame (cleared by `clear_events()`)
-- `held` — keys physically down right now (NOT cleared by `clear_events()`)
-- Call `window.keyboard.clear_events()` once per frame; `update()` does NOT do it automatically.
+**`keyboard.py`** — reads keys via curses `getch()` (no OS hooks or permissions). `poll()` drains pending events once per frame into `pressed` (lowercase key names that fired this frame: new press or OS auto-repeat). Terminals never report releases, so holding a key is a stream of presses; there is no held set.
 
 **`util.py`** — `ColorPairs`, `Colors`, `Image`, `load_image`, `load_images`, plus module-level `draw_line(window, x1, x2, y, char, cp)` and `draw_endpoints(...)`.
 
@@ -58,10 +54,11 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 |--------|------|
 | `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, VIEWPORT=78×20, FPS=30, biome colors, gem catalog, tool catalog, enemy catalog, difficulty tiers |
 | `state.py` | `GameState` dataclass — single source of truth for player, world, enemies, inventory, scene |
+| `input.py` | `Action` enum, `InputState` (`pressed`/`held` actions), `DEFAULT_KEYMAP`, `map_keys()` — the frontend-agnostic input boundary |
 | `world.py` | `generate_world(seed)` → 200×80 `Surface` with biomes + town. `ensure_connectivity()` BFS flood-fill. |
 | `camera.py` | `update_camera(state)` centers on player clamped to map. `render_viewport(window, state)` blits tile slice. |
 | `hud.py` | `render_hud(window, state)` writes to rows 20-21: HP (color-coded), Gold, Tool, Biome, key hints, HUD messages |
-| `player.py` | `init_player`, `update_player` (movement via `keyboard.held`, HP regen in town, death check), `render_player`, `set_hud_message` |
+| `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E-key cycles tools; Space-key mines tiles, depletes them, rolls gem drops |
 | `gems.py` | `roll_gem_drop(biome, tool)` weighted random; `add_gem_to_inventory`; polished gem value computation |
 | `enemies.py` | `Enemy` class; BFS pathfinding (cap 50 steps); `spawn_enemies`, `update_enemies`, `render_enemies`; difficulty scaling |
@@ -90,9 +87,9 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 - **`screen_array` cell:** always `[is_changed: bool, char: str, color_pair: tuple|None]`. Never change this structure.
 - **Boundary guard:** never write to `window.height-1` row or `window.width-1` col.
 - **Color pairs:** always `((r,g,b),(r,g,b))` tuples. Never call `curses.init_pair` directly.
-- **Key names:** `"up"`, `"down"`, `"left"`, `"right"`, `"space"`, `"esc"`, `"enter"`, `"e"`, `"f"`, `"w"`, `"a"`, `"s"`, `"d"` (lowercase, as returned by pynput).
-- **Movement:** use `keyboard.held` for smooth held-key movement; use `keyboard.pressed` for single-fire actions.
-- **`clear_events()`:** clears `pressed` and `released` but NOT `held`. Must be called exactly once per frame by the game loop.
+- **Input:** game code never reads raw keys. Update functions take an `InputState` (`game/input.py`) of `Action`s; raw key names appear only in `DEFAULT_KEYMAP`. `main.py` calls `window.keyboard.poll()` then `map_keys()` exactly once per frame.
+- **Movement:** one step per move action in `inp.pressed` (or while in `inp.held`, for frontends that report releases), rate-limited by `MOVE_COOLDOWN`; a direction change during the cooldown is queued. Use `inp.pressed` for single-fire actions.
+- **Quitting:** scenes set `state.quit_requested`; only the main loop exits.
 
 ## Save Files
 

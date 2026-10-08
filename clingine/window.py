@@ -29,9 +29,11 @@ class Window:
             curses.curs_set(0)
             self.screen.nodelay(True)
             self.screen.keypad(True)
+            # Deliver a lone Esc after 25 ms instead of the 1 s escape-sequence default.
+            curses.set_escdelay(25)
             self.running = True
             self.clock = clock.Clock()
-            self.keyboard = keyboard.Keyboard(self)
+            self.keyboard = keyboard.Keyboard(self.screen)
             self.color_pairs = util.ColorPairs(self)
             self.color_pair = ((255, 255, 255), (0, 0, 0))
             self.color_pairs.add(self.color_pair)
@@ -66,7 +68,6 @@ class Window:
         curses.endwin()
 
     def update(self, fps):
-        self.screen.getch()
         for y in range(math.floor(self.height)):
             for x in range(math.floor(self.width)):
                 if y != math.floor(self.height) - 1 and x != math.floor(self.width) - 1:
