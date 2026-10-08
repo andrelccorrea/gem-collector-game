@@ -8,6 +8,7 @@ from game.constants import (
     TYPE_SHOP,
     TYPE_STREAM,
 )
+from game.death import bag_here, recover_bag
 from game.gems import bag_has_room
 from game.geography import biome_at
 from game.input import Action, InputState
@@ -52,14 +53,20 @@ def use_tool(inp: InputState, state) -> None:
     if tile_type in (TYPE_SHOP, TYPE_LAPIDARY, TYPE_SAVE):
         return
 
-    if state.equipped_tool is None:
-        set_hud_message(state, "No tool equipped! Press E to equip.", 2.0)
-        return
-
     tool_def = TOOL_CATALOG.get(state.equipped_tool)
     compatible_types = tool_def.compatible_types if tool_def is not None else ()
 
     pos = (state.player_x, state.player_y)
+
+    if bag_here(state):
+        taken = recover_bag(state)
+        left = "" if state.dropped_bag is None else " Your bag is full; some is left."
+        set_hud_message(state, f"Recovered {taken} items from your dropped bag.{left}", 3.0)
+        return
+
+    if state.equipped_tool is None:
+        set_hud_message(state, "No tool equipped! Press E to equip.", 2.0)
+        return
 
     if not bag_has_room(state) and (pos in state.world_gems or tile_type in _DIGGABLE):
         set_hud_message(state, "Your bag is full! Sell at the shop.", 2.0)

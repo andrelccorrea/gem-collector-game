@@ -1,9 +1,10 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 5, compact JSON):
+Save format (``schema_version`` 6, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
     lapidary_level, bag_level, market {kind: saturation}, lantern {level, fuel},
+    hardcore, dropped_bag {x, y, gems, loot, polished} or null,
     depleted_tiles [[x, y]...],
     world_gems [[x, y, name]...], fog (run-length string, row-major),
     rng_state (gameplay RNG state, so a continued run keeps its roll sequence)
@@ -21,7 +22,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 APP_DIR_NAME = "GemCollector"
@@ -89,6 +90,13 @@ def import_legacy_files(*legacy_dirs: str) -> None:
 
 def has_save() -> bool:
     return os.path.isfile(save_path())
+
+
+def delete_save() -> None:
+    try:
+        os.remove(save_path())
+    except OSError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +182,13 @@ def _migrate_v4_to_v5(data: dict) -> dict:
     return data
 
 
+def _migrate_v5_to_v6(data: dict) -> dict:
+    """v6 adds hardcore runs and the bag dropped on death."""
+    data["hardcore"] = False
+    data["dropped_bag"] = None
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -181,6 +196,7 @@ MIGRATIONS = {
     2: _migrate_v2_to_v3,
     3: _migrate_v3_to_v4,
     4: _migrate_v4_to_v5,
+    5: _migrate_v5_to_v6,
 }
 
 
@@ -229,6 +245,8 @@ def save_game(state) -> str | None:
         "bag_level": state.bag_level,
         "market": state.market,
         "lantern": {"level": state.lantern_level, "fuel": state.lantern_fuel},
+        "hardcore": state.hardcore,
+        "dropped_bag": state.dropped_bag,
         "depleted_tiles": [[x, y] for x, y in sorted(state.depleted_tiles)],
         "world_gems": [[x, y, name] for (x, y), name in sorted(state.world_gems.items())],
         "fog": _encode_fog(state.world_tiles.meta),
@@ -320,6 +338,8 @@ def _state_from_save(data: dict):
     state.market = data["market"]
     state.lantern_level = data["lantern"]["level"]
     state.lantern_fuel = data["lantern"]["fuel"]
+    state.hardcore = data["hardcore"]
+    state.dropped_bag = data["dropped_bag"]
 
     if data["worldgen_version"] == world_module.WORLDGEN_VERSION:
         _restore_map(state, data)
@@ -327,6 +347,7 @@ def _state_from_save(data: dict):
         # Saved coordinates belong to a different world layout: keep progress, reset map.
         if state.world_tiles.start_pos is not None:
             state.player_x, state.player_y = state.world_tiles.start_pos
+        state.dropped_bag = None
         set_hud_message(
             state,
             "A game update reshaped the world: your gold, gems and tools were kept.",

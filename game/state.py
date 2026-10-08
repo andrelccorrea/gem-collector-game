@@ -18,6 +18,7 @@ class GameState:
     active_scene: str = "menu"
     menu_cursor: int = 0
     has_won: bool = False
+    hardcore: bool = False  # death ends the run (and erases its save)
     quit_requested: bool = False
     menu_notice: str = ""  # one-off message shown on the main menu
 
@@ -76,6 +77,9 @@ class GameState:
 
     # Shop saturation per item kind (sales recently made); see game/market.py
     market: dict = field(default_factory=dict)
+
+    # Everything carried when the player last died: {"x", "y", "gems", "loot", "polished"}
+    dropped_bag: Any = None
 
     # Lantern: fuel left (seconds of light at drain 1) and upgrade level
     lantern_fuel: float = 240.0

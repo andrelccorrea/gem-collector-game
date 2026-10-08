@@ -1,6 +1,6 @@
 import math
 
-from game import persistence
+from game import death, persistence
 from game.constants import (
     COLOR_MENU_DIMMED,
     COLOR_MENU_NORMAL,
@@ -10,7 +10,21 @@ from game.constants import (
 from game.input import Action, InputState
 from game.ui import clear_screen, write_str
 
-MENU_ITEMS = ["New Game", "Continue", "Leaderboard"]
+# (id, label); "continue" is only selectable when a save exists
+MENU_ITEMS = [
+    ("new", "New Game"),
+    ("new_hardcore", "New Game (Hardcore)"),
+    ("continue", "Continue"),
+    ("leaderboard", "Leaderboard"),
+]
+
+
+def _menu_ids() -> list:
+    return [item_id for item_id, _ in MENU_ITEMS]
+
+
+def _enabled(item_id: str, save_exists: bool) -> bool:
+    return item_id != "continue" or save_exists
 
 
 def render_menu(renderer, state) -> None:
@@ -26,12 +40,12 @@ def render_menu(renderer, state) -> None:
     write_str(renderer, mid_y - 4, mid_x - len(subtitle) // 2, subtitle, COLOR_MENU_NORMAL)
 
     save_exists = persistence.has_save()
-    for i, item in enumerate(MENU_ITEMS):
-        row = mid_y - 1 + i * 2
+    for i, (item_id, item) in enumerate(MENU_ITEMS):
+        row = mid_y - 2 + i
         label = f"  {item}  "
         col = mid_x - len(label) // 2
 
-        if i == 1 and not save_exists:
+        if not _enabled(item_id, save_exists):
             cp = COLOR_MENU_DIMMED
         elif i == state.menu_cursor:
             cp = COLOR_MENU_SELECTED
@@ -52,14 +66,15 @@ def update_menu(inp: InputState, state) -> None:
     save_exists = persistence.has_save()
     pressed = inp.pressed
 
-    if Action.MOVE_UP in pressed and state.menu_cursor > 0:
-        state.menu_cursor -= 1
-        if state.menu_cursor == 1 and not save_exists:
-            state.menu_cursor = 0
-    elif Action.MOVE_DOWN in pressed and state.menu_cursor < len(MENU_ITEMS) - 1:
-        state.menu_cursor += 1
-        if state.menu_cursor == 1 and not save_exists:
-            state.menu_cursor = 2
+    step = (Action.MOVE_DOWN in pressed) - (Action.MOVE_UP in pressed)
+    if step:
+        # Move to the next selectable entry in that direction, if any.
+        ids = _menu_ids()
+        i = state.menu_cursor + step
+        while 0 <= i < len(ids) and not _enabled(ids[i], save_exists):
+            i += step
+        if 0 <= i < len(ids):
+            state.menu_cursor = i
     elif Action.CONFIRM in pressed:
         state.menu_notice = ""
         _select_menu_item(state, save_exists)
@@ -74,15 +89,18 @@ def _replace_state(state, new_state) -> None:
 
 
 def _select_menu_item(state, save_exists: bool) -> None:
+    choice = _menu_ids()[state.menu_cursor]
 
-    if state.menu_cursor == 0:  # New Game
+    if choice in ("new", "new_hardcore"):
         import random
 
         from game.simulation import new_run
 
-        _replace_state(state, new_run(random.randint(1, 999999)))
+        run = new_run(random.randint(1, 999999))
+        run.hardcore = choice == "new_hardcore"
+        _replace_state(state, run)
 
-    elif state.menu_cursor == 1 and save_exists:  # Continue
+    elif choice == "continue" and save_exists:
         try:
             loaded = persistence.load_game()
         except persistence.SaveLoadError as e:
@@ -93,7 +111,7 @@ def _select_menu_item(state, save_exists: bool) -> None:
             _replace_state(state, loaded)
             state.active_scene = "game"
 
-    elif state.menu_cursor == 2:  # Leaderboard
+    elif choice == "leaderboard":
         state.active_scene = "leaderboard"
 
 
@@ -101,18 +119,30 @@ def render_death_screen(renderer, state) -> None:
     clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     mid_x = math.floor(renderer.width) // 2
     mid_y = math.floor(renderer.height) // 2
-    msg = "  YOU DIED  "
-    write_str(renderer, mid_y - 2, mid_x - len(msg) // 2, msg, COLOR_MENU_TITLE)
+    msg = "  YOU DIED  " if state.hardcore else "  YOU FAINTED  "
+    write_str(renderer, mid_y - 3, mid_x - len(msg) // 2, msg, COLOR_MENU_TITLE)
     sub = f"Lifetime Earnings: ${state.lifetime_earnings}"
-    write_str(renderer, mid_y, mid_x - len(sub) // 2, sub, COLOR_MENU_NORMAL)
-    hint = "Press Enter to return to menu"
-    write_str(renderer, mid_y + 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+    write_str(renderer, mid_y - 1, mid_x - len(sub) // 2, sub, COLOR_MENU_NORMAL)
+    if state.hardcore:
+        lines = ["Hardcore run over: its save is gone.", "Press Enter to return to menu"]
+    else:
+        lines = [
+            "Your bag stays where you fell (marked & on the map).",
+            f"Press Enter to revive in town for ${death.revive_fee(state)}",
+        ]
+    for i, line in enumerate(lines):
+        write_str(renderer, mid_y + 1 + i, mid_x - len(line) // 2, line, COLOR_MENU_DIMMED)
 
 
 def update_death_screen(inp: InputState, state) -> None:
-    if Action.CONFIRM in inp.pressed:
+    if Action.CONFIRM not in inp.pressed:
+        return
+    if state.hardcore:
+        persistence.delete_save()
         state.active_scene = "menu"
         state.menu_cursor = 0
+    else:
+        death.revive_in_town(state)
 
 
 def render_win_screen(renderer, state) -> None:

@@ -7,7 +7,7 @@ from game import persistence
 from game.gems import add_polished_gem
 from game.input import Action, InputState
 from game.loop import STEP
-from game.menu import _select_menu_item, render_menu, update_menu
+from game.menu import MENU_ITEMS, _select_menu_item, render_menu, update_menu
 from game.persistence import (
     SCHEMA_VERSION,
     SaveLoadError,
@@ -201,7 +201,7 @@ def test_menu_shows_load_error_instead_of_crashing():
     with open(save_path(), "w") as f:
         f.write("not json")
     state = GameState()
-    state.menu_cursor = 1
+    state.menu_cursor = [item_id for item_id, _ in MENU_ITEMS].index("continue")
     _select_menu_item(state, save_exists=True)
     assert state.active_scene == "menu"
     assert "damaged" in state.menu_notice

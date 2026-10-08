@@ -4,6 +4,9 @@ from game.constants import HUD_ROWS, MAP_HEIGHT, MAP_WIDTH, VIEW_HEIGHT, VIEW_WI
 from game.objects.registry import GEM_CATALOG
 from game.theme import UNSEEN_APPEARANCE, dim, tile_appearance
 
+DROPPED_BAG_CHAR = "&"
+DROPPED_BAG_COLOR = ((255, 120, 0), (40, 20, 0))
+
 
 class View(NamedTuple):
     """A rectangle of the world: top-left tile (x, y) and size in tiles."""
@@ -60,6 +63,18 @@ def render_viewport(renderer, state, view: View) -> None:
                 renderer.set_cell(sx, sy, char, color_pair)
 
     _render_world_gems(renderer, state, view)
+    _render_dropped_bag(renderer, state, view)
+
+
+def _render_dropped_bag(renderer, state, view: View) -> None:
+    bag = state.dropped_bag
+    if bag is None or not view.contains(bag["x"], bag["y"]):
+        return
+    visibility = state.world_tiles.meta.get((bag["x"], bag["y"]), {}).get("visibility", "visible")
+    if visibility == "unseen":
+        return
+    color = DROPPED_BAG_COLOR if visibility == "visible" else dim(DROPPED_BAG_COLOR)
+    renderer.set_cell(bag["x"] - view.x, bag["y"] - view.y, DROPPED_BAG_CHAR, color)
 
 
 def _render_world_gems(renderer, state, view: View) -> None:
