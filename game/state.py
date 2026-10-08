@@ -114,6 +114,10 @@ class GameState:
     # last one was shown
     tips_seen: set = field(default_factory=set)
     last_tip_time: float = float("-inf")
+    # Peaceful animals (game/critters.py) and their own RNG; never saved
+    critters: list = field(default_factory=list)
+    critter_rng: Any = None
+    critter_timer: float = 0.0
     # World events not yet shown by the frontend (game/events.py); never saved
     events: list = field(default_factory=list)
 

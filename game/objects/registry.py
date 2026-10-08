@@ -50,6 +50,8 @@ _DATA = load_catalogs()
 GEM_CATALOG: dict[str, GemDef] = build_gem_catalog(_DATA["gems"])
 TOOL_CATALOG: dict[str, ToolDef] = build_tool_catalog(_DATA["tools"])
 ENEMY_CATALOG: dict[str, EnemyDef] = build_enemy_catalog(_DATA["enemies"])
+# Peaceful animals: name -> their table from catalogs.toml (see game/critters.py)
+CRITTERS: dict[str, dict] = {c["name"]: c for c in _DATA["critters"]}
 TOOL_MAX_LEVEL: int = _DATA["tool_upgrades"]["max_level"]
 TOOL_UPGRADE_COSTS: dict[int, int] = {
     int(level): cost for level, cost in _DATA["tool_upgrades"]["costs"].items()

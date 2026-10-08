@@ -3,7 +3,7 @@
 A few hand-picked tints (day, dusk, night, dawn) instead of a smooth fade keep the
 terminal's color pairs bounded and the pixel art crisp. At night the lantern keeps a
 warm glow around the player, so the dark reads as a gradient rather than a flat shade.
-Drawing only: the simulation never reads it.
+Mostly drawing: the simulation only uses it to pick which animals are about.
 """
 
 DAY_SECONDS = 360.0  # game seconds per full day

@@ -98,6 +98,7 @@ ASCII_FALLBACK = {
     "♦": "o",
     "♠": "t",
     "◊": "v",
+    "•": ".",
 }
 UNSEEN_APPEARANCE = (" ", None)
 

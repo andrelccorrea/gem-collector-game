@@ -10,6 +10,7 @@ from game import (
     buildings,
     camera,
     combat,
+    critters,
     enemies,
     fog,
     lantern,
@@ -45,6 +46,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     # Enemy spawning and movement
     enemies.spawn_enemies(state, dt)
     enemies.update_enemies(state, dt)
+    critters.update_critters(state, dt)
 
     # Combat: enemy auto-attacks
     combat.enemy_attacks(state, dt)
