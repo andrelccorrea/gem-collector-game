@@ -1,5 +1,29 @@
 # Gem Collector: Improvement and Android Roadmap (2026-10-08)
 
+## Status (implementation finished 2026-10-08)
+
+| Item | Status | Notes |
+|---|---|---|
+| 0.1 Project setup | Done | uv + pyproject, ruff, CI on 3.13/3.14, dead engine code removed |
+| 0.2 Input layer | Done | curses `getch()` + `Action`/`InputState`. *Deviation:* holding is a stream of presses (terminals report no releases), not a decay window |
+| 0.3 Fixed timestep | Done | Deadline-paced clock (30.0 FPS measured), game time frozen outside play |
+| 0.4 Seeded RNG | Done | Plus `game/simulation.py` (headless `step_game`) and full New Game reset (1.5) |
+| 0.5 Save format v1 | Done | Now schema 10 with a migration chain; per-platform data dir |
+| 0.6 Scenes | Done | *Deviation:* registry keyed by `active_scene`, no stack (Back already maps to Cancel) |
+| 0.7 Tiles as types | Done | `TileMap` + `theme.py`; `game/` no longer imports `clingine` |
+| 0.8 Runtime viewport | Done | *Deviation:* the simulation keeps a fixed 79x21 view so runs are identical on any screen |
+| 1.1-1.12 | Done | World gen 549 -> 45 ms, tests 30 s -> 4 s, idle frame draws 0 cells, palette colors, ring spawns, BFS with parent pointers, one-price-per-gem, catalogs.toml, attack cooldown |
+| Phase 2 balance sim | Done | `game/bot.py`, `scripts/balance_sim.py`, results in `docs/BALANCE.md` |
+| Phase 2 items 1-14 | Done | Tool tiers, bag, death/hardcore, loot-only kills, daily run, lantern, cut minigame, market, perks, geodes, staged stock, LOS fog, recall charm, museum (trophy part of 14; mod slots and lore not done) |
+| Phase 2 deferred | Not done | Town raids, idle miners (deferred by this roadmap) |
+| 3.2 Kivy frontend | Done | `mobile/main.py`, verified on the desktop |
+| 3.3 Touch controls | Done | Tap-to-move/use/attack, buttons, d-pad. *Deviation:* landscape layout (80-column grid) |
+| 3.4 Android lifecycle | Done | Save on pause, no time passes in background, Back button, hints follow the controls |
+| 3.1 Go/no-go build | **Needs you** | Needs JDK 17 + Android SDK/NDK and **your** SDK licence acceptance; steps in `docs/ANDROID.md` |
+| 3.5 Play Store release | **Needs you** | Keystore, app id and Play Console account; checklist in `docs/ANDROID.md` |
+
+---
+
 ## 1. Executive summary
 
 - **What the code base looks like.** The game, engine and `main.py` come to about 4.9k lines, and the tests add about 1.5k more. All 124 tests pass. Rendering already has a clean boundary in `clingine/renderer.py:5-21,56-82`, but four things tie the game to the desktop terminal:
