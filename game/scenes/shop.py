@@ -9,8 +9,7 @@ from game.constants import (
 )
 from game.gems import get_gem_raw_value, polished_prices, take_polished_gem
 from game.input import Action, InputState
-from game.objects.registry import ENEMY_CATALOG, TOOL_CATALOG
-from game.objects.tools.upgrades import TOOL_MAX_LEVEL, TOOL_UPGRADE_COSTS
+from game.objects.registry import ENEMY_CATALOG, TOOL_CATALOG, TOOL_MAX_LEVEL, TOOL_UPGRADE_COSTS
 from game.player import set_hud_message
 from game.ui import clear_screen, render_list, write_str
 

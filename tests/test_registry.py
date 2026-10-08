@@ -1,7 +1,4 @@
 import dataclasses
-import types
-from types import ModuleType
-from unittest.mock import patch
 
 import pytest
 
@@ -9,9 +6,12 @@ from game.objects.base import EnemyDef, GemDef, ToolDef
 from game.objects.registry import (
     GEM_CATALOG,
     TOOL_CATALOG,
+    TOOL_MAX_LEVEL,
+    TOOL_UPGRADE_COSTS,
     build_enemy_catalog,
     build_gem_catalog,
     build_tool_catalog,
+    load_catalogs,
 )
 
 # ---------------------------------------------------------------------------
@@ -152,34 +152,14 @@ def test_gem_def_equality():
 
 
 # ---------------------------------------------------------------------------
-# Registry builder tests — empty subpackages
+# Catalog file loading
 # ---------------------------------------------------------------------------
 
 
-def test_build_gem_catalog_empty():
-    with patch("game.objects.registry.pkgutil.iter_modules", return_value=[]):
-        catalog = build_gem_catalog()
-    assert isinstance(catalog, dict)
-    assert len(catalog) == 0
-
-
-def test_build_tool_catalog_empty():
-    with patch("game.objects.registry.pkgutil.iter_modules", return_value=[]):
-        catalog = build_tool_catalog()
-    assert isinstance(catalog, dict)
-    assert len(catalog) == 0
-
-
-def test_build_enemy_catalog_empty():
-    with patch("game.objects.registry.pkgutil.iter_modules", return_value=[]):
-        catalog = build_enemy_catalog()
-    assert isinstance(catalog, dict)
-    assert len(catalog) == 0
-
-
-# ---------------------------------------------------------------------------
-# Singleton tests
-# ---------------------------------------------------------------------------
+def test_build_catalogs_from_empty_entries():
+    assert build_gem_catalog([]) == {}
+    assert build_tool_catalog([]) == {}
+    assert build_enemy_catalog([]) == {}
 
 
 def test_gem_catalog_singleton():
@@ -190,27 +170,60 @@ def test_tool_catalog_singleton():
     assert isinstance(TOOL_CATALOG, dict)
 
 
-# ---------------------------------------------------------------------------
-# Dynamic discovery test (future-proofing)
-# ---------------------------------------------------------------------------
+def test_catalog_file_entries_become_frozen_defs_in_file_order(tmp_path):
+    path = tmp_path / "catalogs.toml"
+    path.write_text(
+        """
+[[gems]]
+name = "zircon"
+value = 42
+polished_min_mult = 2.0
+polished_max_mult = 2.5
+char = "o"
+color = [[1, 2, 3], [0, 0, 0]]
+biomes = ["cave"]
+rarity_weight = 3
+
+[[gems]]
+name = "agate"
+value = 7
+polished_min_mult = 2.0
+polished_max_mult = 2.2
+char = "o"
+color = [[9, 9, 9], [0, 0, 0]]
+biomes = ["meadow", "river"]
+rarity_weight = 9
+"""
+    )
+    catalog = build_gem_catalog(load_catalogs(path)["gems"])
+    assert list(catalog) == ["zircon", "agate"]
+    assert catalog["zircon"] == make_gem_def(
+        name="zircon",
+        value=42,
+        polished_max_mult=2.5,
+        color=((1, 2, 3), (0, 0, 0)),
+        biomes=("cave",),
+        rarity_weight=3,
+    )
+    hash(catalog["agate"])  # tuples, not lists: entries stay hashable
 
 
-def test_registry_discovers_new_gem():
-    """Inject a fake gem module into sys.modules and patch pkgutil.iter_modules
-    so build_gem_catalog() picks it up and registers the GemDef it contains."""
-    fake_gem = make_gem_def(name="discovered_gem", value=42)
+def test_duplicate_names_are_rejected():
+    entry = {f.name: getattr(make_gem_def(), f.name) for f in dataclasses.fields(GemDef)}
+    with pytest.raises(ValueError, match="duplicate"):
+        build_gem_catalog([entry, dict(entry)])
 
-    fake_module: ModuleType = types.ModuleType("game.objects.gems.fake_gem")
-    fake_module.discovered_gem = fake_gem  # type: ignore[attr-defined]
 
-    fake_module_name = "game.objects.gems.fake_gem"
+def test_unknown_or_missing_fields_are_rejected():
+    entry = {f.name: getattr(make_gem_def(), f.name) for f in dataclasses.fields(GemDef)}
+    with pytest.raises(TypeError):
+        build_gem_catalog([{**entry, "sparkle": 1}])
+    entry.pop("value")
+    with pytest.raises(TypeError):
+        build_gem_catalog([entry])
 
-    # iter_modules yields (finder, name, ispkg) triples
-    fake_iter_result = [(None, fake_module_name, False)]
 
-    with patch("game.objects.registry.pkgutil.iter_modules", return_value=fake_iter_result):
-        with patch("game.objects.registry.importlib.import_module", return_value=fake_module):
-            catalog = build_gem_catalog()
-
-    assert "discovered_gem" in catalog
-    assert catalog["discovered_gem"] is fake_gem
+def test_tool_upgrades_come_from_the_catalog_file():
+    data = load_catalogs()
+    assert TOOL_MAX_LEVEL == data["tool_upgrades"]["max_level"]
+    assert set(TOOL_UPGRADE_COSTS) == set(range(2, TOOL_MAX_LEVEL + 1))

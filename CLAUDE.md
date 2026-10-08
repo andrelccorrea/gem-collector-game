@@ -54,7 +54,8 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 
 | Module | Role |
 |--------|------|
-| `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, HUD_ROWS=2, VIEW 79×21 (fixed simulation view), FPS=30, biome colors, gem catalog, tool catalog, enemy catalog, difficulty tiers |
+| `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, HUD_ROWS=2, VIEW 79×21 (fixed simulation view), FPS=30, biome colors, tile properties, lapidary upgrades, difficulty tiers |
+| `data/catalogs.toml` + `objects/registry.py` | Gem, tool and enemy definitions (and tool upgrade costs) as data, loaded with stdlib `tomllib` into frozen `GemDef`/`ToolDef`/`EnemyDef` catalogs. File order is catalog order and world generation draws from it — reordering entries changes worlds (bump `WORLDGEN_VERSION`) |
 | `state.py` | `GameState` dataclass — single source of truth for player, world, enemies, inventory, scene |
 | `simulation.py` | `new_run(seed)` (fresh GameState: world, player, fog, camera) and `step_game(inp, state, dt)` (one fixed simulation step, no drawing) — same seed + same inputs = same run |
 | `loop.py` | `FixedTimestep`: turns frame time into fixed 1/FPS simulation steps (clamped at 0.25 s), buffering pressed input until a step consumes it; `reset()` freezes time outside the game scene |

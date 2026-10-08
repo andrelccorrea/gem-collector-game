@@ -7,10 +7,11 @@ import game.tools
 from game.objects.registry import (
     ENEMY_CATALOG,
     TOOL_CATALOG,
+    TOOL_MAX_LEVEL,
+    TOOL_UPGRADE_COSTS,
     build_enemy_catalog,
     build_tool_catalog,
 )
-from game.objects.tools.upgrades import TOOL_MAX_LEVEL, TOOL_UPGRADE_COSTS
 
 # ---------------------------------------------------------------------------
 # Tool catalog tests
