@@ -10,6 +10,7 @@ Android:  see docs/ANDROID.md
 """
 
 import os
+import random
 import sys
 import time
 
@@ -28,7 +29,14 @@ from kivy.clock import Clock  # noqa: E402
 from kivy.core.audio import SoundLoader  # noqa: E402
 from kivy.core.text import Label as CoreLabel  # noqa: E402
 from kivy.core.window import Window  # noqa: E402
-from kivy.graphics import Color, Rectangle  # noqa: E402
+from kivy.graphics import (  # noqa: E402
+    Color,
+    InstructionGroup,
+    PopMatrix,
+    PushMatrix,
+    Rectangle,
+    Translate,
+)
 from kivy.graphics.texture import Texture  # noqa: E402
 from kivy.metrics import dp  # noqa: E402
 from kivy.storage.jsonstore import JsonStore  # noqa: E402
@@ -44,7 +52,7 @@ from sprites import sprite_rgba  # noqa: E402
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
 from game.constants import FPS, HUD_ROWS  # noqa: E402
-from game.events import take_events  # noqa: E402
+from game.events import FIND, HURT, take_events  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
 from game.state import GameState  # noqa: E402
@@ -140,10 +148,16 @@ class GridView(Widget):
         self.tap_handler = tap_handler
         self._glyphs: dict = {}
         self._bg, self._fg = [], []
+        with self.canvas.before:
+            PushMatrix()
+            self.shake = Translate(0, 0)  # screen shake moves the whole grid
         with self.canvas:
             for _ in range(ROWS * COLS):
                 self._bg.append((Color(0, 0, 0, 1), Rectangle()))
                 self._fg.append((Color(1, 1, 1, 1), Rectangle()))
+        self.overlay = InstructionGroup()  # floating texts, redrawn every frame
+        self.canvas.after.add(self.overlay)
+        self.canvas.after.add(PopMatrix())
         self.bind(pos=self._layout, size=self._layout)
         self._renderer = None
         self._shown_sprites: dict = {}
@@ -274,39 +288,76 @@ class FloatingTexts:
         return texture
 
     def draw(self, view, now: float) -> None:
-        canvas = self.grid.canvas.after
-        canvas.clear()
+        overlay = self.grid.overlay
+        overlay.clear()
         self.items = [item for item in self.items if now - item[1] < FLOAT_SECONDS]
         if view is None:
             return
         grid = self.grid
         cw, ch = grid.cell_size()
-        with canvas:
-            for event, born, slot in self.items:
-                if not view.contains(event.x, event.y):
-                    continue
-                age = (now - born) / FLOAT_SECONDS
-                alpha = 1.0 if age < 0.6 else (1.0 - age) / 0.4
-                label = self._label(event.text, max(ch * 0.8, 8))
-                icon = _sprite_texture(event.icon) if event.icon else None
-                icon_w = cw * 1.4 if icon else 0
-                width = icon_w + label.width
-                center_x = grid.x + (event.x - view.x + 0.5) * cw
-                left = min(max(center_x - width / 2, grid.x), grid.right - width)
-                bottom = grid.top - (event.y - view.y) * ch + (slot + age * FLOAT_RISE) * ch
-                if icon:
-                    Color(*_rgba(event.color or _WHITE)[:3], alpha)
-                    Rectangle(texture=icon, pos=(left, bottom), size=(icon_w, ch * 1.4))
-                Color(*_rgba(event.text_color)[:3], alpha)
-                text_y = bottom + (ch * 1.4 - label.height) / 2
-                Rectangle(texture=label, pos=(left + icon_w, text_y), size=label.size)
+        for event, born, slot in self.items:
+            if not view.contains(event.x, event.y):
+                continue
+            age = (now - born) / FLOAT_SECONDS
+            alpha = 1.0 if age < 0.6 else (1.0 - age) / 0.4
+            label = self._label(event.text, max(ch * 0.8, 8))
+            icon = _sprite_texture(event.icon) if event.icon else None
+            icon_w = cw * 1.4 if icon else 0
+            width = icon_w + label.width
+            center_x = grid.x + (event.x - view.x + 0.5) * cw
+            left = min(max(center_x - width / 2, grid.x), grid.right - width)
+            bottom = grid.top - (event.y - view.y) * ch + (slot + age * FLOAT_RISE) * ch
+            if icon:
+                overlay.add(Color(*_rgba(event.color or _WHITE)[:3], alpha))
+                overlay.add(Rectangle(texture=icon, pos=(left, bottom), size=(icon_w, ch * 1.4)))
+            overlay.add(Color(*_rgba(event.text_color)[:3], alpha))
+            text_y = bottom + (ch * 1.4 - label.height) / 2
+            overlay.add(Rectangle(texture=label, pos=(left + icon_w, text_y), size=label.size))
+
+
+SHAKE_SECONDS = 0.2  # the grid shakes this long when the player is hurt
+SHAKE_CELLS = 0.3  # starting amplitude, in cells; it eases out to zero
+VIBRATE_MS = {HURT: 40, FIND: 20}  # Android only
+
+
+class ScreenShake:
+    """Shakes the grid briefly (a small, fast-fading random offset) after a hit."""
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        self.until = 0.0
+        self._rng = random.Random()  # visual only: never the game's RNG
+
+    def update(self, events, now: float) -> None:
+        if any(event.kind == HURT for event in events):
+            self.until = now + SHAKE_SECONDS
+        left = max(0.0, self.until - now) / SHAKE_SECONDS
+        amplitude = SHAKE_CELLS * self.grid.cell_size()[0] * left**2
+        self.grid.shake.xy = (
+            self._rng.uniform(-amplitude, amplitude),
+            self._rng.uniform(-amplitude, amplitude),
+        )
+
+
+def _android_vibrator():
+    """Android's Vibrator service, or None elsewhere (desktop) or if it is unavailable."""
+    try:
+        from jnius import autoclass
+
+        activity = autoclass("org.kivy.android.PythonActivity").mActivity
+        context = autoclass("android.content.Context")
+        return activity.getSystemService(context.VIBRATOR_SERVICE)
+    except Exception:  # no pyjnius / not on Android
+        return None
 
 
 class SoundEffects:
-    """Plays the synthesized effect of each event kind (mobile/sfx.py); can be muted."""
+    """Plays the synthesized effect of each event kind (mobile/sfx.py) and a short
+    vibration for the important ones; both can be turned off together."""
 
     def __init__(self, folder: str, enabled: bool):
         self.enabled = enabled
+        self.vibrator = _android_vibrator()
         self.sounds = {}
         for kind, path in write_sounds(folder).items():
             sound = SoundLoader.load(path)
@@ -316,11 +367,15 @@ class SoundEffects:
     def play(self, events) -> None:
         if not self.enabled:
             return
-        for kind in {event.kind for event in events}:
+        kinds = {event.kind for event in events}
+        for kind in kinds:
             sound = self.sounds.get(kind)
             if sound is not None:
                 sound.stop()  # restart if it is still playing
                 sound.play()
+        buzz = max((VIBRATE_MS.get(kind, 0) for kind in kinds), default=0)
+        if buzz and self.vibrator is not None:
+            self.vibrator.vibrate(buzz)
 
 
 class GemCollectorApp(App):
@@ -344,6 +399,7 @@ class GemCollectorApp(App):
         self.grid = GridView(tap_handler=self._tap_cell, size_hint=(0.74, 1))
         root.add_widget(self.grid)
         self.floats = FloatingTexts(self.grid)
+        self.shake = ScreenShake(self.grid)
         root.add_widget(self._controls())
         Window.bind(on_key_down=self._key_down)
         Clock.schedule_interval(self._frame, 1 / FPS)
@@ -385,7 +441,7 @@ class GemCollectorApp(App):
         return panel
 
     def _sound_label(self):
-        return "Sound: on" if self.sfx.enabled else "Sound: off"
+        return "Sound/Vib: on" if self.sfx.enabled else "Sound/Vib: off"
 
     def _toggle_sound(self):
         self.sfx.enabled = not self.sfx.enabled
@@ -423,6 +479,7 @@ class GemCollectorApp(App):
         events = take_events(self.state)
         self.floats.add(events, now)
         self.sfx.play(events)
+        self.shake.update(events, now)
         in_world = self.state.active_scene == "game"
         self.floats.draw(camera.render_view(self.state, self.renderer) if in_world else None, now)
         if self.state.quit_requested:

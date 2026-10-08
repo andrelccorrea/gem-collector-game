@@ -10,6 +10,8 @@ version = 0.1.0
 requirements = python3,kivy==2.3.1
 # The 80x24 character grid plus the control panel need a wide screen.
 orientation = landscape
+# Short vibrations on hits and finds (can be turned off in the game).
+android.permissions = VIBRATE
 fullscreen = 1
 
 # Google Play requires targeting API 36 for new apps and updates (from 2026-08-31).
