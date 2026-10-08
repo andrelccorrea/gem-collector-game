@@ -208,6 +208,8 @@ def test_using_a_building_tile_opens_its_screen(kind, scene):
     assert state.active_scene == scene
     if scene == "shop":
         assert (state.shop_cursor, state.shop_tab) == (0, 0)
+    if scene == "lapidary":
+        assert state.lapidary_cursor == 0
 
 
 def _select(state, action, key=None):

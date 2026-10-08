@@ -88,7 +88,17 @@ def test_sell_all_adds_every_individual_price():
         add_polished_gem(state, "opal", price)
     state.inventory["gems"]["quartz"] = 2
     items = _build_shop_items(state)
-    state.shop_cursor = next(i for i, it in enumerate(items) if it["action"] == "sell_all_gems")
+    sell_all = next(i for i, it in enumerate(items) if it["action"] == "sell_all_gems")
+    assert "$430 total" in items[sell_all]["label"]
+    state.shop_cursor = sell_all
     update_shop(CONFIRM, state)
     assert state.player_gold == 50 + 420 + 2 * 5
     assert state.inventory["gems"] == {} and state.polished_gem_values == {}
+
+
+def test_selling_the_last_polished_gem_leaves_no_empty_price_list():
+    state = GameState(active_scene="shop", shop_tab=2)
+    add_polished_gem(state, "opal", 150)
+    state.shop_cursor = 0
+    update_shop(CONFIRM, state)
+    assert "opal_polished" not in state.polished_gem_values

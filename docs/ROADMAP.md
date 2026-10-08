@@ -97,7 +97,7 @@ Before this phase, build a **headless economy simulation** (M). It runs N seeded
 | 11 | **Staged shop stock** unlocking at $2.5k, $5k and $7.5k (Super Motherload) | Everything is for sale from the start, so there are no mid-game goals | `game/buildings.py:51-80`; `game/constants.py:169-174` | S | High |
 | 12 | **Line-of-sight fog** (shadowcasting in pure Python, keeping the stdlib-only rule) | You can see through cave walls today | `game/fog.py:14-23` | M | Neutral |
 | 13 | **Fast-travel waypoints or recall items** | Town (100,40) is the only hub, and the caves run to x=199 | `game/constants.py` (TOWN_CENTER, BIOME_CAVE_MIN_X) | M | High |
-| 14 | Tool mod slots with free reassignment / a trophy-gem museum / generated "legendary lode" lore | Gives gems a use besides selling, plus collection goals | `game/objects/tools/upgrades.py`; `game/world.py` | M/S/M | High |
+| 14 | Tool mod slots with free reassignment / a trophy-gem museum / generated "legendary lode" lore | Gives gems a use besides selling, plus collection goals | `game/data/catalogs.toml` ([tool_upgrades]); `game/world.py` | M/S/M | High |
 | Deferred | Dome Keeper-style raids on Town (L); idle income from hired miners (it undermines the $10k race) | — | `game/constants.py:24,169-174` | L/M | Medium |
 
 ### Phase 3: Port
