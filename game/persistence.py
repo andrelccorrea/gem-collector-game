@@ -17,7 +17,7 @@ import shutil
 import sys
 from datetime import date
 
-from game.constants import CHAR_DEPLETED, MAP_HEIGHT, MAP_WIDTH
+from game.constants import MAP_HEIGHT, MAP_WIDTH
 
 SCHEMA_VERSION = 1
 SAVE_NAME = "save.json"
@@ -325,10 +325,6 @@ def _deplete_tile_on_surface(state, x: int, y: int) -> None:
     meta["depleted"] = True
     meta["interactable"] = False
     state.world_tiles.meta[(x, y)] = meta
-
-    # Change visual to depleted appearance
-    depleted_color = ((80, 80, 80), (20, 20, 20))
-    state.world_tiles.set_tile(x, y, CHAR_DEPLETED, depleted_color)
 
 
 # ---------------------------------------------------------------------------

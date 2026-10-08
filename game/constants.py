@@ -122,28 +122,29 @@ TYPE_STREAM = "stream"
 TYPE_LAKE = "lake"
 
 # Tile definitions: type -> (char, color_pair, walkable, interactable)
-TILE_DEFS = {
-    TYPE_GRASS: (CHAR_GRASS, COLOR_MEADOW, True, False),
-    TYPE_TREE: (CHAR_TREE, ((0, 100, 0), (0, 30, 0)), False, False),
-    TYPE_PATH: (CHAR_PATH, ((180, 140, 60), (0, 30, 0)), True, False),
-    TYPE_ROCK: (CHAR_ROCK, COLOR_HILLSIDE, False, False),
-    TYPE_ORE: (CHAR_ORE, ((255, 220, 0), (40, 40, 40)), True, True),
-    TYPE_DIRT: (CHAR_DIRT, ((120, 80, 40), (40, 40, 40)), True, False),
-    TYPE_SHALLOW: (CHAR_SHALLOW, COLOR_RIVER, True, True),
-    TYPE_BANK: (CHAR_BANK, ((180, 160, 100), (0, 0, 80)), True, False),
-    TYPE_DEEP: (CHAR_DEEP, ((0, 0, 160), (0, 0, 80)), False, False),
-    TYPE_CAVE_FLOOR: (CHAR_CAVE_FLOOR, COLOR_CAVE, True, False),
-    TYPE_CAVE_WALL: (CHAR_CAVE_WALL, ((80, 60, 30), (10, 10, 10)), False, False),
-    TYPE_RICH_ORE: (CHAR_RICH_ORE, ((100, 200, 255), (10, 10, 10)), True, True),
-    TYPE_TOWN: (CHAR_TOWN_GROUND, COLOR_TOWN, True, False),
-    TYPE_SHOP: (CHAR_SHOP, COLOR_BUILDING, True, True),
-    TYPE_LAPIDARY: (CHAR_LAPIDARY, COLOR_BUILDING, True, True),
-    TYPE_SAVE: (CHAR_SAVE, COLOR_BUILDING, True, True),
-    TYPE_MINEABLE_GRASS: (CHAR_MINEABLE_GRASS, ((180, 230, 140), (0, 30, 0)), True, True),
-    TYPE_MINEABLE_DIRT: (CHAR_MINEABLE_DIRT, ((210, 160, 90), (40, 40, 40)), True, True),
-    TYPE_MINEABLE_ROCK: (CHAR_MINEABLE_ROCK, ((230, 230, 230), (40, 40, 40)), True, True),
-    TYPE_STREAM: (CHAR_STREAM, ((150, 210, 255), (0, 50, 120)), True, True),
-    TYPE_LAKE: (CHAR_LAKE, ((180, 220, 255), (30, 80, 160)), True, True),
+# Gameplay properties per tile type: (walkable, interactable). Appearance lives in theme.py.
+TILE_PROPS = {
+    TYPE_GRASS: (True, False),
+    TYPE_TREE: (False, False),
+    TYPE_PATH: (True, False),
+    TYPE_ROCK: (False, False),
+    TYPE_ORE: (True, True),
+    TYPE_DIRT: (True, False),
+    TYPE_SHALLOW: (True, True),
+    TYPE_BANK: (True, False),
+    TYPE_DEEP: (False, False),
+    TYPE_CAVE_FLOOR: (True, False),
+    TYPE_CAVE_WALL: (False, False),
+    TYPE_RICH_ORE: (True, True),
+    TYPE_TOWN: (True, False),
+    TYPE_SHOP: (True, True),
+    TYPE_LAPIDARY: (True, True),
+    TYPE_SAVE: (True, True),
+    TYPE_MINEABLE_GRASS: (True, True),
+    TYPE_MINEABLE_DIRT: (True, True),
+    TYPE_MINEABLE_ROCK: (True, True),
+    TYPE_STREAM: (True, True),
+    TYPE_LAKE: (True, True),
 }
 
 # Biome detection helper

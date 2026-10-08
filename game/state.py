@@ -25,7 +25,7 @@ class GameState:
     seed: int = 0
     # Every gameplay roll must use this RNG (never the global `random` module).
     rng: random.Random = field(default_factory=lambda: gameplay_rng(0))
-    world_tiles: Any = None  # Surface object, set after generation
+    world_tiles: Any = None  # TileMap, set after generation
 
     # Player position
     player_x: int = 100

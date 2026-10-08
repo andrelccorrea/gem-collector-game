@@ -2,7 +2,6 @@ import math
 import random
 from collections import deque
 
-from clingine.surface import Surface
 from game.bsp import BSPNode, connect_rooms, get_leaves, place_rooms, split
 from game.constants import (
     LAPIDARY_X,
@@ -13,7 +12,7 @@ from game.constants import (
     SAVE_Y,
     SHOP_X,
     SHOP_Y,
-    TILE_DEFS,
+    TILE_PROPS,
     TOWN_CENTER_X,
     TOWN_CENTER_Y,
     TYPE_BANK,
@@ -38,6 +37,7 @@ from game.constants import (
     TYPE_TOWN,
     TYPE_TREE,
 )
+from game.tilemap import TileMap
 
 # Town boundaries: 12-wide x 8-tall cluster centered at TOWN_CENTER
 TOWN_LEFT = TOWN_CENTER_X - 6
@@ -63,10 +63,9 @@ def _biome_corridor_tile(x: int, y: int) -> str:
     return TYPE_PATH
 
 
-def _apply_tile(surface: Surface, x: int, y: int, type_name: str) -> None:
+def _apply_tile(surface: TileMap, x: int, y: int, type_name: str) -> None:
     """Write one tile to the surface and meta dict."""
-    char, color_pair, walkable, interactable = TILE_DEFS[type_name]
-    surface.set_tile(x, y, char, color_pair)
+    walkable, interactable = TILE_PROPS[type_name]
     surface.meta[(x, y)] = {
         "type": type_name,
         "walkable": walkable,
@@ -80,7 +79,7 @@ _WATER_TYPES = {TYPE_STREAM, TYPE_LAKE, TYPE_SHALLOW, TYPE_DEEP}
 
 
 def _carve_stream(
-    surface: Surface,
+    surface: TileMap,
     rng: random.Random,
     x_start: int,
     y_start: int,
@@ -144,7 +143,7 @@ def _carve_stream(
 
 
 def _carve_lake(
-    surface: Surface,
+    surface: TileMap,
     rng: random.Random,
     cx: int,
     cy: int,
@@ -185,7 +184,7 @@ def _carve_lake(
 
 
 def _scatter_mineable(
-    surface: Surface,
+    surface: TileMap,
     rng: random.Random,
     x_min: int,
     y_min: int,
@@ -206,7 +205,7 @@ def _scatter_mineable(
 
 
 def _add_water_banks(
-    surface: Surface,
+    surface: TileMap,
     x_min: int,
     y_min: int,
     x_max: int,
@@ -230,7 +229,7 @@ def _add_water_banks(
 
 
 def _place_visible_gems(
-    surface: Surface,
+    surface: TileMap,
     rng: random.Random,
     eligible_types: tuple[str, ...],
     region_bounds: tuple[int, int, int, int],
@@ -266,7 +265,7 @@ def _place_visible_gems(
     return placed
 
 
-def _generate_meadow(surface: Surface, rng: random.Random) -> None:
+def _generate_meadow(surface: TileMap, rng: random.Random) -> None:
     """Meadow region (x=0..49, y=0..79): grass with scattered trees, optional
     ponds, and mineable patches."""
     x_min, y_min, x_max, y_max = 0, 0, 50, 80
@@ -294,7 +293,7 @@ def _generate_meadow(surface: Surface, rng: random.Random) -> None:
     _scatter_mineable(surface, rng, x_min, y_min, x_max, y_max, TYPE_DIRT, TYPE_MINEABLE_DIRT, 0.10)
 
 
-def _generate_hillside(surface: Surface, rng: random.Random) -> None:
+def _generate_hillside(surface: TileMap, rng: random.Random) -> None:
     """Hillside region (x=50..119, y=0..39): dirt with scattered rocks and
     mineable patches."""
     x_min, y_min, x_max, y_max = 50, 0, 120, 40
@@ -319,7 +318,7 @@ def _generate_hillside(surface: Surface, rng: random.Random) -> None:
     _scatter_mineable(surface, rng, x_min, y_min, x_max, y_max, TYPE_ROCK, TYPE_MINEABLE_ROCK, 0.20)
 
 
-def _retile_cave_resources(surface: Surface, rng: random.Random) -> None:
+def _retile_cave_resources(surface: TileMap, rng: random.Random) -> None:
     """Add prospecting features to the cave: convert legacy ORE/RICH_ORE if
     present, scatter mineable patches on cave floor, and carve 1-2 small pools."""
     cave_min_x = 120
@@ -368,7 +367,7 @@ def _retile_cave_resources(surface: Surface, rng: random.Random) -> None:
 
 
 def _generate_river_delta(
-    surface: Surface,
+    surface: TileMap,
     rng: random.Random,
 ) -> None:
     """River Delta region (x=50..119, y=40..79): grass base with winding streams,
@@ -419,7 +418,7 @@ def _generate_river_delta(
     )
 
 
-def _apply_cave_automata(surface: Surface) -> None:
+def _apply_cave_automata(surface: TileMap) -> None:
     """Smooth the cave region with cellular automata to reduce isolated pockets.
 
     Runs 3 passes over cols 120-199. CAVE_WALL tiles that have fewer than 4 wall
@@ -461,7 +460,7 @@ def _apply_cave_automata(surface: Surface) -> None:
             _apply_tile(surface, x, y, type_name)
 
 
-def ensure_connectivity(surface: Surface, start_x: int, start_y: int) -> None:
+def ensure_connectivity(surface: TileMap, start_x: int, start_y: int) -> None:
     """BFS from start, then carve corridors to any disconnected walkable tile clusters.
 
     Repeats up to 50 passes. Each pass does a fresh BFS so that newly carved
@@ -525,7 +524,7 @@ def ensure_connectivity(surface: Surface, start_x: int, start_y: int) -> None:
 
 
 def _carve_bsp_band(
-    surface: Surface,
+    surface: TileMap,
     rng: random.Random,
     band_x: int,
     band_y: int,
@@ -577,14 +576,14 @@ def _carve_bsp_band(
 WORLDGEN_VERSION = 1
 
 
-def generate_world(seed: int) -> tuple[Surface, dict[tuple[int, int], str]]:
+def generate_world(seed: int) -> tuple[TileMap, dict[tuple[int, int], str]]:
     """Generate the 200×80 procedural world.
 
     Returns a tuple of (surface, world_gems) where world_gems maps (x, y)
     coordinates to gem names for visible gems placed on the map.
     """
     rng = random.Random(seed)
-    surface = Surface(MAP_WIDTH, MAP_HEIGHT)
+    surface = TileMap(MAP_WIDTH, MAP_HEIGHT)
 
     # Fill entire map with solid wall tiles by biome column band
     for y in range(MAP_HEIGHT):

@@ -40,7 +40,7 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 
 **`window.py`** — Central coordinator. Calls `curses.initscr()`, manages `screen_array[y][x] = [is_changed, char, color_pair]`, flushes only dirty cells via `window.update()`. Color pairs are lazy-allocated via `window.color_pairs.get_color_pair(((r,g,b),(r,g,b)))`.
 
-**`surface.py`** — Off-screen tile buffer. `Surface(width, height)` with `set_tile(x, y, char, cp)`, `get_tile(x, y)`, `fill()`, and `blit(window, cam_x, cam_y, vp_w, vp_h, dest_y)` which copies a viewport slice into `screen_array` respecting dirty flags. Game code attaches a `surface.meta` dict: `(x,y) -> {"type", "walkable", "interactable", "depleted"}`.
+**`surface.py`** — Generic off-screen char/color buffer with `blit()` (engine utility; the game world no longer uses it).
 
 **`keyboard.py`** — reads keys via curses `getch()` (no OS hooks or permissions). `poll()` drains pending events once per frame into `pressed` (lowercase key names that fired this frame: new press or OS auto-repeat). Terminals never report releases, so holding a key is a stream of presses; there is no held set.
 
@@ -57,8 +57,10 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 | `simulation.py` | `new_run(seed)` (fresh GameState: world, player, fog, camera) and `step_game(inp, state, dt)` (one fixed simulation step, no drawing) — same seed + same inputs = same run |
 | `loop.py` | `FixedTimestep`: turns frame time into fixed 1/FPS simulation steps (clamped at 0.25 s), buffering pressed input until a step consumes it; `reset()` freezes time outside the game scene |
 | `input.py` | `Action` enum, `InputState` (`pressed`/`held` actions), `DEFAULT_KEYMAP`, `map_keys()` — the frontend-agnostic input boundary |
-| `world.py` | `generate_world(seed)` → 200×80 `Surface` with biomes + town. `ensure_connectivity()` BFS flood-fill. |
-| `camera.py` | `update_camera(state)` centers on player clamped to map. `render_viewport(window, state)` blits tile slice. |
+| `tilemap.py` | `TileMap`: the world as data — `meta[(x, y)] = {type, walkable, interactable, depleted, visibility}`, `start_pos`; no glyphs |
+| `theme.py` | Terminal theme: `TILE_APPEARANCE` (type → char, colors), depleted/unseen looks, `tile_appearance(meta)` with fog dimming |
+| `world.py` | `generate_world(seed)` → 200×80 `TileMap` with biomes + town. `ensure_connectivity()` BFS flood-fill. |
+| `camera.py` | `update_camera(state)` centers on player clamped to map. `render_viewport(renderer, state)` draws the visible slice through `theme.tile_appearance`, touching only changed cells. |
 | `hud.py` | `render_hud(window, state)` writes to rows 20-21: HP (color-coded), Gold, Tool, Biome, key hints, HUD messages |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E-key cycles tools; Space-key mines tiles, depletes them, rolls gem drops |
@@ -90,6 +92,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 
 - **`screen_array` cell:** always `[is_changed: bool, char: str, color_pair: tuple|None]`. Never change this structure.
 - **Boundary guard:** never write to `window.height-1` row or `window.width-1` col.
+- **Tiles are types:** game code stores/changes tile `type`/`depleted`/`visibility` in `TileMap.meta`; never chars or colors (those come from `theme.py`). `game/` must not import `clingine`.
 - **Color pairs:** always `((r,g,b),(r,g,b))` tuples. Never call `curses.init_pair` directly.
 - **Input:** game code never reads raw keys. Update functions take an `InputState` (`game/input.py`) of `Action`s; raw key names appear only in `DEFAULT_KEYMAP`. `main.py` calls `window.keyboard.poll()` then `map_keys()` exactly once per frame.
 - **Movement:** one step per move action in `inp.pressed` (or while in `inp.held`, for frontends that report releases), rate-limited by `MOVE_COOLDOWN`; a direction change during the cooldown is queued. Use `inp.pressed` for single-fire actions.

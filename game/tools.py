@@ -2,7 +2,6 @@ from game.constants import (
     BIOME_CAVE_MIN_X,
     BIOME_HILLSIDE_MAX_Y,
     BIOME_MEADOW_MAX_X,
-    CHAR_DEPLETED,
     TYPE_LAKE,
     TYPE_LAPIDARY,
     TYPE_MINEABLE_DIRT,
@@ -146,9 +145,6 @@ def _deplete_tile(state, x: int, y: int) -> None:
     meta["interactable"] = False
     state.depleted_tiles.add((x, y))
     state.world_tiles.meta[(x, y)] = meta
-
-    depleted_color = ((80, 80, 80), (20, 20, 20))
-    state.world_tiles.set_tile(x, y, CHAR_DEPLETED, depleted_color)
 
 
 def _coord_to_biome(x: int, y: int) -> str:

@@ -1,5 +1,6 @@
 from game.constants import MAP_HEIGHT, MAP_WIDTH, VIEWPORT_HEIGHT, VIEWPORT_WIDTH
 from game.objects.registry import GEM_CATALOG
+from game.theme import UNSEEN_APPEARANCE, dim, tile_appearance
 
 
 def update_camera(state) -> None:
@@ -14,14 +15,16 @@ def render_viewport(renderer, state) -> None:
     if state.world_tiles is None:
         return
 
-    state.world_tiles.blit(
-        renderer,
-        state.camera_x,
-        state.camera_y,
-        VIEWPORT_WIDTH,
-        VIEWPORT_HEIGHT,
-        dest_y=0,
-    )
+    meta = state.world_tiles.meta
+    max_x = min(VIEWPORT_WIDTH, renderer.width - 1)
+    max_y = min(VIEWPORT_HEIGHT, renderer.height - 1)
+    for sy in range(max_y):
+        for sx in range(max_x):
+            tile = meta.get((state.camera_x + sx, state.camera_y + sy))
+            char, color_pair = tile_appearance(tile) if tile is not None else UNSEEN_APPEARANCE
+            # Only touch cells that changed, so the frontend redraws as little as possible.
+            if renderer.get_cell(sx, sy) != (char, color_pair):
+                renderer.set_cell(sx, sy, char, color_pair)
 
     _render_world_gems(renderer, state)
 
@@ -49,10 +52,6 @@ def _render_world_gems(renderer, state) -> None:
 
         char, color_pair = gem.char, gem.color
         if visibility == "explored":
-            fg, bg = color_pair
-            color_pair = (
-                (fg[0] // 2, fg[1] // 2, fg[2] // 2),
-                (bg[0] // 2, bg[1] // 2, bg[2] // 2),
-            )
+            color_pair = dim(color_pair)
 
         renderer.set_cell(sx, sy, char, color_pair)

@@ -11,8 +11,6 @@ class Surface:
         self.tiles = [
             [[default_char, default_color_pair] for _ in range(width)] for _ in range(height)
         ]
-        self.meta: dict = {}
-        self.start_pos: tuple | None = None
 
     def set_tile(self, x: int, y: int, char: str, color_pair=None) -> None:
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -63,18 +61,6 @@ class Surface:
 
                 new_char = char if len(char) == 1 else self.default_char
                 new_cp = color_pair if color_pair is not None else self.default_color_pair
-
-                visibility = self.meta.get((tile_x, tile_y), {}).get("visibility", "visible")
-                if visibility == "unseen":
-                    renderer.set_cell(screen_x, screen_y, " ", None)
-                    continue
-                elif visibility == "explored":
-                    if new_cp is not None:
-                        fg, bg = new_cp
-                        new_cp = (
-                            (fg[0] // 2, fg[1] // 2, fg[2] // 2),
-                            (bg[0] // 2, bg[1] // 2, bg[2] // 2),
-                        )
 
                 existing_char, existing_cp = renderer.get_cell(screen_x, screen_y)
                 if new_char != existing_char or new_cp != existing_cp:
