@@ -6,7 +6,19 @@ always reproduce the same run (replays, balance simulations, daily seeded runs).
 
 import uuid
 
-from game import buildings, camera, combat, enemies, fog, lantern, market, player, tools, world
+from game import (
+    buildings,
+    camera,
+    combat,
+    enemies,
+    fog,
+    lantern,
+    market,
+    player,
+    tips,
+    tools,
+    world,
+)
 from game.input import Action, InputState
 from game.state import GameState, gameplay_rng
 
@@ -53,6 +65,8 @@ def step_game(inp: InputState, state, dt: float) -> bool:
         # Spawning reads the viewport, so keep it in sync with the simulation rather
         # than with rendering (which may run a different number of times).
         camera.update_camera(state)
+
+    tips.check_tips(state)
 
     if Action.CANCEL in inp.pressed:
         state.active_scene = "menu"

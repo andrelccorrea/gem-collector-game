@@ -28,6 +28,7 @@ def new_profile() -> dict:
         "perks": {key: 0 for key in PERKS},
         "runs_finished": 0,
         "rewarded_runs": [],
+        "tips": [],
     }
 
 
@@ -44,6 +45,7 @@ def load_profile() -> dict:
         profile["reputation"] = int(data["reputation"])
         profile["runs_finished"] = int(data.get("runs_finished", 0))
         profile["rewarded_runs"] = [str(r) for r in data.get("rewarded_runs", [])]
+        profile["tips"] = [str(t) for t in data.get("tips", [])]
         for key in PERKS:
             profile["perks"][key] = int(data.get("perks", {}).get(key, 0))
     except (OSError, ValueError, TypeError, AttributeError, KeyError):
@@ -108,6 +110,15 @@ def buy_perk(key: str) -> bool:
     profile["perks"][key] += 1
     save_profile(profile)
     return True
+
+
+def remember_tips(tips) -> None:
+    """Add these first-time tips to the ones the profile has already shown."""
+    profile = load_profile()
+    known = set(profile["tips"])
+    if not set(tips) <= known:
+        profile["tips"] = sorted(known | set(tips))
+        save_profile(profile)
 
 
 def apply_perks(state, profile: dict) -> None:

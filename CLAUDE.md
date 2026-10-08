@@ -67,6 +67,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `camera.py` | `update_camera(state)` centers the fixed simulation view on the player (clamped); `on_screen` tests it. `render_view(state, renderer)` → `View` the frontend draws (≤ simulation view); `render_viewport(renderer, state, view)` draws it through `theme.tile_appearance`, touching only changed cells, and sets a sprite per drawn cell (`GROUND` tile type, `OBJECT` gem/bag; enemies and the player set theirs). |
 | `hud.py` | `render_hud(renderer, state)` writes to the last three rows: HP (color-coded), Gold, Tool, Biome; the player's tile (`tile_info.describe_here`); key hints or HUD messages (bag fill kept). `HudPulse` (owned by GameScene, render-only) blinks HP/Gold/Bag when they change |
 | `events.py` | `emit`/`emit_gem` record world events (finds, damage, healing) in `state.events` (capped, never saved); a frontend `take_events` once per frame and animates them (Kivy: floating text with an icon). The HUD message stays the text record |
+| `tips.py` | First-time tips (`check_tips`, run by `step_game`): one mechanic at a time, when it first matters, never over another message, `TIP_GAP` apart; `state.tips_seen` is merged with and saved to the profile by `GameScene` |
 | `tile_info.py` | `describe_here(state)`: tile name, what Use does there (enter, dig/pan with which tools, worked out), gem and dropped bag on the tile |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
@@ -76,7 +77,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `lantern.py` | Fuel drains per biome, refills in town; `light_radius` sets the fog radius |
 | `death.py` | Normal-mode revive in town for a fee with the bag dropped where the player fell (`recover_bag`); hardcore runs end on death |
 | `daily.py` | Daily run: seed from the date, 15-minute game-time limit, `daily_end` scene |
-| `profile.py` | Progress between runs (`profile.json`): reputation from wins, daily runs and hardcore deaths; perks bought in the Perks menu (`apply_perks` on new normal/hardcore runs, never daily) |
+| `profile.py` | Progress between runs (`profile.json`): reputation from wins, daily runs and hardcore deaths; first-time tips already shown; perks bought in the Perks menu (`apply_perks` on new normal/hardcore runs, never daily) |
 | `bot.py` | Headless greedy bot that plays through `step_game` for balance runs (`scripts/balance_sim.py`, results in `docs/BALANCE.md`) |
 | `geography.py` | `in_town(x, y, margin)`, `biome_at(x, y)`, `region_name(x, y)` — the single definition of the town rectangle and biome regions |
 | `enemies.py` | `Enemy` class; `find_path_bfs` (parent-pointer BFS, depth cap, falls back to the reachable tile closest to the target, optional `blocked`); `spawn_enemies` (ring around the player: off-screen, out of town, 10 tiles inside the despawn distance), `update_enemies`, `render_enemies`; difficulty scaling |

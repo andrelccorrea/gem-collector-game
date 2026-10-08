@@ -105,6 +105,10 @@ class GameState:
     # HUD message (temporary notification)
     hud_message: str = ""
     hud_message_timer: float = 0.0
+    # First-time tips already shown (game/tips.py), kept in the profile, and when the
+    # last one was shown
+    tips_seen: set = field(default_factory=set)
+    last_tip_time: float = float("-inf")
     # World events not yet shown by the frontend (game/events.py); never saved
     events: list = field(default_factory=list)
 
