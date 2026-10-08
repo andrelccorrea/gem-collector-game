@@ -9,7 +9,7 @@ from game.constants import (
     TYPE_STREAM,
 )
 from game.death import bag_here, recover_bag
-from game.events import DULL_COLOR, GAIN_COLOR, LOSS_COLOR, emit, emit_gem
+from game.events import DULL_COLOR, FULL, GAIN_COLOR, LOOT, LOSS_COLOR, MISS, emit, emit_gem
 from game.gems import bag_has_room
 from game.geography import biome_at
 from game.input import Action, InputState
@@ -63,7 +63,7 @@ def use_tool(inp: InputState, state) -> None:
         taken = recover_bag(state)
         left = "" if state.dropped_bag is None else " Your bag is full; some is left."
         set_hud_message(state, f"Recovered {taken} items from your dropped bag.{left}", 3.0)
-        emit(state, f"+{taken} items", GAIN_COLOR, "bag")
+        emit(state, LOOT, f"+{taken} items", GAIN_COLOR, "bag")
         return
 
     if state.equipped_tool is None:
@@ -72,7 +72,7 @@ def use_tool(inp: InputState, state) -> None:
 
     if not bag_has_room(state) and (pos in state.world_gems or tile_type in _DIGGABLE):
         set_hud_message(state, "Your bag is full! Sell at the shop.", 2.0)
-        emit(state, "Bag full", LOSS_COLOR, "bag")
+        emit(state, FULL, "Bag full", LOSS_COLOR, "bag")
         return
 
     # Priority 1: visible gem at player tile
@@ -135,7 +135,7 @@ def _dig_mineable_tile(state, x: int, y: int, tile_type: str) -> None:
         emit_gem(state, gem_name)
     else:
         set_hud_message(state, "You dig... but find nothing.", 1.5)
-        emit(state, "nothing", DULL_COLOR)
+        emit(state, MISS, "nothing", DULL_COLOR)
 
 
 def _pan_water(state, x: int, y: int, tile_type: str) -> None:
@@ -151,7 +151,7 @@ def _pan_water(state, x: int, y: int, tile_type: str) -> None:
         emit_gem(state, gem_name)
     else:
         set_hud_message(state, "You pan the water... nothing.", 1.5)
-        emit(state, "nothing", DULL_COLOR)
+        emit(state, MISS, "nothing", DULL_COLOR)
 
 
 def _equipped_tier(state) -> int:

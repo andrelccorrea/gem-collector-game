@@ -89,7 +89,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 
 ### Mobile (`mobile/`)
 
-`main.py` is the Kivy frontend (Android; also runs on the desktop from `.venv-mobile`, Python 3.13 + Kivy 2.3.1): a `GridRenderer` (80x24 cells, redraws changed cells; draws the pixel-art from `sprites.py` where the game sets sprites, glyphs elsewhere), action buttons + d-pad, `game/touch.py` for taps (walk-to, use on arrival, attack adjacent). It saves on pause and resets the game timestep on resume. `build_android.sh` assembles `build_src/` (main.py + sprites.py + `game/` + `clingine/renderer.py`, never the curses modules) and runs Buildozer with `buildozer.spec` (API 36, AAB). See `docs/ANDROID.md`.
+`main.py` is the Kivy frontend (Android; also runs on the desktop from `.venv-mobile`, Python 3.13 + Kivy 2.3.1): a `GridRenderer` (80x24 cells, redraws changed cells; draws the pixel-art from `sprites.py` where the game sets sprites, glyphs elsewhere), floating event text, sound effects synthesized by `sfx.py` (one per event kind, cached as WAV in the app's data dir; Sound on/off button kept in `settings.json`), action buttons + d-pad, `game/touch.py` for taps (walk-to, use on arrival, attack adjacent). It saves on pause and resets the game timestep on resume. `build_android.sh` assembles `build_src/` (main.py + sprites.py + sfx.py + `game/` + `clingine/renderer.py`, never the curses modules) and runs Buildozer with `buildozer.spec` (API 36, AAB). See `docs/ANDROID.md`.
 
 ### Map Layout (200×80)
 

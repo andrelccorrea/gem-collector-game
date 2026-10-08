@@ -25,15 +25,18 @@ Config.set("kivy", "exit_on_escape", "0")
 
 from kivy.app import App  # noqa: E402
 from kivy.clock import Clock  # noqa: E402
+from kivy.core.audio import SoundLoader  # noqa: E402
 from kivy.core.text import Label as CoreLabel  # noqa: E402
 from kivy.core.window import Window  # noqa: E402
 from kivy.graphics import Color, Rectangle  # noqa: E402
 from kivy.graphics.texture import Texture  # noqa: E402
 from kivy.metrics import dp  # noqa: E402
+from kivy.storage.jsonstore import JsonStore  # noqa: E402
 from kivy.uix.boxlayout import BoxLayout  # noqa: E402
 from kivy.uix.button import Button  # noqa: E402
 from kivy.uix.gridlayout import GridLayout  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
+from sfx import write_sounds  # noqa: E402
 from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
 from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
 from sprites import sprite_rgba  # noqa: E402
@@ -299,6 +302,27 @@ class FloatingTexts:
                 Rectangle(texture=label, pos=(left + icon_w, text_y), size=label.size)
 
 
+class SoundEffects:
+    """Plays the synthesized effect of each event kind (mobile/sfx.py); can be muted."""
+
+    def __init__(self, folder: str, enabled: bool):
+        self.enabled = enabled
+        self.sounds = {}
+        for kind, path in write_sounds(folder).items():
+            sound = SoundLoader.load(path)
+            if sound is not None:  # no audio backend: stay silent
+                self.sounds[kind] = sound
+
+    def play(self, events) -> None:
+        if not self.enabled:
+            return
+        for kind in {event.kind for event in events}:
+            sound = self.sounds.get(kind)
+            if sound is not None:
+                sound.stop()  # restart if it is still playing
+                sound.play()
+
+
 class GemCollectorApp(App):
     title = "Gem Collector"
 
@@ -311,6 +335,10 @@ class GemCollectorApp(App):
         self.renderer = GridRenderer()
         self.touch = TouchController()
         self.keys: set = set()
+        # Frontend preferences (not part of the game's save).
+        self.settings = JsonStore(os.path.join(self.user_data_dir, "settings.json"))
+        sound_on = self.settings.get("sound")["on"] if self.settings.exists("sound") else True
+        self.sfx = SoundEffects(os.path.join(self.user_data_dir, "sfx"), sound_on)
 
         root = BoxLayout(orientation="horizontal")
         self.grid = GridView(tap_handler=self._tap_cell, size_hint=(0.74, 1))
@@ -335,6 +363,9 @@ class GemCollectorApp(App):
             button = Button(text=label)
             button.bind(on_press=lambda _b, a=action: self.touch.press(a))
             actions.add_widget(button)
+        self.sound_button = Button(text=self._sound_label())
+        self.sound_button.bind(on_press=lambda _b: self._toggle_sound())
+        actions.add_widget(self.sound_button)
         pad = GridLayout(cols=3, spacing=dp(6), size_hint_y=3 / 7)
         for label, action in [("", None), ("^", Action.MOVE_UP), ("", None),
                               ("<", Action.MOVE_LEFT), ("", None), (">", Action.MOVE_RIGHT),
@@ -352,6 +383,14 @@ class GemCollectorApp(App):
         panel.add_widget(actions)
         panel.add_widget(pad)
         return panel
+
+    def _sound_label(self):
+        return "Sound: on" if self.sfx.enabled else "Sound: off"
+
+    def _toggle_sound(self):
+        self.sfx.enabled = not self.sfx.enabled
+        self.settings.put("sound", on=self.sfx.enabled)
+        self.sound_button.text = self._sound_label()
 
     def _dpad_down(self, action):
         self.touch.press(action)
@@ -381,7 +420,9 @@ class GemCollectorApp(App):
         self.scenes.frame(inp, self.state, dt, self.renderer)
         self.grid.flush(self.renderer)
         now = time.perf_counter()
-        self.floats.add(take_events(self.state), now)
+        events = take_events(self.state)
+        self.floats.add(events, now)
+        self.sfx.play(events)
         in_world = self.state.active_scene == "game"
         self.floats.draw(camera.render_view(self.state, self.renderer) if in_world else None, now)
         if self.state.quit_requested:

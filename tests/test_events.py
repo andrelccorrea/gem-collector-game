@@ -3,7 +3,9 @@ from game.combat import HIT_COLOR, enemy_attacks, player_attack
 from game.enemies import Enemy
 from game.events import (
     DULL_COLOR,
+    FIND,
     GAIN_COLOR,
+    HURT,
     LOSS_COLOR,
     MAX_PENDING,
     Event,
@@ -25,7 +27,7 @@ def test_picking_up_a_gem_floats_it_in_its_color():
     state.world_gems = {(5, 5): "quartz"}
     use_tool(press(Action.USE), state)
     color = GEM_CATALOG["quartz"].color[0]
-    assert take_events(state) == [Event(5, 5, "+Quartz", GAIN_COLOR, "gem", color)]
+    assert take_events(state) == [Event(5, 5, FIND, "+Quartz", GAIN_COLOR, "gem", color)]
     assert state.events == []
 
 
@@ -50,13 +52,13 @@ def test_combat_floats_damage_on_the_target():
     enemy_attacks(state, STEP)
     hit, hurt = take_events(state)
     assert (hit.x, hit.y, hit.text_color) == (6, 5, HIT_COLOR)
-    assert hurt == Event(5, 5, "-2", LOSS_COLOR, "heart")
+    assert hurt == Event(5, 5, HURT, "-2", LOSS_COLOR, "heart")
 
 
 def test_pending_events_are_capped():
     state = GameState()
     for i in range(MAX_PENDING + 5):
-        emit(state, str(i), GAIN_COLOR)
+        emit(state, FIND, str(i), GAIN_COLOR)
     events = take_events(state)
     assert len(events) == MAX_PENDING and events[-1].text == str(MAX_PENDING + 4)
 

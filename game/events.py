@@ -13,26 +13,30 @@ GAIN_COLOR = (255, 220, 90)
 LOSS_COLOR = (255, 90, 90)
 HEAL_COLOR = (110, 230, 110)
 DULL_COLOR = (170, 170, 170)
+
+# Event kinds: what happened, for frontends that react per kind (e.g. a sound each).
+FIND, MISS, LOOT, FULL, HIT, HURT, HEAL = "find", "miss", "loot", "full", "hit", "hurt", "heal"
 # Frontends that never take events (terminal, balance bot) keep only the latest ones.
 MAX_PENDING = 32
 
 
 class Event(NamedTuple):
-    """``text`` shown at world tile (x, y), next to sprite ``icon`` (None = no icon)
-    tinted ``color`` (None = the icon's own colors); ``text_color`` colors the text."""
+    """An event of ``kind`` at world tile (x, y): ``text`` next to sprite ``icon`` (None
+    = no icon) tinted ``color`` (None = the icon's own colors), in ``text_color``."""
 
     x: int
     y: int
+    kind: str
     text: str
     text_color: tuple
     icon: str | None = None
     color: tuple | None = None
 
 
-def emit(state, text: str, text_color: tuple, icon=None, color=None, at=None) -> None:
+def emit(state, kind: str, text: str, text_color: tuple, icon=None, color=None, at=None) -> None:
     """Record an event at tile ``at`` (default: the player's tile)."""
     x, y = at if at is not None else (state.player_x, state.player_y)
-    state.events.append(Event(x, y, text, text_color, icon, color))
+    state.events.append(Event(x, y, kind, text, text_color, icon, color))
     del state.events[:-MAX_PENDING]
 
 
@@ -40,7 +44,7 @@ def emit_gem(state, gem_name: str) -> None:
     """A gem (or geode) went into the bag."""
     gem = GEM_CATALOG.get(gem_name)
     color = gem.color[0] if gem is not None else None
-    emit(state, f"+{gem_name.replace('_', ' ').title()}", GAIN_COLOR, "gem", color)
+    emit(state, FIND, f"+{gem_name.replace('_', ' ').title()}", GAIN_COLOR, "gem", color)
 
 
 def take_events(state) -> list:
