@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 
 rm -rf build_src
 mkdir -p build_src/clingine
-cp main.py sprites.py sfx.py build_src/
+cp main.py sprites.py sfx.py particles.py build_src/
 rsync -a --exclude __pycache__ ../game build_src/
 # Only the renderer interface is needed; the curses window and keyboard stay out.
 cp ../clingine/renderer.py build_src/clingine/

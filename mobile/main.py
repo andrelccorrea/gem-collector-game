@@ -45,6 +45,7 @@ from kivy.uix.boxlayout import BoxLayout  # noqa: E402
 from kivy.uix.button import Button  # noqa: E402
 from kivy.uix.gridlayout import GridLayout  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
+from particles import burst, step  # noqa: E402
 from sfx import write_sounds  # noqa: E402
 from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
 from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
@@ -310,8 +311,8 @@ class FloatingTexts:
         return texture
 
     def draw(self, view, now: float) -> None:
+        """Add this frame's texts to the grid overlay (cleared by the caller)."""
         overlay = self.grid.overlay
-        overlay.clear()
         self.items = [item for item in self.items if now - item[1] < FLOAT_SECONDS]
         if view is None:
             return
@@ -403,6 +404,39 @@ def _android_vibrator():
         return None
 
 
+class ParticleLayer:
+    """Draws mobile/particles.py bursts as small square pixels over the world."""
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        self.particles: list = []
+        self._rng = random.Random()  # visual only: never the game's RNG
+        self._last = None
+
+    def add(self, events) -> None:
+        for event in events:
+            color = event.color or event.text_color
+            self.particles += burst(event.kind, event.x, event.y, color, self._rng)
+
+    def draw(self, view, now: float) -> None:
+        dt = 0.0 if self._last is None else min(now - self._last, 0.1)
+        self._last = now
+        self.particles = step(self.particles, dt)
+        if view is None:
+            return
+        grid, overlay = self.grid, self.grid.overlay
+        cw, ch = grid.cell_size()
+        for p in self.particles:
+            if not view.contains(p.wx, p.wy):
+                continue
+            size = max(2.0, round(p.size * cw))  # whole pixels keep the pixel-art look
+            x = grid.x + (p.wx - view.x + 0.5) * cw + p.ox * cw + grid.scroll.x
+            y = grid.top - (p.wy - view.y + 0.5) * ch + p.oy * cw + grid.scroll.y
+            overlay.add(Color(*_rgba(p.color)[:3], p.alpha))
+            corner = (round(x - size / 2), round(y - size / 2))
+            overlay.add(Rectangle(pos=corner, size=(size, size)))
+
+
 class SoundEffects:
     """Plays the synthesized effect of each event kind (mobile/sfx.py) and a short
     vibration for the important ones; both can be turned off together."""
@@ -451,6 +485,7 @@ class GemCollectorApp(App):
         self.grid = GridView(tap_handler=self._tap_cell, size_hint=(0.74, 1))
         root.add_widget(self.grid)
         self.floats = FloatingTexts(self.grid)
+        self.particles = ParticleLayer(self.grid)
         self.shake = ScreenShake(self.grid)
         self.slide = WorldSlide(self.grid)
         root.add_widget(self._controls())
@@ -531,11 +566,14 @@ class GemCollectorApp(App):
         now = time.perf_counter()
         events = take_events(self.state)
         self.floats.add(events, now)
+        self.particles.add(events)
         self.sfx.play(events)
         self.shake.update(events, now)
         in_world = self.state.active_scene == "game"
         view = camera.render_view(self.state, self.renderer) if in_world else None
         self.slide.update(view, now)
+        self.grid.overlay.clear()
+        self.particles.draw(view, now)  # under the texts
         self.floats.draw(view, now)
         if self.state.quit_requested:
             self.stop()
