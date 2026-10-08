@@ -13,12 +13,19 @@ _SPEC.loader.exec_module(sfx)
 
 EVENT_KINDS = {
     events.FIND, events.MISS, events.LOOT, events.FULL, events.HIT, events.HURT, events.HEAL,
-    events.ACHIEVE,
+    events.ACHIEVE, events.COIN, events.DENIED,
 }  # fmt: skip
+UI_SOUNDS = {"tap"}  # played by the frontend itself, not by an event
 
 
 def test_every_event_kind_has_a_sound():
-    assert EVENT_KINDS == set(sfx.SOUNDS)
+    assert EVENT_KINDS | UI_SOUNDS == set(sfx.SOUNDS)
+
+
+def test_interface_cues_are_very_short():
+    for name in ("tap", "coin", "denied"):
+        seconds = sum(segment[3] for segment in sfx.SOUNDS[name])
+        assert seconds <= (0.15 if name == "tap" else 0.3), name
 
 
 def test_sounds_are_short_valid_wavs_and_never_clip():

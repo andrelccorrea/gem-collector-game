@@ -17,6 +17,7 @@ DULL_COLOR = (170, 170, 170)
 # Event kinds: what happened, for frontends that react per kind (e.g. a sound each).
 FIND, MISS, LOOT, FULL, HIT, HURT, HEAL = "find", "miss", "loot", "full", "hit", "hurt", "heal"
 ACHIEVE = "achievement"
+COIN, DENIED = "coin", "denied"  # a purchase or sale went through / was refused
 # Frontends that never take events (terminal, balance bot) keep only the latest ones.
 MAX_PENDING = 32
 

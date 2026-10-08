@@ -54,7 +54,7 @@ from sprites import frame_at, sprite_rgba  # noqa: E402
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
 from game.constants import FPS, HUD_ROWS, MOVE_COOLDOWN  # noqa: E402
-from game.events import FIND, HURT, take_events  # noqa: E402
+from game.events import COIN, DENIED, FIND, HURT, take_events  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
 from game.state import GameState  # noqa: E402
@@ -291,6 +291,8 @@ class FloatingTexts:
 
     def add(self, events, now: float) -> None:
         for event in events:
+            if not event.text:  # interface cues (coin, denied) have nothing to show
+                continue
             slot = sum(
                 1
                 for other, born, _ in self.items
@@ -370,7 +372,7 @@ class WorldSlide:
 
 SHAKE_SECONDS = 0.2  # the grid shakes this long when the player is hurt
 SHAKE_CELLS = 0.3  # starting amplitude, in cells; it eases out to zero
-VIBRATE_MS = {HURT: 40, FIND: 20}  # Android only
+VIBRATE_MS = {HURT: 40, FIND: 20, COIN: 12, DENIED: 25}  # Android only
 
 
 class ScreenShake:
@@ -450,6 +452,13 @@ class SoundEffects:
             if sound is not None:  # no audio backend: stay silent
                 self.sounds[kind] = sound
 
+    def tap(self) -> None:
+        """The short click of a touch button."""
+        sound = self.sounds.get("tap")
+        if self.enabled and sound is not None:
+            sound.stop()
+            sound.play()
+
     def play(self, events) -> None:
         if not self.enabled:
             return
@@ -506,6 +515,7 @@ class GemCollectorApp(App):
                               ("Tab", Action.NEXT_TAB), ("Item", Action.USE_ITEM)]:  # fmt: skip
             button = Button(text=label)
             button.bind(on_press=lambda _b, a=action: self.touch.press(a))
+            button.bind(on_press=lambda _b: self.sfx.tap())
             actions.add_widget(button)
         self.sound_button = Button(text=self._sound_label())
         self.sound_button.bind(on_press=lambda _b: self._toggle_sound())
@@ -522,6 +532,7 @@ class GemCollectorApp(App):
             button = Button(text=label, font_size=dp(22), always_release=True)
             # A d-pad tap moves one step (and navigates menus); holding keeps moving.
             button.bind(on_press=lambda _b, a=action: self._dpad_down(a))
+            button.bind(on_press=lambda _b: self.sfx.tap())
             button.bind(on_release=lambda _b, a=action: self.touch.hold(a, False))
             pad.add_widget(button)
         panel.add_widget(actions)

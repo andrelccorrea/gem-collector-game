@@ -83,3 +83,14 @@ def test_the_selected_item_is_described():
     render_shop(renderer, state)
     row = "".join(renderer.get_cell(x, 20)[0] for x in range(79))
     assert "Walk faster" in row
+
+
+def test_purchases_chime_and_refusals_are_marked():
+    state = make_state(active_scene="shop", shop_tab=0, player_gold=1000)
+    items = _build_shop_items(state)
+    state.shop_cursor = next(i for i, it in enumerate(items) if it["key"] == "bandage")
+    update_shop(CONFIRM, state)
+    assert state.events[-1].kind == "coin"
+    state.player_gold = 0
+    update_shop(CONFIRM, state)
+    assert state.events[-1].kind == "denied" and state.hud_message == "Not enough gold!"
