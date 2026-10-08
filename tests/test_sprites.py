@@ -105,3 +105,20 @@ def test_walk_cycles_use_real_frames_and_the_player_mirrors_its_poses():
     assert steps == [(2, False), (3, False), (2, True), (3, True)]
     assert sprites.walk_frame("grass", 1.0) is None
     assert set(sprites.FACING) <= set(sprites.SPRITES)
+
+
+def test_shore_masks_mark_the_sides_that_touch_land():
+    water, land = {"type": "stream"}, {"type": "grass"}
+    meta = {(1, 1): water, (1, 0): land, (2, 1): water, (1, 2): land, (0, 1): water}
+    assert camera.shore_mask(meta, 1, 1) == 1 | 4
+    assert camera.shore_mask({(5, 5): water}, 5, 5) == 0  # map edge: no shore
+
+
+def test_shore_sprites_add_foam_on_their_land_sides():
+    plain = sprites.sprite_rows("stream")
+    north = sprites.sprite_rows("stream#1")
+    assert north[0] == "AAAAAAAA" and north[2:] == plain[2:]
+    west = sprites.sprite_rows("stream#8", frame=1)
+    assert all(row[0] == "A" for row in west)
+    assert sprites.frame_count("stream#8") == sprites.frame_count("stream")
+    assert sprites.frame_at("lake#15", 0.6) == sprites.frame_at("lake", 0.6)

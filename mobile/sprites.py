@@ -766,26 +766,58 @@ def walk_frame(sprite_id: str, seconds: float, phase: int = 0):
     return cycle[(int(seconds * WALK_FPS) + phase) % len(cycle)]
 
 
+def _base(sprite_id: str) -> str:
+    """The sprite an id is drawn from: "stream#5" is a stream with shore on N and S."""
+    return sprite_id.split("#", 1)[0]
+
+
+def _shore(rows: list[str], mask: int) -> list[str]:
+    """Foam along the sides that touch land (bits N=1, E=2, S=4, W=8): a solid line
+    at the edge and a dotted one inside it."""
+    grid = [list(row) for row in rows]
+    h, w = len(grid), len(grid[0])
+    for i in range(max(h, w)):
+        dotted = "A" if i % 2 == 0 else None
+        if mask & 1 and i < w:
+            grid[0][i] = "A"
+            grid[1][i] = dotted or grid[1][i]
+        if mask & 4 and i < w:
+            grid[h - 1][i] = "A"
+            grid[h - 2][i] = dotted or grid[h - 2][i]
+        if mask & 8 and i < h:
+            grid[i][0] = "A"
+            grid[i][1] = dotted or grid[i][1]
+        if mask & 2 and i < h:
+            grid[i][w - 1] = "A"
+            grid[i][w - 2] = dotted or grid[i][w - 2]
+    return ["".join(row) for row in grid]
+
+
 def frame_count(sprite_id: str) -> int:
-    return 1 + len(FRAMES.get(sprite_id, ()))
+    return 1 + len(FRAMES.get(_base(sprite_id), ()))
 
 
 def frame_at(sprite_id: str, seconds: float, phase: int = 0) -> int:
     """Which frame of the sprite shows at time ``seconds`` (``phase`` shifts a cell's cycle)."""
-    frames = IDLE.get(sprite_id) or range(frame_count(sprite_id))
+    base = _base(sprite_id)
+    frames = IDLE.get(base) or range(frame_count(base))
     if len(frames) == 1:
         return 0
-    return frames[(int(seconds * FPS[sprite_id]) + phase) % len(frames)]
+    return frames[(int(seconds * FPS[base]) + phase) % len(frames)]
 
 
 def sprite_rows(sprite_id: str, frame: int = 0) -> list[str] | None:
     """The sprite's 16 rows (8-row textures repeated), or None if there is no sprite."""
-    rows = SPRITES.get(sprite_id)
+    base = _base(sprite_id)
+    rows = SPRITES.get(base)
     if rows is None:
         return None
     if frame:
-        rows = FRAMES[sprite_id][frame - 1]
-    return rows * (HEIGHT // len(rows))
+        rows = FRAMES[base][frame - 1]
+    rows = rows * (HEIGHT // len(rows))
+    if base != sprite_id:
+        rows = _shore(rows, int(sprite_id.split("#", 1)[1]))
+    return rows
 
 
 def sprite_rgba(sprite_id: str, frame: int = 0) -> bytes | None:

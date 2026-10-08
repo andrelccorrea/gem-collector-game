@@ -1,7 +1,17 @@
 from typing import NamedTuple
 
 from game import daylight
-from game.constants import HUD_ROWS, MAP_HEIGHT, MAP_WIDTH, VIEW_HEIGHT, VIEW_WIDTH
+from game.constants import (
+    HUD_ROWS,
+    MAP_HEIGHT,
+    MAP_WIDTH,
+    TYPE_DEEP,
+    TYPE_LAKE,
+    TYPE_SHALLOW,
+    TYPE_STREAM,
+    VIEW_HEIGHT,
+    VIEW_WIDTH,
+)
 from game.daylight import mix, shade, tint_at
 from game.decor import decoration
 from game.objects.registry import GEM_CATALOG
@@ -72,7 +82,7 @@ def render_viewport(renderer, state, view: View) -> None:
                 light = tint_at(state, now, wx, wy)
                 char, color_pair = tile_appearance(tile, deco)
                 color_pair = shade(color_pair, light)
-            _set_ground_sprite(renderer, sx, sy, tile, deco, light)
+            _set_ground_sprite(renderer, sx, sy, tile, deco, light, meta, wx, wy)
             # Only touch cells that changed, so the frontend redraws as little as possible.
             if renderer.get_cell(sx, sy) != (char, color_pair):
                 renderer.set_cell(sx, sy, char, color_pair)
@@ -81,11 +91,30 @@ def render_viewport(renderer, state, view: View) -> None:
     _render_dropped_bag(renderer, state, view)
 
 
-def _set_ground_sprite(renderer, sx: int, sy: int, tile: dict | None, deco, light) -> None:
+_WATER = {TYPE_STREAM, TYPE_LAKE, TYPE_SHALLOW, TYPE_DEEP}
+_SIDES = ((0, -1, 1), (1, 0, 2), (0, 1, 4), (-1, 0, 8))  # (dx, dy, bit): N, E, S, W
+
+
+def shore_mask(meta: dict, x: int, y: int) -> int:
+    """Which sides of a water tile touch land, as bits N=1, E=2, S=4, W=8 (4-bit
+    autotiling); off the map counts as water, so map edges get no shore."""
+    mask = 0
+    for dx, dy, bit in _SIDES:
+        neighbour = meta.get((x + dx, y + dy))
+        if neighbour is not None and neighbour["type"] not in _WATER:
+            mask |= bit
+    return mask
+
+
+def _set_ground_sprite(renderer, sx, sy, tile, deco, light, meta, wx, wy) -> None:
     visibility = "unseen" if tile is None else tile.get("visibility", "visible")
     if visibility == "unseen":
         return
     sprite = deco or ("depleted" if tile.get("depleted") else tile["type"])
+    if sprite in _WATER:
+        mask = shore_mask(meta, wx, wy)
+        if mask:
+            sprite = f"{sprite}#{mask}"
     fog = None if visibility == "visible" else EXPLORED_TINT
     renderer.set_sprite(sx, sy, GROUND, sprite, mix(fog, light))
 
