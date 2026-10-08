@@ -29,7 +29,7 @@ PATCH_W, PATCH_H = 7, 4  # cells per patch block (cells are about twice as tall 
 PATCH_SHARE = 0.35  # share of blocks that are patches
 
 
-def _unit(*values: int) -> float:
+def stable_random(*values: int) -> float:
     """A stable pseudo-random number in [0, 1) for these integers."""
     h = 0x9E3779B1
     for v in values:
@@ -59,9 +59,9 @@ def _decide(seed: int, x: int, y: int, tile_type: str) -> str | None:
     options = DECOR.get(tile_type)
     if not options:
         return None
-    roll = _unit(seed, x, y)
+    roll = stable_random(seed, x, y)
     for i, (name, in_patch, elsewhere) in enumerate(options):
-        patch = _unit(seed, x // PATCH_W, y // PATCH_H, i + 1) < PATCH_SHARE
+        patch = stable_random(seed, x // PATCH_W, y // PATCH_H, i + 1) < PATCH_SHARE
         chance = in_patch if patch else elsewhere
         if roll < chance:
             return name

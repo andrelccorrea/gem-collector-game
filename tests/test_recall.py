@@ -1,3 +1,4 @@
+from game import deals
 from game.constants import RECALL_CHARM_COST
 from game.hud import render_hud
 from game.input import Action, InputState, map_keys
@@ -22,7 +23,8 @@ def test_charm_is_bought_at_the_shop():
     state.shop_cursor = next(i for i, it in enumerate(items) if it["action"] == "buy_charm")
     update_shop(CONFIRM, state)
     assert state.recall_charms == 1
-    assert state.player_gold == 100 - RECALL_CHARM_COST
+    # The charm can be the deal of the day: what is charged is the shown price.
+    assert state.player_gold == 100 - deals.price(state, "recall_charm", RECALL_CHARM_COST)
 
 
 def test_recall_teleports_to_town_and_uses_a_charm():

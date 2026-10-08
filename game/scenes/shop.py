@@ -1,6 +1,6 @@
 """General Store: buy and upgrade tools, sell gems and loot."""
 
-from game import market
+from game import deals, market
 from game.buildings import check_win
 from game.constants import (
     COLOR_MENU_DIMMED,
@@ -54,7 +54,7 @@ def _build_shop_items(state) -> list:
     if tab == 0:  # Buy Tools
         for tool_name, tool_def in TOOL_CATALOG.items():
             owned = tool_name in state.inventory.get("tools", {})
-            cost = tool_def.cost
+            cost = deals.price(state, tool_name, tool_def.cost)
             if owned:
                 label = f"  {tool_name.title():16s}  (Owned)"
                 enabled = False
@@ -62,7 +62,7 @@ def _build_shop_items(state) -> list:
                 label = f"  {tool_name.title():16s}  FREE"
                 enabled = True
             else:
-                label = f"  {tool_name.title():16s}  ${cost}"
+                label = f"  {tool_name.title():16s}  {_price_tag(cost, tool_def.cost)}"
                 enabled = state.player_gold >= cost
             items.append(
                 {
@@ -74,28 +74,32 @@ def _build_shop_items(state) -> list:
                     "value": 0,
                 }
             )
+        charm_cost = deals.price(state, "recall_charm", RECALL_CHARM_COST)
         charm_label = (
-            f"  {'Recall Charm':16s}  ${RECALL_CHARM_COST}  (have {state.recall_charms}, R)"
+            f"  {'Recall Charm':16s}  {_price_tag(charm_cost, RECALL_CHARM_COST)}"
+            f"  (have {state.recall_charms}, R)"
         )
         items.append(
             {
                 "label": charm_label,
-                "enabled": state.player_gold >= RECALL_CHARM_COST,
+                "enabled": state.player_gold >= charm_cost,
                 "action": "buy_charm",
                 "key": "recall_charm",
-                "cost": RECALL_CHARM_COST,
+                "cost": charm_cost,
                 "value": 0,
             }
         )
         for key, supply in SUPPLIES.items():
             have = state.supplies.get(key, 0)
+            cost = deals.price(state, key, supply["cost"])
             items.append(
                 {
-                    "label": f"  {supply['name']:16s}  ${supply['cost']}  (have {have})",
-                    "enabled": state.player_gold >= supply["cost"],
+                    "label": f"  {supply['name']:16s}  {_price_tag(cost, supply['cost'])}"
+                    f"  (have {have})",
+                    "enabled": state.player_gold >= cost,
                     "action": "buy_supply",
                     "key": key,
-                    "cost": supply["cost"],
+                    "cost": cost,
                     "value": 0,
                 }
             )
@@ -301,6 +305,11 @@ def _describe(item: dict) -> str:
     return ""
 
 
+def _price_tag(cost: int, base: int) -> str:
+    """ "$90" or, on the deal of the day, "$67 DEAL (was $90)"."""
+    return f"${cost}" if cost == base else f"${cost} DEAL (was ${base})"
+
+
 def _gear_upgrade_item(state, gear: str) -> dict:
     """Shop row for the next level of a piece of gear (disabled when unavailable)."""
     attr, values, costs, unlock_at, unit = _GEAR[gear]
@@ -313,9 +322,9 @@ def _gear_upgrade_item(state, gear: str) -> dict:
     elif state.lifetime_earnings < unlock_at[level + 1]:
         item["label"] = f"  {name:16s}  better {gear} unlocks at ${unlock_at[level + 1]} earned"
     else:
-        cost = costs[level + 1]
+        cost = deals.price(state, gear, costs[level + 1])
         upgrade = f"{capacities[level]} -> {capacities[level + 1]} {unit}"
-        item["label"] = f"  {name:16s}  {upgrade}  ${cost}"
+        item["label"] = f"  {name:16s}  {upgrade}  {_price_tag(cost, costs[level + 1])}"
         item["cost"] = cost
         item["enabled"] = state.player_gold >= cost
     return item
@@ -338,6 +347,7 @@ def render_shop(renderer, state) -> None:
 
     gold_str = f"Your Gold: ${state.player_gold}"
     write_str(renderer, 2, width - len(gold_str) - 1, gold_str, COLOR_MENU_NORMAL)
+    write_str(renderer, 3, 2, deals.banner(state)[: width - 4], COLOR_MENU_TITLE)
 
     write_str(renderer, 4, 2, "Item", COLOR_MENU_DIMMED)
 
@@ -405,10 +415,10 @@ def update_shop(inp: InputState, state) -> None:
     action = item["action"]
 
     if action == "buy_charm":
-        if state.player_gold < RECALL_CHARM_COST:
+        if state.player_gold < item["cost"]:
             _refuse(state, "Not enough gold!")
         else:
-            state.player_gold -= RECALL_CHARM_COST
+            state.player_gold -= item["cost"]
             state.recall_charms += 1
             set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
             _chime(state)
