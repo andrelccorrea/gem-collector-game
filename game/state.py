@@ -63,9 +63,7 @@ class GameState:
     # Seconds of in-game time; advances only while the game scene is simulated.
     game_time: float = 0.0
     last_combat_time: float = float("-inf")
-
-    # Difficulty
-    difficulty_level: int = 0
+    last_attack_time: float = float("-inf")
 
     # Depleted tiles: set of (x, y) tuples
     depleted_tiles: set = field(default_factory=set)
@@ -75,7 +73,6 @@ class GameState:
 
     # Fog of war: set of (x, y) coords currently marked "visible"
     visible_tiles: set = field(default_factory=set)
-    respawn_timers: dict = field(default_factory=dict)  # (x,y) -> ticks_remaining
 
     # Lapidary level
     lapidary_level: int = 1

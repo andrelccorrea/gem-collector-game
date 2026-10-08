@@ -1,3 +1,4 @@
+from game.constants import PLAYER_ATTACK_COOLDOWN
 from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
 from game.player import set_hud_message
@@ -6,6 +7,8 @@ from game.player import set_hud_message
 def player_attack(inp: InputState, state) -> None:
     """Handle F key: attack the closest adjacent enemy."""
     if Action.ATTACK not in inp.pressed:
+        return
+    if state.game_time - state.last_attack_time < PLAYER_ATTACK_COOLDOWN:
         return
 
     px, py = state.player_x, state.player_y
@@ -20,7 +23,7 @@ def player_attack(inp: InputState, state) -> None:
     # Target the closest (Manhattan distance)
     target = min(adjacent, key=lambda e: abs(e.x - px) + abs(e.y - py))
 
-    # Calculate damage
+    state.last_attack_time = state.game_time
     damage = _player_damage(state)
     target.hp -= damage
     target.flash_timer = 0.2  # brief flash feedback

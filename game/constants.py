@@ -18,7 +18,6 @@ FOG_RADIUS: int = 8
 PLAYER_START_HP = 20
 PLAYER_START_GOLD = 50
 PLAYER_CHAR = "@"
-PLAYER_SPEED_COOLDOWN = 0.15  # seconds between tile moves
 HP_REGEN_RATE = 1  # HP per 10 seconds in town
 HP_REGEN_INTERVAL = 10.0  # seconds
 
@@ -27,6 +26,8 @@ WIN_LIFETIME_EARNINGS = 10000
 
 # Movement step cooldown
 MOVE_COOLDOWN = 0.15
+# Minimum game time between player attacks (holding F auto-repeats the key).
+PLAYER_ATTACK_COOLDOWN = 0.35
 
 # Town center (in map coordinates)
 TOWN_CENTER_X = 100
@@ -44,14 +45,12 @@ SAVE_Y = TOWN_CENTER_Y + 2
 BIOME_MEADOW_MAX_X = 49
 BIOME_CAVE_MIN_X = 120
 BIOME_HILLSIDE_MAX_Y = 39  # upper center
-BIOME_RIVER_MIN_Y = 40  # lower center
 
 # Enemy config
 MAX_ENEMIES_BASE = 8
 ENEMY_SPAWN_INTERVAL = 5.0  # seconds between spawn attempts
 ENEMY_PATH_RECALC_INTERVAL = 0.5  # seconds
 ENEMY_MAX_DISTANCE = 60  # despawn if farther than this
-ENEMY_ATTACK_COOLDOWN = 1.0  # seconds between enemy attacks
 
 # Color palettes - all as ((fg_r,fg_g,fg_b),(bg_r,bg_g,bg_b))
 # Biomes
