@@ -19,6 +19,7 @@ class Action(Enum):
     NEXT_TAB = auto()
     CONFIRM = auto()
     CANCEL = auto()
+    RECALL = auto()
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,7 @@ DEFAULT_KEYMAP = {
     "tab": Action.NEXT_TAB,
     "enter": Action.CONFIRM,
     "esc": Action.CANCEL,
+    "r": Action.RECALL,
 }
 
 

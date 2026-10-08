@@ -7,6 +7,7 @@ from game.constants import (
     COLOR_MENU_NORMAL,
     COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
+    RECALL_CHARM_COST,
 )
 from game.gems import polished_prices
 from game.input import Action, InputState
@@ -63,6 +64,19 @@ def _build_shop_items(state) -> list:
                     "value": 0,
                 }
             )
+        charm_label = (
+            f"  {'Recall Charm':16s}  ${RECALL_CHARM_COST}  (have {state.recall_charms}, R)"
+        )
+        items.append(
+            {
+                "label": charm_label,
+                "enabled": state.player_gold >= RECALL_CHARM_COST,
+                "action": "buy_charm",
+                "key": "recall_charm",
+                "cost": RECALL_CHARM_COST,
+                "value": 0,
+            }
+        )
 
     elif tab == 1:  # Upgrade Tools
         owned_tools = state.inventory.get("tools", {})
@@ -268,7 +282,15 @@ def update_shop(inp: InputState, state) -> None:
     item = items[state.shop_cursor]
     action = item["action"]
 
-    if action == "buy_tool":
+    if action == "buy_charm":
+        if state.player_gold < RECALL_CHARM_COST:
+            set_hud_message(state, "Not enough gold!", 1.5)
+        else:
+            state.player_gold -= RECALL_CHARM_COST
+            state.recall_charms += 1
+            set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
+
+    elif action == "buy_tool":
         tool_name = item["key"]
         cost = item["cost"]
         if tool_name in state.inventory.get("tools", {}):

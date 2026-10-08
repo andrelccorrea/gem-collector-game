@@ -82,6 +82,8 @@ class GameState:
     # Everything carried when the player last died: {"x", "y", "gems", "loot", "polished"}
     dropped_bag: Any = None
 
+    recall_charms: int = 0
+
     # Lantern: fuel left (seconds of light at drain 1) and upgrade level
     lantern_fuel: float = 240.0
     lantern_level: int = 0

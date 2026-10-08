@@ -26,6 +26,9 @@ WIN_LIFETIME_EARNINGS = 10000
 
 # Movement step cooldown
 MOVE_COOLDOWN = 0.15
+# Recall charm: one-use teleport back to town, sold at the shop.
+RECALL_CHARM_COST = 35
+
 # Minimum game time between player attacks (holding F auto-repeats the key).
 PLAYER_ATTACK_COOLDOWN = 0.35
 

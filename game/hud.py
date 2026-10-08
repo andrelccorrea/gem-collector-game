@@ -40,7 +40,7 @@ def render_hud(renderer, state) -> None:
     )
     carried, capacity = bag_count(state), bag_capacity(state)
     row2 = (
-        f" [Space]Use [F]Attack [E]Tool [Esc]Menu"
+        f" [Space]Use [F]Attack [E]Tool [R]Recall [Esc]Menu"
         f"  |  Bag:{carried}/{capacity}  Earned:${state.lifetime_earnings}"
     )
 

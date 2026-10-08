@@ -39,7 +39,9 @@ def init_player(state) -> None:
 
 
 def update_player(inp: InputState, state, dt: float) -> None:
-    """Handle movement, HP regen, HUD message timer."""
+    """Handle movement, recall, HP regen, HUD message timer."""
+    if Action.RECALL in inp.pressed:
+        _use_recall_charm(state)
     _handle_movement(inp, state, dt)
     _handle_hp_regen(state, dt)
     _handle_hud_message(state, dt)
@@ -140,3 +142,15 @@ def set_hud_message(state, msg: str, duration: float = 2.0) -> None:
     """Set a temporary HUD message."""
     state.hud_message = msg
     state.hud_message_timer = duration
+
+
+def _use_recall_charm(state) -> None:
+    if in_town(state.player_x, state.player_y):
+        set_hud_message(state, "You are already in town.", 1.5)
+    elif state.recall_charms <= 0:
+        set_hud_message(state, "No Recall Charm. Buy one at the shop.", 1.5)
+    elif state.world_tiles is not None and state.world_tiles.start_pos is not None:
+        state.recall_charms -= 1
+        state.player_x, state.player_y = state.world_tiles.start_pos
+        state.queued_move = None
+        set_hud_message(state, f"Recalled to town ({state.recall_charms} charms left).", 2.0)

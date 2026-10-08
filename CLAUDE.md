@@ -31,6 +31,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | Space | Use tool / interact with building |
 | E | Cycle equipped tool |
 | F | Attack nearest enemy |
+| R | Use a Recall Charm (teleport to town) |
 | Esc | Open menu / close sub-screen |
 | Enter | Confirm selection |
 
