@@ -21,6 +21,7 @@ from game.objects.registry import (
     BAG_COSTS,
     BAG_UNLOCK_AT,
     BOOTS,
+    DOWSING,
     GEM_CATALOG,
     LANTERN,
     SUPPLIES,
@@ -248,6 +249,13 @@ _GEAR = {
         ARMOR["unlock_at"],
         "dmg blocked per hit",
     ),
+    "dowsing rod": (
+        "dowsing_level",
+        lambda s: DOWSING["radii"],
+        DOWSING["costs"],
+        DOWSING["unlock_at"],
+        "tiles of hot/cold hints",
+    ),
     "boots": (
         "boots_level",
         lambda s: [round(1 / (MOVE_COOLDOWN * m), 1) for m in BOOTS["step_multipliers"]],
@@ -263,6 +271,7 @@ _GEAR_DESC = {
     "lantern": "Light lasts longer away from town",
     "armor": "Enemy hits hurt less (a hit always does at least 1)",
     "boots": "Walk faster",
+    "dowsing rod": "Hot/cold hints toward the nearest gem on the ground, with a ping",
 }
 
 

@@ -13,7 +13,7 @@ _SPEC.loader.exec_module(sfx)
 
 EVENT_KINDS = {
     events.FIND, events.MISS, events.LOOT, events.FULL, events.HIT, events.HURT, events.HEAL,
-    events.ACHIEVE, events.COIN, events.DENIED,
+    events.ACHIEVE, events.COIN, events.DENIED, "detect",
 }  # fmt: skip
 UI_SOUNDS = {"tap"}  # played by the frontend itself, not by an event
 

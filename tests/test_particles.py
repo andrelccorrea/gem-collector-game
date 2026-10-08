@@ -15,7 +15,7 @@ def test_each_event_kind_with_a_burst_has_a_preset():
     kinds = {events.FIND, events.MISS, events.HIT, events.HURT, events.LOOT, events.HEAL}
     kinds.add(events.ACHIEVE)
     assert kinds == set(particles.PRESETS)
-    for quiet in (events.FULL, events.COIN, events.DENIED):  # shop and bag cues: no burst
+    for quiet in (events.FULL, events.COIN, events.DENIED, "detect"):  # shop and bag cues: no burst
         assert particles.burst(quiet, 0, 0, (1, 2, 3), random.Random(1)) == []
 
 

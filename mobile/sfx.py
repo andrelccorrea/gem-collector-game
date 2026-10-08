@@ -14,7 +14,7 @@ import wave
 
 RATE = 22050
 VOLUME = 0.45
-VERSION = 2  # bump when a sound changes, so cached WAV files are rendered again
+VERSION = 3  # bump when a sound changes, so cached WAV files are rendered again
 
 # Each sound is a list of segments: (wave, start Hz, end Hz, seconds, loudness).
 # The pitch slides from start to end; every segment fades out (a "pluck").
@@ -38,6 +38,7 @@ SOUNDS = {
     "tap": [("sine", 1400, 1200, 0.035, 0.25)],
     "coin": [("square", 1320, 1320, 0.04, 0.25), ("square", 1760, 1760, 0.09, 0.25)],
     "denied": [("square", 180, 150, 0.09, 0.3)],
+    "detect": [("sine", 1050, 1050, 0.05, 0.3), ("sine", 1400, 1400, 0.08, 0.3)],
     "achievement": [  # little fanfare: C E G C'
         ("square", 523, 523, 0.07, 0.35),
         ("square", 659, 659, 0.07, 0.35),

@@ -301,6 +301,12 @@ step_multipliers = [1.0, 0.85, 0.7]
 costs = [0, 130, 340]
 unlock_at = [0, 0, 2000]
 
+[dowsing]
+# Reach in tiles of the dowsing rod's hot/cold hints toward ground gems, per level
+radii = [0, 6, 10]
+costs = [0, 180, 420]
+unlock_at = [0, 0, 2500]
+
 # Supplies: consumables used with the Item action (the most needed one is used)
 [supplies.bandage]
 name = "Bandage"

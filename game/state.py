@@ -100,6 +100,8 @@ class GameState:
     # Armor and boots levels (indexes into the catalog's armor / boots tables)
     armor_level: int = 0
     boots_level: int = 0
+    dowsing_level: int = 0
+    dowse_tier: Any = None  # last hot/cold tier of the rod (game/dowsing.py); not saved
     # Run-long bonuses from perks bought between runs (game/profile.py)
     bag_bonus: int = 0
     lantern_bonus: float = 0.0

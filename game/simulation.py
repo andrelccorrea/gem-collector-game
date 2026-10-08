@@ -11,6 +11,7 @@ from game import (
     camera,
     combat,
     critters,
+    dowsing,
     enemies,
     fog,
     lantern,
@@ -62,6 +63,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     tools.update_tools(inp, state)
     tools.use_tool(inp, state)
     supplies.use_supply(inp, state)
+    dowsing.update_dowsing(state)
 
     lantern.update_lantern(state, dt)
     if state.world_tiles is not None:
