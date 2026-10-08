@@ -9,7 +9,7 @@ LOW_FUEL_SHARE = 0.25
 
 
 def lantern_capacity(state) -> float:
-    return float(LANTERN["capacities"][state.lantern_level])
+    return LANTERN["capacities"][state.lantern_level] * (1.0 + state.lantern_bonus)
 
 
 def fuel_share(state) -> float:

@@ -53,7 +53,7 @@ def roll_gem_drop(biome: str, tier: int, rng: random.Random) -> str | None:
 
 
 def bag_capacity(state) -> int:
-    return BAG_CAPACITIES[state.bag_level]
+    return BAG_CAPACITIES[state.bag_level] + state.bag_bonus
 
 
 def bag_count(state) -> int:

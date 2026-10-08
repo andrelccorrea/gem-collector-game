@@ -279,3 +279,35 @@ unlock_at = [0, 0, 2500]
 drain = { meadow = 0.5, hillside = 1.0, river = 1.5, cave = 2.5 }
 # Light radius in tiles goes from min_radius (empty) to the full fog radius
 min_radius = 2
+
+# Permanent perks bought with reputation between runs (see game/profile.py).
+# Each level adds `per_level`; `costs` lists the reputation price of each level.
+[perks.start_gold]
+name = "Savings"
+desc = "Start runs with more gold"
+per_level = 50
+costs = [3, 6, 10]
+
+[perks.max_hp]
+name = "Sturdy"
+desc = "More maximum HP"
+per_level = 4
+costs = [3, 6, 10]
+
+[perks.bag_bonus]
+name = "Deep Pockets"
+desc = "Carry more items"
+per_level = 5
+costs = [4, 8, 12]
+
+[perks.lantern_bonus]
+name = "Better Wick"
+desc = "Lantern lasts longer (+20% per level)"
+per_level = 0.2
+costs = [3, 6, 10]
+
+[reputation]
+# Reputation earned when a run ends: lifetime earnings // divisor
+win_divisor = 500
+hardcore_death_divisor = 1000
+daily_divisor = 1000

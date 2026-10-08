@@ -22,6 +22,7 @@ class GameState:
     daily: str | None = None  # ISO date of a daily run (time-limited, never saved)
     quit_requested: bool = False
     menu_notice: str = ""  # one-off message shown on the main menu
+    perks_cursor: int = 0
 
     # Map
     seed: int = 0
@@ -93,6 +94,9 @@ class GameState:
 
     # Bag upgrade level (index into the catalog's bag capacities)
     bag_level: int = 0
+    # Run-long bonuses from perks bought between runs (game/profile.py)
+    bag_bonus: int = 0
+    lantern_bonus: float = 0.0
 
     # Lapidary level
     lapidary_level: int = 1

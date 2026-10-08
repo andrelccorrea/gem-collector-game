@@ -74,6 +74,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `lantern.py` | Fuel drains per biome, refills in town; `light_radius` sets the fog radius |
 | `death.py` | Normal-mode revive in town for a fee with the bag dropped where the player fell (`recover_bag`); hardcore runs end on death |
 | `daily.py` | Daily run: seed from the date, 15-minute game-time limit, `daily_end` scene |
+| `profile.py` | Progress between runs (`profile.json`): reputation from wins, daily runs and hardcore deaths; perks bought in the Perks menu (`apply_perks` on new normal/hardcore runs, never daily) |
 | `bot.py` | Headless greedy bot that plays through `step_game` for balance runs (`scripts/balance_sim.py`, results in `docs/BALANCE.md`) |
 | `geography.py` | `in_town(x, y, margin)`, `biome_at(x, y)`, `region_name(x, y)` — the single definition of the town rectangle and biome regions |
 | `enemies.py` | `Enemy` class; `find_path_bfs` (parent-pointer BFS, depth cap, falls back to the reachable tile closest to the target, optional `blocked`); `spawn_enemies` (ring around the player: off-screen, out of town, 10 tiles inside the despawn distance), `update_enemies`, `render_enemies`; difficulty scaling |
@@ -82,7 +83,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy/upgrade tools and gear, sell via `market`), `lapidary.py` (LapidaryScene: cutting minigame), `save_point.py` (daily runs can't save) |
 | `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
-| `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Leaderboard), death screen, win screen, daily end screen, leaderboard display |
+| `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Leaderboard), death, win, daily-end, perks and leaderboard screens |
 
 ### Map Layout (200×80)
 
