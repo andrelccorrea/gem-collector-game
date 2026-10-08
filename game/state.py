@@ -18,6 +18,7 @@ class GameState:
     active_scene: str = "menu"
     menu_cursor: int = 0
     has_won: bool = False
+    run_id: str = ""  # identifies a run across saves (rewards are paid once per run)
     hardcore: bool = False  # death ends the run (and erases its save)
     daily: str | None = None  # ISO date of a daily run (time-limited, never saved)
     quit_requested: bool = False

@@ -169,7 +169,8 @@ def _build_shop_items(state) -> list:
 def _sell_row(state, key: str, name: str, count: int, action: str) -> dict:
     """Shop row for selling one kind; shows the price spread and any market discount."""
     if key.endswith("_polished"):
-        multiplier = market.price_multiplier(state.market.get(key, 0.0))
+        saturation = state.market.get(key, 0.0)
+        multiplier = market.price_multiplier(saturation) * market.museum_bonus(state)
         prices = polished_prices(state, key)
         low, high = int(prices[-1] * multiplier), int(prices[0] * multiplier)
         price_text = f"${low}-${high}" if low != high else f"${high}"
@@ -221,8 +222,13 @@ _GEAR = {
 
 def _gear_upgrade_item(state, gear: str) -> dict:
     """Shop row for the next level of a piece of gear (disabled when unavailable)."""
-    attr, capacities, costs, unlock_at, unit = _GEAR[gear]
+    attr, base_capacities, costs, unlock_at, unit = _GEAR[gear]
     level = getattr(state, attr)
+    # Show capacities as the player will get them, perk bonuses included.
+    if gear == "bag":
+        capacities = [c + state.bag_bonus for c in base_capacities]
+    else:
+        capacities = [round(c * (1 + state.lantern_bonus)) for c in base_capacities]
     name = gear.title()
     item = {"action": "upgrade_gear", "key": gear, "cost": 0, "value": 0, "enabled": False}
     if level + 1 >= len(capacities):

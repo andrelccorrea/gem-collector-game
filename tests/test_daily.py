@@ -85,3 +85,12 @@ def test_daily_run_is_in_the_menu_and_its_end_screen_is_registered(monkeypatch):
     _select_menu_item(state, save_exists=False)
     assert state.daily == "2026-10-08" and state.active_scene == "game"
     assert "daily_end" in build_scenes()
+
+
+def test_daily_runs_never_trigger_the_main_win():
+    from game.buildings import check_win
+
+    state = start_daily(DAY)
+    state.lifetime_earnings = 20_000
+    check_win(state)
+    assert state.active_scene == "game" and not state.has_won

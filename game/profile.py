@@ -18,40 +18,69 @@ def _path() -> str:
     return os.path.join(persistence.data_dir(), PROFILE_NAME)
 
 
+# How many rewarded run ids to remember (enough to cover any save a player could reload).
+REWARDED_RUNS_KEPT = 200
+
+
 def new_profile() -> dict:
-    return {"reputation": 0, "perks": {key: 0 for key in PERKS}, "runs_finished": 0}
+    return {
+        "reputation": 0,
+        "perks": {key: 0 for key in PERKS},
+        "runs_finished": 0,
+        "rewarded_runs": [],
+    }
 
 
 def load_profile() -> dict:
+    """The saved profile; a fresh one if none exists. A damaged file is moved aside to
+    profile.json.bak (so it can be recovered by hand) rather than silently replaced."""
     profile = new_profile()
+    path = _path()
+    if not os.path.isfile(path):
+        return profile
     try:
-        with open(_path()) as f:
+        with open(path) as f:
             data = json.load(f)
-        if isinstance(data, dict):
-            profile["reputation"] = int(data.get("reputation", 0))
-            profile["runs_finished"] = int(data.get("runs_finished", 0))
-            for key in PERKS:
-                profile["perks"][key] = int(data.get("perks", {}).get(key, 0))
-    except (OSError, ValueError, TypeError, AttributeError):
-        pass
+        profile["reputation"] = int(data["reputation"])
+        profile["runs_finished"] = int(data.get("runs_finished", 0))
+        profile["rewarded_runs"] = [str(r) for r in data.get("rewarded_runs", [])]
+        for key in PERKS:
+            profile["perks"][key] = int(data.get("perks", {}).get(key, 0))
+    except (OSError, ValueError, TypeError, AttributeError, KeyError):
+        try:
+            os.replace(path, path + ".bak")
+        except OSError:
+            pass
+        return new_profile()
     return profile
 
 
 def save_profile(profile: dict) -> None:
+    """Write atomically (tmp file + rename): a kill mid-write never truncates it."""
+    path = _path()
+    tmp = path + ".tmp"
     try:
         os.makedirs(persistence.data_dir(), exist_ok=True)
-        with open(_path(), "w") as f:
+        with open(tmp, "w") as f:
             json.dump(profile, f, indent=2)
+        os.replace(tmp, path)
     except OSError:
         pass
 
 
-def award_reputation(earnings: int, outcome: str) -> int:
-    """Credit reputation for a finished run (outcome: win, hardcore_death, daily)."""
-    gained = earnings // REPUTATION[f"{outcome}_divisor"]
+def award_reputation(earnings: int, outcome: str, run_id: str) -> int:
+    """Credit reputation for a finished run (outcome: win, hardcore_death, daily).
+
+    Each run pays out once: reloading a save from before the ending pays nothing more.
+    """
     profile = load_profile()
+    if run_id and run_id in profile["rewarded_runs"]:
+        return 0
+    gained = earnings // REPUTATION[f"{outcome}_divisor"]
     profile["reputation"] += gained
     profile["runs_finished"] += 1
+    if run_id:
+        profile["rewarded_runs"] = (profile["rewarded_runs"] + [run_id])[-REWARDED_RUNS_KEPT:]
     save_profile(profile)
     return gained
 

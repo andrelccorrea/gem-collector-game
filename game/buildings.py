@@ -32,6 +32,9 @@ def check_building_interaction(inp: InputState, state) -> None:
 
 def check_win(state) -> None:
     """Trigger win scene if lifetime earnings threshold is reached."""
+    # Daily runs are scored on their own board when time runs out.
+    if state.daily:
+        return
     if state.lifetime_earnings >= WIN_LIFETIME_EARNINGS and not state.has_won:
         state.has_won = True
         state.active_scene = "win"

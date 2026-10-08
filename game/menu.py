@@ -161,7 +161,7 @@ def update_death_screen(inp: InputState, state) -> None:
         return
     if state.hardcore:
         persistence.delete_save()
-        profile.award_reputation(state.lifetime_earnings, "hardcore_death")
+        profile.award_reputation(state.lifetime_earnings, "hardcore_death", state.run_id)
         state.active_scene = "menu"
         state.menu_cursor = 0
     else:
@@ -191,7 +191,7 @@ def _reputation_for(state, outcome: str) -> int:
 def update_win_screen(inp: InputState, state) -> None:
     if Action.CONFIRM in inp.pressed:
         persistence.save_leaderboard_entry(state.lifetime_earnings)
-        profile.award_reputation(state.lifetime_earnings, "win")
+        profile.award_reputation(state.lifetime_earnings, "win", state.run_id)
         state.active_scene = "game"
 
 
@@ -219,7 +219,7 @@ def render_daily_end(renderer, state) -> None:
 def update_daily_end(inp: InputState, state) -> None:
     if Action.CONFIRM in inp.pressed:
         persistence.save_daily_entry(state.daily, state.lifetime_earnings)
-        profile.award_reputation(state.lifetime_earnings, "daily")
+        profile.award_reputation(state.lifetime_earnings, "daily", state.run_id)
         state.active_scene = "menu"
         state.menu_cursor = 0
 
@@ -311,6 +311,7 @@ def update_perks(inp: InputState, state) -> None:
 
     pressed = inp.pressed
     if Action.CANCEL in pressed:
+        state.menu_notice = ""
         state.active_scene = "menu"
     elif Action.MOVE_UP in pressed:
         state.perks_cursor = max(0, state.perks_cursor - 1)

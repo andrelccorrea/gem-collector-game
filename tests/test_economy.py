@@ -231,3 +231,13 @@ def test_market_does_not_recover_while_the_shop_is_open():
     for _ in range(600):
         scene.update(InputState(), state, 1 / 30)
     assert state.market == {"garnet": 3.0}
+
+
+def test_gear_rows_show_capacities_with_perk_bonuses():
+    from game.lantern import lantern_capacity
+
+    state = make_state(active_scene="shop", shop_tab=1, player_gold=0)
+    state.bag_bonus, state.lantern_bonus = 10, 0.5
+    rows = {it["key"]: it["label"] for it in _build_shop_items(state)}
+    assert f"{bag_capacity(state)} -> {BAG_CAPACITIES[1] + 10} items" in rows["bag"]
+    assert f"{round(lantern_capacity(state))} ->" in rows["lantern"]

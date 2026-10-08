@@ -68,7 +68,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `hud.py` | `render_hud(renderer, state)` writes to the last two rows: HP (color-coded), Gold, Tool, Biome, key hints, HUD messages |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
-| `gems.py` | `effective_tier(tool, level)`, `roll_gem_drop(biome, tier, rng)` (gems need `min_tier`), bag capacity/count, polished prices (one per gem, highest first), `roll_cut_value` |
+| `gems.py` | `effective_tier(tool, level)`, `roll_gem_drop(biome, tier, rng)` (gems need `min_tier`), bag capacity/count, polished prices (one per gem, highest first), `roll_cut_value`, geodes (`GEODE`, `crack_geode`) |
 | `market.py` | All selling: per-kind saturation lowers prices (recovers over game time), `sell_one`/`sell_all`/`preview_sell_all` |
 | `fog.py` | `update_fog`: tiles within the lantern's radius and in line of sight (trees, rock and cave walls block it) are visible; recomputed only when the player moves or the light changes (`state.fog_key`) |
 | `lantern.py` | Fuel drains per biome, refills in town; `light_radius` sets the fog radius |
@@ -80,7 +80,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `enemies.py` | `Enemy` class; `find_path_bfs` (parent-pointer BFS, depth cap, falls back to the reachable tile closest to the target, optional `blocked`); `spawn_enemies` (ring around the player: off-screen, out of town, 10 tiles inside the despawn distance), `update_enemies`, `render_enemies`; difficulty scaling |
 | `combat.py` | F attack (Chebyshev-1 adjacency, `PLAYER_ATTACK_COOLDOWN`); kills give loot only; enemy auto-attacks on per-enemy cooldown |
 | `buildings.py` | `check_building_interaction` (USE on S/L/P tile switches scene) and `check_win` |
-| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy/upgrade tools and gear, sell via `market`), `lapidary.py` (LapidaryScene: cutting minigame), `save_point.py` (daily runs can't save) |
+| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy tools/charms, upgrade tools and gear, sell via `market`, Museum donations), `lapidary.py` (LapidaryScene: cutting minigame, geode cracking), `save_point.py` (daily runs can't save) |
 | `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
 | `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Leaderboard), death, win, daily-end, perks and leaderboard screens |
@@ -98,7 +98,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 ### Scene Graph
 
 `state.active_scene` names the current screen; `main.py` hands each frame to `SceneManager.frame()`, which calls `enter()` on a switch, then `update()`, then `render()` (skipped if the update switched away). New screens must be registered in `game/scenes/__init__.py::build_scenes()` (a test checks every name assigned in `game/`).
-`menu` → `game` → `shop` / `lapidary` / `save_point` / `death` / `win` / `leaderboard`
+`menu` → `game` → `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `leaderboard`
 
 ### Key Invariants
 
@@ -118,4 +118,5 @@ Stored in `persistence.data_dir()`: `~/Library/Application Support/GemCollector`
 
 - `save.json` — single slot, compact JSON with `schema_version` and `worldgen_version`; fog is a run-length string; includes the gameplay RNG state. Old formats are upgraded by `persistence.MIGRATIONS`; a damaged file is moved to `save.json.bak` and the menu shows why.
 - **Changing world generation for an existing seed? Bump `world.WORLDGEN_VERSION`** — saved tile coordinates are tied to it (on mismatch the map resets, progress is kept). **Changing the save layout? Bump `SCHEMA_VERSION` and add a migration.**
-- `leaderboard.json` — top 10 runs by lifetime earnings.
+- `leaderboard.json` — top 10 runs by lifetime earnings; `daily.json` — top 10 daily scores per date.
+- `profile.json` — reputation, perks and the ids of runs already rewarded (each run pays out once); written atomically, a damaged file is moved to `profile.json.bak`.

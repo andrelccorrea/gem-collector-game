@@ -35,7 +35,7 @@ def _menu(item_id):
 
 @pytest.mark.parametrize("outcome", ["win", "hardcore_death", "daily"])
 def test_finished_runs_earn_reputation(outcome):
-    gained = profile.award_reputation(5_000, outcome)
+    gained = profile.award_reputation(5_000, outcome, "run-1")
     assert gained == 5_000 // REPUTATION[f"{outcome}_divisor"]
     assert profile.load_profile()["reputation"] == gained
     assert profile.load_profile()["runs_finished"] == 1
@@ -130,6 +130,43 @@ def test_run_perk_bonuses_are_saved():
     assert (loaded.bag_bonus, loaded.lantern_bonus) == (10, 0.4)
 
 
-def test_damaged_profile_starts_fresh(isolated_data_dir):
+def test_damaged_profile_is_kept_aside_and_a_fresh_one_starts(isolated_data_dir):
     (isolated_data_dir / "profile.json").write_text("{nope")
     assert profile.load_profile() == profile.new_profile()
+    assert (isolated_data_dir / "profile.json.bak").read_text() == "{nope"
+
+
+def test_profile_is_written_atomically(isolated_data_dir):
+    _give_reputation(7)
+    assert not (isolated_data_dir / "profile.json.tmp").exists()
+    assert profile.load_profile()["reputation"] == 7
+
+
+def test_a_run_pays_reputation_only_once():
+    assert profile.award_reputation(10_000, "win", "run-A") > 0
+    assert profile.award_reputation(10_000, "win", "run-A") == 0
+    assert profile.award_reputation(10_000, "win", "run-B") > 0
+
+
+def test_reloading_a_save_from_before_the_win_does_not_pay_again():
+    state = new_run(8)
+    state.lifetime_earnings = 9_990
+    save_game(state)  # saved just before winning
+    state.lifetime_earnings, state.active_scene = 10_000, "win"
+    update_win_screen(CONFIRM, state)
+    first = profile.load_profile()["reputation"]
+    assert first > 0
+
+    reloaded = load_game()
+    assert reloaded.run_id == state.run_id
+    reloaded.lifetime_earnings, reloaded.active_scene = 10_000, "win"
+    update_win_screen(CONFIRM, reloaded)
+    assert profile.load_profile()["reputation"] == first
+
+
+def test_perks_notice_does_not_follow_to_the_main_menu():
+    state = GameState(active_scene="perks")
+    update_perks(CONFIRM, state)  # not enough reputation -> notice
+    assert state.menu_notice
+    update_perks(InputState(pressed=frozenset({Action.CANCEL})), state)
+    assert state.active_scene == "menu" and state.menu_notice == ""

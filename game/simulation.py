@@ -4,6 +4,8 @@ Nothing here draws or reads the wall clock, so the same seed and the same inputs
 always reproduce the same run (replays, balance simulations, daily seeded runs).
 """
 
+import uuid
+
 from game import buildings, camera, combat, enemies, fog, lantern, market, player, tools, world
 from game.input import Action, InputState
 from game.state import GameState, gameplay_rng
@@ -11,7 +13,8 @@ from game.state import GameState, gameplay_rng
 
 def new_run(seed: int) -> GameState:
     """Return a fresh GameState for a new run on the world generated from ``seed``."""
-    state = GameState(seed=seed, rng=gameplay_rng(seed))
+    # The run id only labels the run for one-time rewards; it never touches gameplay.
+    state = GameState(seed=seed, rng=gameplay_rng(seed), run_id=uuid.uuid4().hex)
     state.world_tiles, state.world_gems = world.generate_world(seed)
     player.init_player(state)
     state.lantern_fuel = lantern.lantern_capacity(state)

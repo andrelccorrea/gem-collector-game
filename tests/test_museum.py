@@ -54,3 +54,16 @@ def test_museum_is_saved():
     state.museum = ["ruby", "opal"]
     save_game(state)
     assert load_game().museum == ["ruby", "opal"]
+
+
+def test_polished_price_range_includes_the_museum_bonus():
+    from game.gems import add_polished_gem
+    from game.market import MUSEUM_BONUS
+
+    state = GameState(active_scene="shop", shop_tab=SHOP_TABS.index("Sell Gems"))
+    add_polished_gem(state, "opal", 200)
+    add_polished_gem(state, "opal", 100)
+    state.museum = list(GEM_CATALOG)[:MUSEUM_MILESTONE]
+    row = next(it for it in _build_shop_items(state) if it["key"] == "opal_polished")
+    bonus = 1 + MUSEUM_BONUS
+    assert f"${int(100 * bonus)}-${int(200 * bonus)}" in row["label"]
