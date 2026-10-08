@@ -42,15 +42,65 @@ def get_gem_raw_value(gem_name: str) -> int:
     return gem.value if gem is not None else 0
 
 
-def get_gem_polished_value(gem_name: str, lapidary_level: int, rng: random.Random) -> int:
-    """Return a randomised polished sell value for a gem at the given lapidary level."""
+def _polish_factors(gem_name: str, lapidary_level: int):
+    """(gem, (min, max) gem multiplier, (min, max) machine bonus), or None if unknown."""
     gem = GEM_CATALOG.get(gem_name)
     if gem is None:
-        return 0
+        return None
     upgrade = LAPIDARY_UPGRADES.get(lapidary_level, LAPIDARY_UPGRADES[1])
-    lapidary_bonus = upgrade["mult_min"] / _LAPIDARY_BASE_MULT
-    gem_mult = rng.uniform(gem.polished_min_mult, gem.polished_max_mult)
-    return int(gem.value * gem_mult * lapidary_bonus)
+    bonus = (
+        upgrade["mult_min"] / _LAPIDARY_BASE_MULT,
+        upgrade["mult_max"] / _LAPIDARY_BASE_MULT,
+    )
+    return gem, (gem.polished_min_mult, gem.polished_max_mult), bonus
+
+
+def polished_value_range(gem_name: str, lapidary_level: int) -> tuple[int, int]:
+    """Lowest and highest price a cut can produce at this lapidary level."""
+    factors = _polish_factors(gem_name, lapidary_level)
+    if factors is None:
+        return 0, 0
+    gem, (gem_lo, gem_hi), (bonus_lo, bonus_hi) = factors
+    return int(gem.value * gem_lo * bonus_lo), int(gem.value * gem_hi * bonus_hi)
+
+
+def get_gem_polished_value(gem_name: str, lapidary_level: int, rng: random.Random) -> int:
+    """Roll the sell price of one freshly cut gem at the given lapidary level."""
+    factors = _polish_factors(gem_name, lapidary_level)
+    if factors is None:
+        return 0
+    gem, (gem_lo, gem_hi), (bonus_lo, bonus_hi) = factors
+    return int(gem.value * rng.uniform(gem_lo, gem_hi) * rng.uniform(bonus_lo, bonus_hi))
+
+
+# Polished gems: inventory["gems"]["<name>_polished"] counts them and
+# state.polished_gem_values["<name>_polished"] lists each one's price, highest first.
+
+
+def add_polished_gem(state, gem_name: str, price: int) -> None:
+    key = f"{gem_name}_polished"
+    gems = state.inventory.setdefault("gems", {})
+    gems[key] = gems.get(key, 0) + 1
+    prices = state.polished_gem_values.setdefault(key, [])
+    prices.append(price)
+    prices.sort(reverse=True)
+
+
+def polished_prices(state, key: str) -> list:
+    """Prices of the held polished gems of this kind, highest first."""
+    return state.polished_gem_values.get(key, [])
+
+
+def take_polished_gem(state, key: str) -> int:
+    """Remove the most valuable polished gem of this kind; returns its price."""
+    gems = state.inventory["gems"]
+    prices = state.polished_gem_values[key]
+    price = prices.pop(0)
+    gems[key] -= 1
+    if gems[key] == 0:
+        del gems[key]
+        del state.polished_gem_values[key]
+    return price
 
 
 def total_gem_count(state) -> int:

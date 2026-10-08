@@ -1,7 +1,6 @@
 """Lapidary: cut raw gems into polished ones and upgrade the cutting machine."""
 
 import math
-import random
 
 from game.constants import (
     COLOR_MENU_DIMMED,
@@ -10,14 +9,15 @@ from game.constants import (
     LAPIDARY_CUT_FEE_RATIO,
     LAPIDARY_UPGRADES,
 )
-from game.gems import get_gem_polished_value, get_gem_raw_value
+from game.gems import (
+    add_polished_gem,
+    get_gem_polished_value,
+    get_gem_raw_value,
+    polished_value_range,
+)
 from game.input import Action, InputState
 from game.player import set_hud_message
 from game.ui import clear_screen, render_list, write_str
-
-# Display-only RNG for the Lapidary price preview, which is rebuilt every frame; it must
-# never draw from the gameplay RNG or the run would depend on the number of frames drawn.
-_PREVIEW_RNG = random.Random()
 
 
 def _build_lapidary_items(state) -> list:
@@ -31,11 +31,11 @@ def _build_lapidary_items(state) -> list:
             continue
         raw_val = get_gem_raw_value(gem_key)
         cut_fee = int(math.ceil(raw_val * LAPIDARY_CUT_FEE_RATIO))
-        polished_val = get_gem_polished_value(gem_key, state.lapidary_level, _PREVIEW_RNG)
+        low, high = polished_value_range(gem_key, state.lapidary_level)
         label = (
             f"  {gem_key.replace('_', ' ').title():16s}  x{count}"
             f"  |  Cut fee: ${cut_fee}"
-            f"  |  Result: ~${polished_val} ea"
+            f"  |  Result: ${low}-${high} ea"
         )
         items.append(
             {
@@ -44,7 +44,7 @@ def _build_lapidary_items(state) -> list:
                 "action": "cut_gem",
                 "key": gem_key,
                 "cut_fee": cut_fee,
-                "polished_val": polished_val,
+                "polished_range": (low, high),
             }
         )
 
@@ -61,7 +61,7 @@ def _build_lapidary_items(state) -> list:
                 "action": "upgrade_lapidary",
                 "key": None,
                 "cut_fee": upgrade_cost,
-                "polished_val": 0,
+                "polished_range": (0, 0),
             }
         )
 
@@ -73,7 +73,7 @@ def _build_lapidary_items(state) -> list:
                 "action": "none",
                 "key": None,
                 "cut_fee": 0,
-                "polished_val": 0,
+                "polished_range": (0, 0),
             }
         )
 
@@ -160,17 +160,13 @@ def update_lapidary(inp: InputState, state) -> None:
             if gems[gem_key] == 0:
                 del gems[gem_key]
 
-            # Add one polished gem
-            polished_key = f"{gem_key}_polished"
-            gems[polished_key] = gems.get(polished_key, 0) + 1
-
-            # Compute and store polished sell price
+            # Each polished gem keeps the price rolled for its own cut.
             polished_val = get_gem_polished_value(gem_key, state.lapidary_level, state.rng)
-            state.polished_gem_values[polished_key] = polished_val
+            add_polished_gem(state, gem_key, polished_val)
 
             set_hud_message(
                 state,
-                f"Cut {gem_key.replace('_', ' ').title()} into a polished gem! (~${polished_val})",
+                f"Cut a {gem_key.replace('_', ' ').title()}: polished gem worth ${polished_val}!",
                 3.0,
             )
 

@@ -5,6 +5,7 @@ import pytest
 
 from game import camera
 from game.constants import MAP_HEIGHT, MAP_WIDTH, VIEW_HEIGHT, VIEW_WIDTH
+from game.gems import add_polished_gem
 from game.input import EMPTY_INPUT, Action, InputState
 from game.loop import STEP
 from game.objects.registry import GEM_CATALOG
@@ -111,7 +112,8 @@ def test_sell_all_is_reachable_and_drawn_with_many_gem_types(stub_renderer):
     state = GameState(active_scene="shop")
     state.shop_tab = 2  # Sell Gems
     state.inventory["gems"] = {name: 1 for name in GEM_CATALOG}
-    state.inventory["gems"].update({f"{name}_polished": 1 for name in GEM_CATALOG})
+    for name in GEM_CATALOG:
+        add_polished_gem(state, name, 100)
     items = _build_shop_items(state)
     assert len(items) > 13, "the list must be longer than one page for this test"
 

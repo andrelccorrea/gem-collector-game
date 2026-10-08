@@ -7,7 +7,7 @@ from game.constants import (
     COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
 )
-from game.gems import get_gem_raw_value
+from game.gems import get_gem_raw_value, polished_prices, take_polished_gem
 from game.input import Action, InputState
 from game.objects.registry import ENEMY_CATALOG, TOOL_CATALOG
 from game.objects.tools.upgrades import TOOL_MAX_LEVEL, TOOL_UPGRADE_COSTS
@@ -91,7 +91,6 @@ def _build_shop_items(state) -> list:
 
     elif tab == 2:  # Sell Gems
         gems = state.inventory.get("gems", {})
-        polished = state.polished_gem_values
         total = 0
 
         for gem_key, count in gems.items():
@@ -99,14 +98,21 @@ def _build_shop_items(state) -> list:
                 continue
             if gem_key.endswith("_polished"):
                 raw_name = gem_key[: -len("_polished")]
-                unit_val = polished.get(gem_key, get_gem_raw_value(raw_name))
+                prices = polished_prices(state, gem_key)
                 display_name = f"{raw_name.replace('_', ' ').title()} (Polished)"
+                # Selling one sells the most valuable; show the spread if they differ.
+                unit_val = prices[0]
+                subtotal = sum(prices)
+                price_text = (
+                    f"${prices[-1]}-${prices[0]}" if prices[0] != prices[-1] else f"${unit_val}"
+                )
             else:
                 unit_val = get_gem_raw_value(gem_key)
                 display_name = gem_key.replace("_", " ").title()
-            subtotal = unit_val * count
+                subtotal = unit_val * count
+                price_text = f"${unit_val}"
             total += subtotal
-            label = f"  {display_name:20s}  x{count}  ${unit_val} each"
+            label = f"  {display_name:20s}  x{count}  {price_text} each"
             items.append(
                 {
                     "label": label,
@@ -304,12 +310,12 @@ def update_shop(inp: InputState, state) -> None:
         if gems.get(gem_key, 0) <= 0:
             set_hud_message(state, "None left!", 1.5)
         else:
-            gems[gem_key] -= 1
-            if gems[gem_key] == 0:
-                del gems[gem_key]
-                # Also remove from polished_gem_values if it was polished
-                if gem_key.endswith("_polished") and gem_key in state.polished_gem_values:
-                    del state.polished_gem_values[gem_key]
+            if gem_key.endswith("_polished"):
+                unit_val = take_polished_gem(state, gem_key)
+            else:
+                gems[gem_key] -= 1
+                if gems[gem_key] == 0:
+                    del gems[gem_key]
             state.player_gold += unit_val
             state.lifetime_earnings += unit_val
             set_hud_message(state, f"Sold for ${unit_val}!", 2.0)
@@ -324,11 +330,9 @@ def update_shop(inp: InputState, state) -> None:
             if count <= 0:
                 continue
             if gem_key.endswith("_polished"):
-                raw_name = gem_key[: -len("_polished")]
-                unit_val = state.polished_gem_values.get(gem_key, get_gem_raw_value(raw_name))
+                total += sum(polished_prices(state, gem_key))
             else:
-                unit_val = get_gem_raw_value(gem_key)
-            total += unit_val * count
+                total += get_gem_raw_value(gem_key) * count
         state.inventory["gems"] = {}
         state.polished_gem_values.clear()
         state.player_gold += total

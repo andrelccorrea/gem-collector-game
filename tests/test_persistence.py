@@ -4,6 +4,7 @@ import os
 import pytest
 
 from game import persistence
+from game.gems import add_polished_gem
 from game.input import Action, InputState
 from game.loop import STEP
 from game.menu import _select_menu_item, render_menu, update_menu
@@ -41,7 +42,8 @@ def _played_run(seed=11, steps=600):
     state.lapidary_level = 2
     state.inventory["gems"]["ruby"] = 3
     state.inventory["tools"]["pickaxe"] = {"level": 2}
-    state.polished_gem_values["ruby_polished"] = 77
+    add_polished_gem(state, "ruby", 77)
+    add_polished_gem(state, "ruby", 91)
     return state
 
 
@@ -289,3 +291,31 @@ def test_first_save_creates_the_data_dir(tmp_path, monkeypatch, played):
     assert not target.exists()
     assert save_game(played) is None
     assert (target / "save.json").is_file()
+
+
+def test_v1_polished_prices_become_one_price_per_gem(monkeypatch):
+    monkeypatch.setattr("game.world.WORLDGEN_VERSION", 1)
+    v1 = {
+        "schema_version": 1,
+        "worldgen_version": 1,
+        "seed": 42,
+        "player": {
+            "x": 100,
+            "y": 40,
+            "hp": 20,
+            "max_hp": 20,
+            "gold": 50,
+            "lifetime_earnings": 0,
+            "equipped_tool": "shovel",
+            "has_won": False,
+        },
+        "inventory": {"gems": {"ruby_polished": 3, "opal_polished": 0}, "tools": {}, "loot": {}},
+        "polished_gem_values": {"ruby_polished": 400, "opal_polished": 90},
+        "lapidary_level": 1,
+        "depleted_tiles": [],
+        "fog": "",
+    }
+    with open(save_path(), "w") as f:
+        json.dump(v1, f)
+    loaded = load_game()
+    assert loaded.polished_gem_values == {"ruby_polished": [400, 400, 400]}

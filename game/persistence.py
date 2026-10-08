@@ -1,8 +1,9 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 1, compact JSON):
+Save format (``schema_version`` 2, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
-    polished_gem_values, lapidary_level, depleted_tiles [[x, y]...],
+    polished_gem_values {"<gem>_polished": [price per gem, highest first]},
+    lapidary_level, depleted_tiles [[x, y]...],
     world_gems [[x, y, name]...], fog (run-length string, row-major),
     rng_state (gameplay RNG state, so a continued run keeps its roll sequence)
 
@@ -19,7 +20,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 APP_DIR_NAME = "GemCollector"
@@ -141,8 +142,19 @@ def _migrate_v0_to_v1(data: dict) -> dict:
     return data
 
 
+def _migrate_v1_to_v2(data: dict) -> dict:
+    """v1 kept one price per polished gem kind; v2 keeps one price per gem."""
+    gems = data.get("inventory", {}).get("gems", {})
+    data["polished_gem_values"] = {
+        key: [price] * gems.get(key, 0)
+        for key, price in data.get("polished_gem_values", {}).items()
+        if gems.get(key, 0) > 0
+    }
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
-MIGRATIONS = {0: _migrate_v0_to_v1}
+MIGRATIONS = {0: _migrate_v0_to_v1, 1: _migrate_v1_to_v2}
 
 
 def migrate(data: dict) -> dict:
