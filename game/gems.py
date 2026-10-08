@@ -10,7 +10,7 @@ NO_DROP_WEIGHT = 65
 _LAPIDARY_BASE_MULT = LAPIDARY_UPGRADES[1]["mult_min"]
 
 
-def roll_gem_drop(biome: str, tool_name: str) -> str | None:
+def roll_gem_drop(biome: str, tool_name: str, rng: random.Random) -> str | None:
     """Roll for a gem drop based on biome and tool. Returns gem name or None."""
     eligible = {name: gem for name, gem in GEM_CATALOG.items() if biome in gem.biomes}
 
@@ -20,7 +20,7 @@ def roll_gem_drop(biome: str, tool_name: str) -> str | None:
     names = [""] + list(eligible.keys())
     weights = [NO_DROP_WEIGHT] + [eligible[n].rarity_weight for n in eligible]
 
-    result = random.choices(names, weights=weights, k=1)[0]
+    result = rng.choices(names, weights=weights, k=1)[0]
     return result if result else None
 
 
@@ -42,14 +42,14 @@ def get_gem_raw_value(gem_name: str) -> int:
     return gem.value if gem is not None else 0
 
 
-def get_gem_polished_value(gem_name: str, lapidary_level: int = 1) -> int:
+def get_gem_polished_value(gem_name: str, lapidary_level: int, rng: random.Random) -> int:
     """Return a randomised polished sell value for a gem at the given lapidary level."""
     gem = GEM_CATALOG.get(gem_name)
     if gem is None:
         return 0
     upgrade = LAPIDARY_UPGRADES.get(lapidary_level, LAPIDARY_UPGRADES[1])
     lapidary_bonus = upgrade["mult_min"] / _LAPIDARY_BASE_MULT
-    gem_mult = random.uniform(gem.polished_min_mult, gem.polished_max_mult)
+    gem_mult = rng.uniform(gem.polished_min_mult, gem.polished_max_mult)
     return int(gem.value * gem_mult * lapidary_bonus)
 
 

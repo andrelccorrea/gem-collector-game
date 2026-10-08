@@ -1,5 +1,4 @@
 import math
-import random
 from collections import deque
 
 from game.constants import (
@@ -85,7 +84,7 @@ def _get_enemy_type_for_biome(biome: str, state) -> str | None:
                 continue
             eligible.append(name)
 
-    return random.choice(eligible) if eligible else None
+    return state.rng.choice(eligible) if eligible else None
 
 
 def _is_in_town_area(x: int, y: int) -> bool:
@@ -113,8 +112,8 @@ def spawn_enemies(state, dt: float) -> None:
 
     # Try up to 20 random positions to find a valid spawn
     for _ in range(20):
-        x = random.randint(0, MAP_WIDTH - 1)
-        y = random.randint(0, MAP_HEIGHT - 1)
+        x = state.rng.randint(0, MAP_WIDTH - 1)
+        y = state.rng.randint(0, MAP_HEIGHT - 1)
 
         # Must be off-screen
         if _is_on_screen(x, y, state):

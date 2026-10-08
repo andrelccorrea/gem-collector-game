@@ -69,12 +69,13 @@ def load_game():
 
     try:
         from game import world as world_module
-        from game.state import GameState
+        from game.state import GameState, gameplay_rng
 
         state = GameState()
 
         # Seed and world
         state.seed = data["seed"]
+        state.rng = gameplay_rng(state.seed)
         state.world_tiles, state.world_gems = world_module.generate_world(state.seed)
 
         # Player

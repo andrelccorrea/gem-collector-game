@@ -97,11 +97,11 @@ def test_rarity_weight_ordering():
 
 def test_roll_gem_drop_cave():
     """100 cave rolls only return gems that belong to the cave biome (or None)."""
-    random.seed(42)
+    rng = random.Random(42)
     catalog = build_gem_catalog()
     cave_gem_names = {name for name, gem in catalog.items() if "cave" in gem.biomes}
     for _ in range(100):
-        result = roll_gem_drop("cave", "pickaxe")
+        result = roll_gem_drop("cave", "pickaxe", rng)
         if result is not None:
             assert result in cave_gem_names, (
                 f"roll_gem_drop('cave', 'pickaxe') returned '{result}', "
@@ -111,11 +111,11 @@ def test_roll_gem_drop_cave():
 
 def test_roll_gem_drop_meadow():
     """100 meadow rolls only return gems that belong to the meadow biome (or None)."""
-    random.seed(7)
+    rng = random.Random(7)
     catalog = build_gem_catalog()
     meadow_gem_names = {name for name, gem in catalog.items() if "meadow" in gem.biomes}
     for _ in range(100):
-        result = roll_gem_drop("meadow", "shovel")
+        result = roll_gem_drop("meadow", "shovel", rng)
         if result is not None:
             assert result in meadow_gem_names, (
                 f"roll_gem_drop('meadow', 'shovel') returned '{result}', "
@@ -125,15 +125,15 @@ def test_roll_gem_drop_meadow():
 
 def test_roll_gem_drop_returns_none_sometimes():
     """200 cave rolls must include at least one None (no-drop weight applies)."""
-    random.seed(99)
-    results = [roll_gem_drop("cave", "pickaxe") for _ in range(200)]
+    rng = random.Random(99)
+    results = [roll_gem_drop("cave", "pickaxe", rng) for _ in range(200)]
     none_count = results.count(None)
     assert none_count > 0, "Expected at least one None in 200 cave rolls, but got zero Nones"
 
 
 def test_roll_gem_drop_unknown_biome_returns_none():
     """An unknown biome has an empty eligible pool so roll_gem_drop returns None."""
-    result = roll_gem_drop("nonexistent_biome", "shovel")
+    result = roll_gem_drop("nonexistent_biome", "shovel", random.Random(0))
     assert result is None
 
 
@@ -150,16 +150,17 @@ def test_get_gem_raw_value_quartz():
 def test_get_gem_polished_value_greater_than_raw():
     """get_gem_polished_value('ruby', lapidary_level=1) is always > get_gem_raw_value('ruby')."""
     raw = get_gem_raw_value("ruby")
+    rng = random.Random(1)
     for _ in range(20):
-        polished = get_gem_polished_value("ruby", lapidary_level=1)
+        polished = get_gem_polished_value("ruby", 1, rng)
         assert polished > raw, f"Polished ruby value {polished} is not greater than raw value {raw}"
 
 
 def test_get_gem_polished_value_lapidary_bonus():
     """Mean polished value at lapidary_level=3 >= mean at lapidary_level=1 over 50 samples each."""
-    random.seed(123)
-    samples_l1 = [get_gem_polished_value("ruby", lapidary_level=1) for _ in range(50)]
-    samples_l3 = [get_gem_polished_value("ruby", lapidary_level=3) for _ in range(50)]
+    rng = random.Random(123)
+    samples_l1 = [get_gem_polished_value("ruby", 1, rng) for _ in range(50)]
+    samples_l3 = [get_gem_polished_value("ruby", 3, rng) for _ in range(50)]
     mean_l1 = sum(samples_l1) / len(samples_l1)
     mean_l3 = sum(samples_l3) / len(samples_l3)
     assert mean_l3 >= mean_l1, (

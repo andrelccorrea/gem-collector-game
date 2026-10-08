@@ -1,5 +1,15 @@
+import random
 from dataclasses import dataclass, field
 from typing import Any
+
+
+def gameplay_rng(seed: int) -> random.Random:
+    """RNG for gameplay rolls (drops, polishing, spawns) of the run with this seed.
+
+    Derived from the seed but independent of the world-generation stream, so the
+    same seed always yields the same world and the same sequence of rolls.
+    """
+    return random.Random(f"{seed}:gameplay")
 
 
 @dataclass
@@ -12,6 +22,8 @@ class GameState:
 
     # Map
     seed: int = 0
+    # Every gameplay roll must use this RNG (never the global `random` module).
+    rng: random.Random = field(default_factory=lambda: gameplay_rng(0))
     world_tiles: Any = None  # Surface object, set after generation
 
     # Player position

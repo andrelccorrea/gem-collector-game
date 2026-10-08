@@ -1,4 +1,5 @@
 import math
+import random
 
 from game.constants import (
     COLOR_MENU_DIMMED,
@@ -21,6 +22,10 @@ from game.player import set_hud_message
 # ---------------------------------------------------------------------------
 # Building interaction gate
 # ---------------------------------------------------------------------------
+
+# Display-only RNG for the Lapidary price preview, which is rebuilt every frame; it must
+# never draw from the gameplay RNG or the run would depend on the number of frames drawn.
+_PREVIEW_RNG = random.Random()
 
 
 def check_building_interaction(inp: InputState, state) -> None:
@@ -453,7 +458,7 @@ def _build_lapidary_items(state) -> list:
             continue
         raw_val = get_gem_raw_value(gem_key)
         cut_fee = int(math.ceil(raw_val * LAPIDARY_CUT_FEE_RATIO))
-        polished_val = get_gem_polished_value(gem_key, state.lapidary_level)
+        polished_val = get_gem_polished_value(gem_key, state.lapidary_level, _PREVIEW_RNG)
         label = (
             f"  {gem_key.replace('_', ' ').title():16s}  x{count}"
             f"  |  Cut fee: ${cut_fee}"
@@ -600,7 +605,7 @@ def update_lapidary(inp: InputState, state) -> None:
             gems[polished_key] = gems.get(polished_key, 0) + 1
 
             # Compute and store polished sell price
-            polished_val = get_gem_polished_value(gem_key, state.lapidary_level)
+            polished_val = get_gem_polished_value(gem_key, state.lapidary_level, state.rng)
             state.polished_gem_values[polished_key] = polished_val
 
             set_hud_message(

@@ -8,8 +8,9 @@ from clingine.renderer import CursesRenderer  # noqa: E402
 from clingine.window import Window  # noqa: E402
 from game import menu as menu_module  # noqa: E402
 from game.constants import FPS, WINDOW_HEIGHT, WINDOW_WIDTH  # noqa: E402
-from game.input import Action, map_keys  # noqa: E402
+from game.input import map_keys  # noqa: E402
 from game.loop import FixedTimestep  # noqa: E402
+from game.simulation import step_game  # noqa: E402
 from game.state import GameState  # noqa: E402
 
 
@@ -42,7 +43,7 @@ def main() -> None:
                 menu_module.update_menu(inp, state)
                 menu_module.render_menu(renderer, state)
             elif state.active_scene == "game":
-                timestep.run(frame_dt, inp, lambda step_inp, dt: _step_game(step_inp, state, dt))
+                timestep.run(frame_dt, inp, lambda step_inp, dt: step_game(step_inp, state, dt))
                 if state.active_scene == "game":
                     _render_game(renderer, state)
             elif state.active_scene == "shop":
@@ -77,47 +78,6 @@ def main() -> None:
             if state.quit_requested:
                 break
             window.update()
-
-    def _step_game(inp, state, dt) -> bool:
-        """Advance the game simulation by one fixed step; False once the scene changed."""
-        from game import buildings as bld
-        from game import combat as combat_module
-        from game import enemies as enemies_module
-        from game import fog as fog_module
-        from game import player as player_module
-        from game import tools as tools_module
-
-        state.game_time += dt
-
-        # Enemy spawning and movement
-        enemies_module.spawn_enemies(state, dt)
-        enemies_module.update_enemies(state, dt)
-
-        # Combat: enemy auto-attacks
-        combat_module.enemy_attacks(state, dt)
-
-        # Input: building interaction check (Space on building tile)
-        bld.check_building_interaction(inp, state)
-
-        # Update player (movement, HP regen, death check)
-        player_module.update_player(inp, state, dt)
-
-        # Player attack (F key)
-        combat_module.player_attack(inp, state)
-
-        # Tool equip (E key) and use (Space key)
-        tools_module.update_tools(inp, state)
-        tools_module.use_tool(inp, state)
-
-        # Update fog of war based on current player position
-        if state.world_tiles is not None:
-            fog_module.update_fog(state)
-
-        # ESC opens menu
-        if Action.CANCEL in inp.pressed:
-            state.active_scene = "menu"
-
-        return state.active_scene == "game"
 
     def _render_game(renderer, state) -> None:
         """Draw the game scene; runs once per frame regardless of simulation steps."""

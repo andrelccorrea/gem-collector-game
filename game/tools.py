@@ -113,7 +113,7 @@ def _dig_mineable_tile(state, x: int, y: int, tile_type: str) -> None:
     from game import gems as gems_module
 
     biome = _coord_to_biome(x, y)
-    gem_name = gems_module.roll_gem_drop(biome, state.equipped_tool)
+    gem_name = gems_module.roll_gem_drop(biome, state.equipped_tool, state.rng)
 
     if gem_name:
         gems_module.add_gem_to_inventory(state, gem_name)
@@ -128,7 +128,7 @@ def _pan_water(state, x: int, y: int, tile_type: str) -> None:
 
     from game import gems as gems_module
 
-    gem_name = gems_module.roll_gem_drop("river", state.equipped_tool)
+    gem_name = gems_module.roll_gem_drop("river", state.equipped_tool, state.rng)
     if gem_name:
         gems_module.add_gem_to_inventory(state, gem_name)
         set_hud_message(state, f"Panned up a {gem_name.title()}!", 3.0)

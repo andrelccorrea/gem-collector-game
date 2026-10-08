@@ -79,45 +79,26 @@ def update_menu(inp: InputState, state) -> None:
         state.quit_requested = True
 
 
+def _replace_state(state, new_state) -> None:
+    """Swap every field of ``state`` for those of ``new_state`` (nothing carries over)."""
+    for key, val in vars(new_state).items():
+        setattr(state, key, val)
+
+
 def _select_menu_item(state, save_exists: bool) -> None:
     from game import persistence
-    from game import world as world_module
 
     if state.menu_cursor == 0:  # New Game
         import random
 
-        from game import fog as fog_module
+        from game.simulation import new_run
 
-        state.seed = random.randint(1, 999999)
-        state.world_tiles, state.world_gems = world_module.generate_world(state.seed)
-        if state.world_tiles.start_pos is not None:
-            state.player_x, state.player_y = state.world_tiles.start_pos
-        else:
-            from game.constants import TOWN_CENTER_X, TOWN_CENTER_Y
-
-            state.player_x = TOWN_CENTER_X
-            state.player_y = TOWN_CENTER_Y
-        state.player_hp = state.player_max_hp
-        state.player_gold = 50
-        state.lifetime_earnings = 0
-        state.equipped_tool = "shovel"
-        state.inventory = {
-            "gems": {},
-            "tools": {"shovel": {"level": 1}},
-            "loot": {},
-        }
-        state.depleted_tiles = set()
-        state.visible_tiles = set()
-        state.has_won = False
-        fog_module.update_fog(state)
-        state.active_scene = "game"
+        _replace_state(state, new_run(random.randint(1, 999999)))
 
     elif state.menu_cursor == 1 and save_exists:  # Continue
         loaded = persistence.load_game()
         if loaded is not None:
-            # Copy loaded state fields into current state
-            for key, val in vars(loaded).items():
-                setattr(state, key, val)
+            _replace_state(state, loaded)
             state.active_scene = "game"
 
     elif state.menu_cursor == 2:  # Leaderboard
