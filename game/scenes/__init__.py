@@ -59,7 +59,7 @@ def build_scenes() -> dict:
         "menu": FunctionScene(menu.update_menu, menu.render_menu),
         "game": GameScene(),
         "shop": FunctionScene(shop.update_shop, shop.render_shop),
-        "lapidary": FunctionScene(lapidary.update_lapidary, lapidary.render_lapidary),
+        "lapidary": lapidary.LapidaryScene(),
         "save_point": FunctionScene(save_point.update_save_point, save_point.render_save_point),
         "death": FunctionScene(menu.update_death_screen, menu.render_death_screen),
         "win": FunctionScene(menu.update_win_screen, menu.render_win_screen),

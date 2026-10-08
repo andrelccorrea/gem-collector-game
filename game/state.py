@@ -101,5 +101,8 @@ class GameState:
     shop_tab: int = 0  # 0=buy_tools, 1=upgrade_tools, 2=sell_gems, 3=sell_loot
     lapidary_cursor: int = 0
 
+    # Gem being cut in the lapidary minigame: {"gem": name, "elapsed": seconds} or None
+    cutting: Any = None
+
     # Polished gem sell prices: "quartz_polished" -> int value
     polished_gem_values: dict = field(default_factory=dict)

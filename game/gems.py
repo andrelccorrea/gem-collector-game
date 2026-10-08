@@ -104,6 +104,15 @@ def get_gem_polished_value(gem_name: str, lapidary_level: int, rng: random.Rando
     return int(gem.value * rng.uniform(gem_lo, gem_hi) * rng.uniform(bonus_lo, bonus_hi))
 
 
+def roll_cut_value(
+    gem_name: str, lapidary_level: int, band: tuple[float, float], rng: random.Random
+) -> int:
+    """Price of a cut whose quality landed in ``band``: a (low, high) share of the
+    gem's polished price range at this lapidary level."""
+    low, high = polished_value_range(gem_name, lapidary_level)
+    return int(low + (high - low) * rng.uniform(*band))
+
+
 # Polished gems: inventory["gems"]["<name>_polished"] counts them and
 # state.polished_gem_values["<name>_polished"] lists each one's price, highest first.
 

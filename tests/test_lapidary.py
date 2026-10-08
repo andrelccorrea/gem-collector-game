@@ -7,9 +7,17 @@ from game.gems import (
     polished_prices,
     polished_value_range,
 )
-from game.input import Action, InputState
+from game.input import EMPTY_INPUT, Action, InputState
 from game.market import price_multiplier
-from game.scenes.lapidary import _build_lapidary_items, render_lapidary, update_lapidary
+from game.scenes.lapidary import (
+    CUT_BAR_WIDTH,
+    CUT_SWEEP_SECONDS,
+    _build_lapidary_items,
+    cut_quality,
+    marker_position,
+    render_lapidary,
+    update_lapidary,
+)
 from game.scenes.shop import _build_shop_items, update_shop
 from game.state import GameState
 
@@ -23,10 +31,13 @@ def _screen(renderer):
     )
 
 
-def _cut(state, gem):
+def _cut(state, gem, elapsed=None):
+    """Start cutting ``gem`` and stop the marker after ``elapsed`` seconds (center)."""
     state.lapidary_cursor = next(
         i for i, item in enumerate(_build_lapidary_items(state)) if item.get("key") == gem
     )
+    update_lapidary(CONFIRM, state)
+    update_lapidary(EMPTY_INPUT, state, CUT_SWEEP_SECONDS / 4 if elapsed is None else elapsed)
     update_lapidary(CONFIRM, state)
 
 
@@ -105,3 +116,68 @@ def test_selling_the_last_polished_gem_leaves_no_empty_price_list():
     state.shop_cursor = 0
     update_shop(CONFIRM, state)
     assert "opal_polished" not in state.polished_gem_values
+
+
+# ── Cutting minigame ──────────────────────────────────────────────────────────
+
+
+def test_marker_sweeps_across_the_bar_and_back():
+    positions = [marker_position(CUT_SWEEP_SECONDS * i / 20) for i in range(21)]
+    assert positions[0] == 0 and positions[-1] == 0
+    assert max(positions) == CUT_BAR_WIDTH - 1
+    assert marker_position(CUT_SWEEP_SECONDS / 4) == CUT_BAR_WIDTH // 2
+
+
+def test_quality_depends_on_distance_from_the_center():
+    center = CUT_BAR_WIDTH // 2
+    assert cut_quality(center)[0] == "Flawless"
+    assert cut_quality(center + 3)[0] == "Excellent"
+    assert cut_quality(center - 7)[0] == "Good"
+    assert cut_quality(0)[0] == "Poor"
+
+
+def test_a_centered_cut_is_worth_the_top_of_the_range():
+    state = GameState(player_gold=10_000)
+    state.inventory["gems"] = {"ruby": 1}
+    low, high = polished_value_range("ruby", 1)
+    _cut(state, "ruby")
+    price = polished_prices(state, "ruby_polished")[0]
+    assert low + 0.9 * (high - low) <= price <= high
+    assert "Flawless" in state.hud_message
+
+
+def test_a_mistimed_cut_is_worth_the_bottom_of_the_range():
+    state = GameState(player_gold=10_000)
+    state.inventory["gems"] = {"ruby": 1}
+    low, high = polished_value_range("ruby", 1)
+    _cut(state, "ruby", elapsed=0.0)  # marker still at the left edge
+    price = polished_prices(state, "ruby_polished")[0]
+    assert low <= price <= low + 0.25 * (high - low) + 1
+
+
+def test_the_fee_is_paid_and_the_gem_used_only_when_the_cut_is_made():
+    state = GameState(player_gold=1000)
+    state.inventory["gems"] = {"ruby": 1}
+    items = _build_lapidary_items(state)
+    state.lapidary_cursor = next(i for i, it in enumerate(items) if it.get("key") == "ruby")
+    fee = items[state.lapidary_cursor]["cut_fee"]
+    update_lapidary(CONFIRM, state)
+    assert state.cutting is not None
+    assert state.player_gold == 1000 and state.inventory["gems"] == {"ruby": 1}
+
+    update_lapidary(InputState(pressed=frozenset({Action.CANCEL})), state)
+    assert state.cutting is None and state.active_scene != "game"
+    assert state.player_gold == 1000 and state.inventory["gems"] == {"ruby": 1}
+
+    _cut(state, "ruby")
+    assert state.player_gold == 1000 - fee and "ruby" not in state.inventory["gems"]
+
+
+def test_the_minigame_is_drawn_while_cutting():
+    state = GameState(player_gold=1000)
+    state.inventory["gems"] = {"ruby": 1}
+    state.cutting = {"gem": "ruby", "fee": 10, "elapsed": CUT_SWEEP_SECONDS / 4}
+    renderer = StubRenderer(80, 24)
+    render_lapidary(renderer, state)
+    screen = _screen(renderer)
+    assert "stop the marker" in screen and "^" in screen

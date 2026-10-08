@@ -5,19 +5,45 @@ import math
 from game.constants import (
     COLOR_MENU_DIMMED,
     COLOR_MENU_NORMAL,
+    COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
     LAPIDARY_CUT_FEE_RATIO,
     LAPIDARY_UPGRADES,
 )
 from game.gems import (
     add_polished_gem,
-    get_gem_polished_value,
     get_gem_raw_value,
     polished_value_range,
+    roll_cut_value,
 )
 from game.input import Action, InputState
 from game.player import set_hud_message
+from game.scenes import Scene
 from game.ui import clear_screen, render_list, write_str
+
+# Cutting minigame: a marker sweeps back and forth across the bar; stopping it near
+# the center gives a better cut. Quality tiers: (name, max distance from center,
+# share of the gem's polished price range the cut lands in).
+CUT_BAR_WIDTH = 31
+CUT_SWEEP_SECONDS = 1.4  # one full left-right-left sweep
+CUT_QUALITIES = [
+    ("Flawless", 1, (0.9, 1.0)),
+    ("Excellent", 4, (0.6, 0.9)),
+    ("Good", 9, (0.25, 0.6)),
+    ("Poor", CUT_BAR_WIDTH, (0.0, 0.25)),
+]
+
+
+def marker_position(elapsed: float) -> int:
+    """Marker cell (0 .. CUT_BAR_WIDTH - 1) after ``elapsed`` seconds of sweeping."""
+    phase = (elapsed % CUT_SWEEP_SECONDS) / CUT_SWEEP_SECONDS
+    triangle = 1 - abs(2 * phase - 1)  # 0 -> 1 -> 0
+    return round(triangle * (CUT_BAR_WIDTH - 1))
+
+
+def cut_quality(position: int) -> tuple:
+    distance = abs(position - CUT_BAR_WIDTH // 2)
+    return next(q for q in CUT_QUALITIES if distance <= q[1])
 
 
 def _build_lapidary_items(state) -> list:
@@ -106,11 +132,17 @@ def render_lapidary(renderer, state) -> None:
     gold_str = f"Your Gold: ${state.player_gold}"
     write_str(renderer, 3, 2, gold_str, COLOR_MENU_NORMAL)
 
+    if state.cutting is not None:
+        _render_cutting(renderer, state)
+        return
+
     items = _build_lapidary_items(state)
     cursor = max(0, min(state.lapidary_cursor, len(items) - 1))
     state.lapidary_cursor = cursor
 
-    render_list(renderer, items, cursor, top=5, bottom=17)
+    render_list(renderer, items, cursor, top=5, bottom=16)
+    if state.hud_message:
+        write_str(renderer, 18, 2, state.hud_message, COLOR_MENU_TITLE)
 
     hint = "[Up/Down] Navigate  [Enter] Cut/Upgrade  [Esc] Close"
     write_str(
@@ -122,9 +154,13 @@ def render_lapidary(renderer, state) -> None:
     )
 
 
-def update_lapidary(inp: InputState, state) -> None:
-    """Handle input for the lapidary scene."""
+def update_lapidary(inp: InputState, state, dt: float = 0.0) -> None:
+    """Handle input for the lapidary scene (and the cutting minigame while it runs)."""
     pressed = inp.pressed
+
+    if state.cutting is not None:
+        _update_cutting(pressed, state, dt)
+        return
 
     if Action.CANCEL in pressed:
         state.active_scene = "game"
@@ -160,21 +196,7 @@ def update_lapidary(inp: InputState, state) -> None:
         elif state.player_gold < cut_fee:
             set_hud_message(state, "Not enough gold for the cut fee!", 1.5)
         else:
-            # Deduct fee and remove one raw gem
-            state.player_gold -= cut_fee
-            gems[gem_key] -= 1
-            if gems[gem_key] == 0:
-                del gems[gem_key]
-
-            # Each polished gem keeps the price rolled for its own cut.
-            polished_val = get_gem_polished_value(gem_key, state.lapidary_level, state.rng)
-            add_polished_gem(state, gem_key, polished_val)
-
-            set_hud_message(
-                state,
-                f"Cut a {gem_key.replace('_', ' ').title()}: polished gem worth ${polished_val}!",
-                3.0,
-            )
+            state.cutting = {"gem": gem_key, "fee": cut_fee, "elapsed": 0.0}
 
     elif action == "upgrade_lapidary":
         upgrade_cost = item["cut_fee"]
@@ -190,3 +212,58 @@ def update_lapidary(inp: InputState, state) -> None:
             state.player_gold -= upgrade_cost
             state.lapidary_level += 1
             set_hud_message(state, f"Lapidary upgraded to level {state.lapidary_level}!", 2.5)
+
+
+def _update_cutting(pressed, state, dt: float) -> None:
+    cut = state.cutting
+    if Action.CANCEL in pressed:
+        state.cutting = None
+        set_hud_message(state, "Cut cancelled.", 1.5)
+        return
+    if Action.CONFIRM not in pressed and Action.USE not in pressed:
+        cut["elapsed"] += dt
+        return
+
+    # Stop the marker: pay the fee, use up the raw gem, add the polished one.
+    gem_key = cut["gem"]
+    name, _distance, band = cut_quality(marker_position(cut["elapsed"]))
+    state.cutting = None
+    gems = state.inventory["gems"]
+    state.player_gold -= cut["fee"]
+    gems[gem_key] -= 1
+    if gems[gem_key] == 0:
+        del gems[gem_key]
+    value = roll_cut_value(gem_key, state.lapidary_level, band, state.rng)
+    add_polished_gem(state, gem_key, value)
+    set_hud_message(
+        state, f"{name} cut! Polished {gem_key.replace('_', ' ').title()} worth ${value}.", 3.0
+    )
+
+
+def _render_cutting(renderer, state) -> None:
+    cut = state.cutting
+    width = renderer.width
+    title = f"Cutting {cut['gem'].replace('_', ' ').title()}: stop the marker at the center!"
+    write_str(renderer, 7, (width - len(title)) // 2, title, COLOR_MENU_NORMAL)
+    left = (width - CUT_BAR_WIDTH) // 2
+    center = CUT_BAR_WIDTH // 2
+    for x in range(CUT_BAR_WIDTH):
+        distance = abs(x - center)
+        name, _d, _band = cut_quality(x)
+        char = "=" if name in ("Flawless", "Excellent") else "-"
+        color = COLOR_MENU_TITLE if distance <= 1 else COLOR_MENU_NORMAL
+        write_str(renderer, 9, left + x, char, color)
+    marker = marker_position(cut["elapsed"])
+    write_str(renderer, 10, left + marker, "^", COLOR_MENU_SELECTED)
+    hint = "[Enter/Space/tap] Cut   [Esc] Cancel (no fee)"
+    write_str(renderer, 12, (width - len(hint)) // 2, hint, COLOR_MENU_DIMMED)
+
+
+class LapidaryScene(Scene):
+    """The lapidary needs frame time for the cutting minigame."""
+
+    def update(self, inp: InputState, state, frame_dt: float) -> None:
+        update_lapidary(inp, state, frame_dt)
+
+    def render(self, renderer, state) -> None:
+        render_lapidary(renderer, state)
