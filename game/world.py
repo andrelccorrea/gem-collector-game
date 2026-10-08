@@ -461,66 +461,64 @@ def _apply_cave_automata(surface: TileMap) -> None:
 
 
 def ensure_connectivity(surface: TileMap, start_x: int, start_y: int) -> None:
-    """BFS from start, then carve corridors to any disconnected walkable tile clusters.
+    """Make every walkable tile reachable from the start by carving corridors.
 
-    Repeats up to 50 passes. Each pass does a fresh BFS so that newly carved
-    corridor tiles (and the cluster tile they connect) are found reachable on the
-    next pass — avoiding the "start tile never added to reachable" edge case of
-    purely incremental approaches.
+    One breadth-first search grows outward from everything reachable so far, crossing
+    any tile. When it touches a walkable tile that is not yet connected, the path back
+    (followed through parent pointers) is carved into a corridor and that tile's whole
+    walkable region joins the search as new sources. Each tile is visited a bounded
+    number of times, so the cost is linear in the map size.
     """
+    meta = surface.meta
 
-    def is_walkable(px: int, py: int) -> bool:
-        return surface.meta.get((px, py), {}).get("walkable", False)
+    def is_walkable(p) -> bool:
+        return meta.get(p, {}).get("walkable", False)
 
-    if not is_walkable(start_x, start_y):
+    def neighbours(p):
+        x, y = p
+        for n in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+            if 0 <= n[0] < MAP_WIDTH and 0 <= n[1] < MAP_HEIGHT:
+                yield n
+
+    def flood(seed, connected: set) -> list:
+        """Walkable region containing ``seed`` that is not yet connected."""
+        region, stack = [seed], [seed]
+        connected.add(seed)
+        while stack:
+            for n in neighbours(stack.pop()):
+                if n not in connected and is_walkable(n):
+                    connected.add(n)
+                    region.append(n)
+                    stack.append(n)
+        return region
+
+    start = (start_x, start_y)
+    if not is_walkable(start):
         return
 
-    for _ in range(50):
-        # Fresh BFS from the start to find all currently reachable tiles.
-        reachable: set = set()
-        q: deque = deque([(start_x, start_y)])
-        reachable.add((start_x, start_y))
-        while q:
-            cx, cy = q.popleft()
-            for nx, ny in ((cx - 1, cy), (cx + 1, cy), (cx, cy - 1), (cx, cy + 1)):
-                if 0 <= nx < MAP_WIDTH and 0 <= ny < MAP_HEIGHT:
-                    if (nx, ny) not in reachable and is_walkable(nx, ny):
-                        reachable.add((nx, ny))
-                        q.append((nx, ny))
+    connected: set = set()
+    frontier = deque(flood(start, connected))
+    parent: dict = {p: None for p in frontier}
 
-        unreachable = [
-            (x, y)
-            for (x, y), meta in surface.meta.items()
-            if meta.get("walkable") and (x, y) not in reachable
-        ]
-
-        if not unreachable:
-            break  # fully connected
-
-        # Find the unreachable tile closest to any reachable tile.
-        # Sample the reachable set (≤300 tiles) to keep this O(|unreachable| * 300).
-        reachable_list = list(reachable)
-        stride = max(1, len(reachable_list) // 300)
-        sample = reachable_list[::stride]
-
-        ux, uy = min(
-            unreachable,
-            key=lambda p: min(abs(p[0] - r[0]) + abs(p[1] - r[1]) for r in sample),
-        )
-        rx, ry = min(reachable, key=lambda p: abs(p[0] - ux) + abs(p[1] - uy))
-
-        # Carve a straight-line corridor from (ux, uy) toward (rx, ry) using
-        # biome-appropriate tiles so caves get cave floor, hillside gets dirt, etc.
-        cx, cy = ux, uy
-        while (cx, cy) != (rx, ry):
-            if cx != rx:
-                cx += 1 if rx > cx else -1
-            elif cy != ry:
-                cy += 1 if ry > cy else -1
-            if not is_walkable(cx, cy):
-                _apply_tile(surface, cx, cy, _biome_corridor_tile(cx, cy))
-        # After this pass the next BFS will find (ux, uy) reachable because it is
-        # now adjacent to a newly walkable corridor tile.
+    while frontier:
+        current = frontier.popleft()
+        for n in neighbours(current):
+            if n in parent:
+                continue
+            parent[n] = current
+            if is_walkable(n) and n not in connected:
+                # Reached a disconnected region: carve the way back, then absorb it.
+                p = current
+                while p is not None and p not in connected:
+                    _apply_tile(surface, p[0], p[1], _biome_corridor_tile(p[0], p[1]))
+                    connected.add(p)
+                    frontier.append(p)
+                    p = parent[p]
+                for q in flood(n, connected):
+                    parent.setdefault(q, n)
+                    frontier.append(q)
+            else:
+                frontier.append(n)
 
 
 def _carve_bsp_band(
@@ -573,7 +571,7 @@ def _carve_bsp_band(
 
 # Bump whenever a change to generation moves tiles for an existing seed: saved tile
 # coordinates (depleted tiles, fog, picked-up gems) are only valid for this version.
-WORLDGEN_VERSION = 1
+WORLDGEN_VERSION = 2
 
 
 def generate_world(seed: int) -> tuple[TileMap, dict[tuple[int, int], str]]:

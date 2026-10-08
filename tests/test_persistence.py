@@ -21,6 +21,7 @@ from game.scenes.save_point import update_save_point
 from game.simulation import new_run, step_game
 from game.state import GameState
 from game.tools import _deplete_tile
+from game.world import WORLDGEN_VERSION
 
 CONFIRM = InputState(pressed=frozenset({Action.CONFIRM}))
 
@@ -103,7 +104,7 @@ def test_save_is_versioned_and_compact():
         raw = f.read()
     data = json.loads(raw)
     assert data["schema_version"] == SCHEMA_VERSION
-    assert data["worldgen_version"] == 1
+    assert data["worldgen_version"] == WORLDGEN_VERSION
     # A fully explored map used to take ~800 KB with one JSON entry per tile.
     assert len(raw) < 20_000
     assert set(_decode_fog(data["fog"])) == {"explored"}
@@ -112,7 +113,7 @@ def test_save_is_versioned_and_compact():
 # ── Migration ─────────────────────────────────────────────────────────────────
 
 
-def test_unversioned_legacy_save_is_migrated():
+def _legacy_save():
     legacy = {
         "seed": 42,
         "player": {
@@ -134,6 +135,11 @@ def test_unversioned_legacy_save_is_migrated():
     with open(save_path(), "w") as f:
         json.dump(legacy, f)
 
+
+def test_unversioned_legacy_save_is_migrated(monkeypatch):
+    # Unversioned saves were written by world generator v1; pin it to check the map data.
+    monkeypatch.setattr("game.world.WORLDGEN_VERSION", 1)
+    _legacy_save()
     loaded = load_game()
 
     assert loaded.player_gold == 80
@@ -142,6 +148,15 @@ def test_unversioned_legacy_save_is_migrated():
     assert loaded.world_tiles.meta[(100, 40)]["visibility"] == "visible"
     assert loaded.world_tiles.meta[(101, 40)]["visibility"] == "explored"
     assert loaded.world_tiles.meta[(0, 0)]["visibility"] == "unseen"
+
+
+def test_legacy_save_from_an_older_world_generator_keeps_progress():
+    _legacy_save()
+    loaded = load_game()
+    assert loaded.player_gold == 80
+    assert loaded.inventory["gems"] == {"quartz": 2}
+    assert loaded.depleted_tiles == set()
+    assert "update" in loaded.hud_message
 
 
 def test_save_from_a_newer_version_is_refused_and_left_untouched():
@@ -156,7 +171,7 @@ def test_save_from_a_newer_version_is_refused_and_left_untouched():
 
 def test_world_generator_change_keeps_progress_and_resets_the_map(played, monkeypatch):
     save_game(played)
-    monkeypatch.setattr("game.world.WORLDGEN_VERSION", 2)
+    monkeypatch.setattr("game.world.WORLDGEN_VERSION", WORLDGEN_VERSION + 1)
 
     loaded = load_game()
 

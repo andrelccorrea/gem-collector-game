@@ -164,3 +164,95 @@ def test_generate_world_different_seeds_differ():
 
     differs = any(surface_1.meta[k]["type"] != surface_2.meta[k]["type"] for k in common_keys)
     assert differs, "generate_world(1) and generate_world(2) should produce different layouts"
+
+
+# ── ensure_connectivity ───────────────────────────────────────────────────────
+
+
+def _island_map():
+    """A 30x12 wall map with three separate walkable rooms."""
+    from game.constants import TILE_PROPS
+    from game.tilemap import TileMap
+    from game.world import _apply_tile
+
+    tiles = TileMap(30, 12)
+    for y in range(12):
+        for x in range(30):
+            _apply_tile(tiles, x, y, "tree")
+    rooms = [(1, 1, 4, 3), (12, 6, 3, 3), (24, 2, 4, 4)]
+    for rx, ry, w, h in rooms:
+        for y in range(ry, ry + h):
+            for x in range(rx, rx + w):
+                _apply_tile(tiles, x, y, "grass")
+    assert not TILE_PROPS["tree"][0] and TILE_PROPS["grass"][0]
+    return tiles
+
+
+def _reachable(tiles, start):
+    from collections import deque
+
+    seen, queue = {start}, deque([start])
+    while queue:
+        x, y = queue.popleft()
+        for n in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+            if n not in seen and tiles.meta.get(n, {}).get("walkable"):
+                seen.add(n)
+                queue.append(n)
+    return seen
+
+
+def test_ensure_connectivity_joins_every_room_with_short_corridors():
+    from game.world import ensure_connectivity
+
+    tiles = _island_map()
+    walkable_before = {c for c, m in tiles.meta.items() if m["walkable"]}
+    ensure_connectivity(tiles, 2, 2)
+
+    walkable_after = {c for c, m in tiles.meta.items() if m["walkable"]}
+    assert walkable_after == _reachable(tiles, (2, 2))
+    assert walkable_before <= walkable_after
+    carved = walkable_after - walkable_before
+    # The shortest possible corridors total 20 tiles (10 per gap); allow a little slack.
+    assert len(carved) <= 24
+
+
+def test_ensure_connectivity_noop_when_start_is_blocked():
+    from game.world import ensure_connectivity
+
+    tiles = _island_map()
+    before = {c: dict(m) for c, m in tiles.meta.items()}
+    ensure_connectivity(tiles, 0, 0)
+    assert tiles.meta == before
+
+
+@pytest.mark.parametrize("seed", [1, 7, 42, 99, 1234])
+def test_connectivity_carves_short_corridors_on_real_maps(seed, monkeypatch):
+    # Measured 31-47 carved tiles per world on these seeds; a regression that
+    # stops reusing joined regions as search sources carves ~300 per world.
+    import game.world as world_module
+
+    carved = []
+    original_apply = world_module._apply_tile
+    original_connect = world_module.ensure_connectivity
+
+    def counting_connect(tiles, sx, sy):
+        monkeypatch.setattr(
+            world_module,
+            "_apply_tile",
+            lambda t, x, y, k: carved.append((x, y)) or original_apply(t, x, y, k),
+        )
+        try:
+            original_connect(tiles, sx, sy)
+        finally:
+            monkeypatch.setattr(world_module, "_apply_tile", original_apply)
+
+    monkeypatch.setattr(world_module, "ensure_connectivity", counting_connect)
+    world_module.generate_world(seed)
+    assert len(carved) <= 100
+
+
+@pytest.mark.parametrize("seed", [1, 7, 42, 99, 1234, 31337])
+def test_every_walkable_tile_is_reachable_from_town(seed):
+    world, _ = generate_world(seed)
+    walkable = {c for c, m in world.meta.items() if m["walkable"]}
+    assert walkable == _reachable(world, world.start_pos)

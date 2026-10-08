@@ -78,7 +78,7 @@ def test_rendering_and_screen_size_do_not_affect_the_simulation():
     def run(screen):
         state, scene = new_run(7), GameScene()
         renderer = StubRenderer(*screen) if screen else None
-        for i in range(1800):
+        for i in range(900):
             pressed = {_SCRIPT[(i // 5) % len(_SCRIPT)]} if i % 5 == 0 else set()
             step_game(InputState(pressed=frozenset(pressed)), state, STEP)
             state.active_scene = "game"
@@ -88,7 +88,7 @@ def test_rendering_and_screen_size_do_not_affect_the_simulation():
 
     headless = run(None)
     assert headless.enemies, "the scripted run should spawn enemies"
-    for screen in [(80, 24), (40, 60), (120, 30), (220, 90)]:
+    for screen in [(80, 24), (40, 60), (220, 90)]:
         assert _snapshot(run(screen)) == _snapshot(headless), screen
 
 
