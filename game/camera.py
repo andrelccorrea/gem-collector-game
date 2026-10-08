@@ -1,6 +1,7 @@
 from typing import NamedTuple
 
 from game.constants import HUD_ROWS, MAP_HEIGHT, MAP_WIDTH, VIEW_HEIGHT, VIEW_WIDTH
+from game.decor import decoration
 from game.objects.registry import GEM_CATALOG
 from game.theme import UNSEEN_APPEARANCE, dim, tile_appearance
 
@@ -59,9 +60,14 @@ def render_viewport(renderer, state, view: View) -> None:
     meta = state.world_tiles.meta
     for sy in range(view.height):
         for sx in range(view.width):
-            tile = meta.get((view.x + sx, view.y + sy))
-            char, color_pair = tile_appearance(tile) if tile is not None else UNSEEN_APPEARANCE
-            _set_ground_sprite(renderer, sx, sy, tile)
+            wx, wy = view.x + sx, view.y + sy
+            tile = meta.get((wx, wy))
+            if tile is None or tile.get("visibility") == "unseen":
+                char, color_pair, deco = *UNSEEN_APPEARANCE, None
+            else:
+                deco = decoration(state.seed, wx, wy, tile)
+                char, color_pair = tile_appearance(tile, deco)
+            _set_ground_sprite(renderer, sx, sy, tile, deco)
             # Only touch cells that changed, so the frontend redraws as little as possible.
             if renderer.get_cell(sx, sy) != (char, color_pair):
                 renderer.set_cell(sx, sy, char, color_pair)
@@ -70,11 +76,11 @@ def render_viewport(renderer, state, view: View) -> None:
     _render_dropped_bag(renderer, state, view)
 
 
-def _set_ground_sprite(renderer, sx: int, sy: int, tile: dict | None) -> None:
+def _set_ground_sprite(renderer, sx: int, sy: int, tile: dict | None, deco: str | None) -> None:
     visibility = "unseen" if tile is None else tile.get("visibility", "visible")
     if visibility == "unseen":
         return
-    sprite = "depleted" if tile.get("depleted") else tile["type"]
+    sprite = deco or ("depleted" if tile.get("depleted") else tile["type"])
     renderer.set_sprite(sx, sy, GROUND, sprite, None if visibility == "visible" else EXPLORED_TINT)
 
 

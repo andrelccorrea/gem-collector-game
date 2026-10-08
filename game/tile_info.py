@@ -24,6 +24,7 @@ from game.constants import (
     TYPE_TREE,
 )
 from game.death import bag_here
+from game.decor import DECOR_NAMES, decoration
 from game.input import Action, hint_label
 from game.objects.registry import TOOL_CATALOG
 from game.tools import MINEABLE_TYPES, WATER_GEM_TYPES
@@ -71,6 +72,9 @@ def describe_here(state) -> str:
     meta = state.world_tiles.meta.get((state.player_x, state.player_y), {})
     tile_type = meta.get("type", "")
     parts = [f"Here: {TILE_NAMES.get(tile_type, tile_type.replace('_', ' ').title())}"]
+    deco = decoration(state.seed, state.player_x, state.player_y, meta) if meta else None
+    if deco is not None:
+        parts[0] += f", {DECOR_NAMES[deco]}"
 
     if tile_type in _BUILDINGS:
         parts[0] += f" - {hint_label(Action.USE, 'Enter')}"

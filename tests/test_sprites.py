@@ -4,6 +4,7 @@ import pathlib
 from clingine.renderer import StubRenderer
 from game import camera
 from game.constants import TILE_PROPS
+from game.decor import DECOR_NAMES
 from game.enemies import HIT_TINT, Enemy
 from game.objects.registry import ENEMY_CATALOG
 from game.scenes.game import GameScene
@@ -27,6 +28,7 @@ class SpriteRecorder(StubRenderer):
 
 def test_every_sprite_the_game_draws_has_pixel_art():
     needed = set(TILE_PROPS) | {"depleted", "player", "gem", "bag"} | set(ENEMY_CATALOG)
+    needed |= set(DECOR_NAMES)
     assert needed <= set(sprites.SPRITES)
 
 

@@ -96,8 +96,21 @@ ASCII_FALLBACK = {
     "≈": "~",
     "☻": "@",
     "♦": "o",
+    "♠": "t",
+    "◊": "v",
 }
 UNSEEN_APPEARANCE = (" ", None)
+
+# Decorations (game/decor.py) drawn in place of their base tile's look.
+DECOR_APPEARANCE = {
+    "flowers": ("*", ((255, 120, 180), (0, 30, 0))),
+    "flowers_yellow": ("*", ((255, 225, 80), (0, 30, 0))),
+    "mushroom": ("♠", ((200, 120, 255), (10, 10, 10))),
+    "crystal": ("◊", ((120, 220, 255), (10, 10, 10))),
+    "reeds": ("|", ((90, 170, 60), (0, 0, 80))),
+    "lily": ("o", ((60, 170, 70), (0, 0, 80))),
+    "pebbles": (".", ((150, 150, 150), (40, 40, 40))),
+}
 
 
 def dim(color_pair):
@@ -108,12 +121,14 @@ def dim(color_pair):
     return (fg[0] // 2, fg[1] // 2, fg[2] // 2), (bg[0] // 2, bg[1] // 2, bg[2] // 2)
 
 
-def tile_appearance(tile_meta: dict) -> tuple:
-    """(char, color_pair) for a tile, including depletion and fog of war."""
+def tile_appearance(tile_meta: dict, decoration: str | None = None) -> tuple:
+    """(char, color_pair) for a tile, including its decoration, depletion and fog of war."""
     visibility = tile_meta.get("visibility", "visible")
     if visibility == "unseen":
         return UNSEEN_APPEARANCE
-    if tile_meta.get("depleted"):
+    if decoration is not None:
+        char, color_pair = DECOR_APPEARANCE[decoration]
+    elif tile_meta.get("depleted"):
         char, color_pair = DEPLETED_APPEARANCE
     else:
         char, color_pair = TILE_APPEARANCE[tile_meta["type"]]
