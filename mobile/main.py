@@ -37,6 +37,7 @@ from kivy.graphics import (  # noqa: E402
     Rectangle,
     Translate,
 )
+from kivy.graphics.scissor_instructions import ScissorPop, ScissorPush  # noqa: E402
 from kivy.graphics.texture import Texture  # noqa: E402
 from kivy.metrics import dp  # noqa: E402
 from kivy.storage.jsonstore import JsonStore  # noqa: E402
@@ -51,7 +52,7 @@ from sprites import frame_at, sprite_rgba  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
-from game.constants import FPS, HUD_ROWS  # noqa: E402
+from game.constants import FPS, HUD_ROWS, MOVE_COOLDOWN  # noqa: E402
 from game.events import FIND, HURT, take_events  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
@@ -60,6 +61,7 @@ from game.theme import ASCII_FALLBACK  # noqa: E402
 from game.touch import TouchController  # noqa: E402
 
 COLS, ROWS = 80, 24
+WORLD_ROWS = ROWS - HUD_ROWS  # the world view; the HUD rows below never scroll
 # On-screen hints name the touch buttons instead of keys.
 TOUCH_HINTS = {
     Action.MOVE_UP: "^",
@@ -153,7 +155,14 @@ class GridView(Widget):
             PushMatrix()
             self.shake = Translate(0, 0)  # screen shake moves the whole grid
         with self.canvas:
-            for _ in range(ROWS * COLS):
+            # The world rows slide (smooth scrolling), clipped so they never cover the HUD.
+            self._clip = ScissorPush()
+            PushMatrix()
+            self.scroll = Translate(0, 0)
+            for i in range(ROWS * COLS):
+                if i == WORLD_ROWS * COLS:
+                    PopMatrix()
+                    ScissorPop()
                 self._bg.append((Color(0, 0, 0, 1), Rectangle()))
                 self._fg.append((Color(1, 1, 1, 1), Rectangle()))
         self.overlay = InstructionGroup()  # floating texts, redrawn every frame
@@ -175,6 +184,10 @@ class GridView(Widget):
                 pos = (self.x + x * cw, self.top - (y + 1) * ch)
                 self._bg[i][1].pos, self._bg[i][1].size = pos, (cw, ch)
                 self._fg[i][1].pos = pos
+        world_h = WORLD_ROWS * ch
+        clip = self._clip
+        clip.x, clip.y = int(self.x), int(self.top - world_h)
+        clip.width, clip.height = int(self.width), int(world_h)
         if self._renderer is not None:
             self._renderer.dirty = {(x, y) for y in range(ROWS) for x in range(COLS)}
         self._shown_sprites = {}
@@ -312,15 +325,45 @@ class FloatingTexts:
             icon = _sprite_texture(event.icon) if event.icon else None
             icon_w = cw * 1.4 if icon else 0
             width = icon_w + label.width
-            center_x = grid.x + (event.x - view.x + 0.5) * cw
+            center_x = grid.x + (event.x - view.x + 0.5) * cw + grid.scroll.x
             left = min(max(center_x - width / 2, grid.x), grid.right - width)
             bottom = grid.top - (event.y - view.y) * ch + (slot + age * FLOAT_RISE) * ch
+            bottom += grid.scroll.y
             if icon:
                 overlay.add(Color(*_rgba(event.color or _WHITE)[:3], alpha))
                 overlay.add(Rectangle(texture=icon, pos=(left, bottom), size=(icon_w, ch * 1.4)))
             overlay.add(Color(*_rgba(event.text_color)[:3], alpha))
             text_y = bottom + (ch * 1.4 - label.height) / 2
             overlay.add(Rectangle(texture=label, pos=(left + icon_w, text_y), size=label.size))
+
+
+SLIDE_SECONDS = MOVE_COOLDOWN  # one step's slide ends as the next step may begin
+
+
+class WorldSlide:
+    """Smooth scrolling: when the camera steps, the world is drawn where it was and slides
+    to its new place at constant speed, so walking reads as one continuous motion."""
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        self.last = None
+        self.origin = (0.0, 0.0)  # offset at the start of the current slide
+        self.start = 0.0
+
+    def update(self, view, now: float) -> None:
+        if view is None:  # world not on screen: nothing to slide
+            self.last, self.origin = None, (0.0, 0.0)
+        elif self.last is not None:
+            dx, dy = view.x - self.last.x, view.y - self.last.y
+            if (dx or dy) and abs(dx) <= 1 and abs(dy) <= 1:  # a step, not a teleport
+                cw, ch = self.grid.cell_size()
+                x, y = self.grid.scroll.xy
+                self.origin, self.start = (x + dx * cw, y - dy * ch), now
+            elif dx or dy:
+                self.origin = (0.0, 0.0)
+        self.last = view
+        left = 1.0 - min(1.0, (now - self.start) / SLIDE_SECONDS)
+        self.grid.scroll.xy = (self.origin[0] * left, self.origin[1] * left)
 
 
 SHAKE_SECONDS = 0.2  # the grid shakes this long when the player is hurt
@@ -408,6 +451,7 @@ class GemCollectorApp(App):
         root.add_widget(self.grid)
         self.floats = FloatingTexts(self.grid)
         self.shake = ScreenShake(self.grid)
+        self.slide = WorldSlide(self.grid)
         root.add_widget(self._controls())
         Window.bind(on_key_down=self._key_down)
         Clock.schedule_interval(self._frame, 1 / FPS)
@@ -489,7 +533,9 @@ class GemCollectorApp(App):
         self.sfx.play(events)
         self.shake.update(events, now)
         in_world = self.state.active_scene == "game"
-        self.floats.draw(camera.render_view(self.state, self.renderer) if in_world else None, now)
+        view = camera.render_view(self.state, self.renderer) if in_world else None
+        self.slide.update(view, now)
+        self.floats.draw(view, now)
         if self.state.quit_requested:
             self.stop()
 
