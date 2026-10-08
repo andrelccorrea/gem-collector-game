@@ -85,6 +85,10 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
 | `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Leaderboard), death, win, daily-end, perks and leaderboard screens |
 
+### Mobile (`mobile/`)
+
+`main.py` is the Kivy frontend (Android; also runs on the desktop from `.venv-mobile`, Python 3.13 + Kivy 2.3.1): a `GridRenderer` (80x24 cells, redraws changed cells), action buttons + d-pad, `game/touch.py` for taps (walk-to, use on arrival, attack adjacent). It saves on pause and resets the game timestep on resume. `build_android.sh` assembles `build_src/` (main.py + `game/` + `clingine/renderer.py`, never the curses modules) and runs Buildozer with `buildozer.spec` (API 36, AAB). See `docs/ANDROID.md`.
+
 ### Map Layout (200×80)
 
 ```
