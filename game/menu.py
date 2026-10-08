@@ -8,39 +8,22 @@ from game.constants import (
     COLOR_MENU_TITLE,
 )
 from game.input import Action, InputState
+from game.ui import clear_screen, write_str
 
 MENU_ITEMS = ["New Game", "Continue", "Leaderboard"]
 
 
-def _write_str(renderer, y: int, x: int, text: str, color_pair: tuple) -> None:
-    max_y = math.floor(renderer.height) - 1
-    max_x = math.floor(renderer.width) - 1
-    if y < 0 or y >= max_y:
-        return
-    for i, ch in enumerate(text):
-        cx = x + i
-        if cx < 0 or cx >= max_x:
-            continue
-        renderer.set_cell(cx, y, ch, color_pair)
-
-
-def _clear_screen(renderer, color_pair=None) -> None:
-    if color_pair is None:
-        color_pair = ((0, 0, 0), (0, 0, 0))
-    renderer.clear(color_pair)
-
-
 def render_menu(renderer, state) -> None:
-    _clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
 
     mid_x = math.floor(renderer.width) // 2
     mid_y = math.floor(renderer.height) // 2
 
     title = "=== GEM COLLECTOR ==="
-    _write_str(renderer, mid_y - 5, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
+    write_str(renderer, mid_y - 5, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
 
     subtitle = "A Terminal Prospecting Adventure"
-    _write_str(renderer, mid_y - 4, mid_x - len(subtitle) // 2, subtitle, COLOR_MENU_NORMAL)
+    write_str(renderer, mid_y - 4, mid_x - len(subtitle) // 2, subtitle, COLOR_MENU_NORMAL)
 
     save_exists = persistence.has_save()
     for i, item in enumerate(MENU_ITEMS):
@@ -55,14 +38,14 @@ def render_menu(renderer, state) -> None:
         else:
             cp = COLOR_MENU_NORMAL
 
-        _write_str(renderer, row, col, label, cp)
+        write_str(renderer, row, col, label, cp)
 
     if state.menu_notice:
         notice = state.menu_notice[: math.floor(renderer.width) - 2]
-        _write_str(renderer, mid_y + 5, mid_x - len(notice) // 2, notice, COLOR_MENU_TITLE)
+        write_str(renderer, mid_y + 5, mid_x - len(notice) // 2, notice, COLOR_MENU_TITLE)
 
     hint = "Arrow Keys: Navigate  |  Enter: Select  |  Esc: Quit"
-    _write_str(renderer, mid_y + 7, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+    write_str(renderer, mid_y + 7, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
 def update_menu(inp: InputState, state) -> None:
@@ -115,15 +98,15 @@ def _select_menu_item(state, save_exists: bool) -> None:
 
 
 def render_death_screen(renderer, state) -> None:
-    _clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     mid_x = math.floor(renderer.width) // 2
     mid_y = math.floor(renderer.height) // 2
     msg = "  YOU DIED  "
-    _write_str(renderer, mid_y - 2, mid_x - len(msg) // 2, msg, COLOR_MENU_TITLE)
+    write_str(renderer, mid_y - 2, mid_x - len(msg) // 2, msg, COLOR_MENU_TITLE)
     sub = f"Lifetime Earnings: ${state.lifetime_earnings}"
-    _write_str(renderer, mid_y, mid_x - len(sub) // 2, sub, COLOR_MENU_NORMAL)
+    write_str(renderer, mid_y, mid_x - len(sub) // 2, sub, COLOR_MENU_NORMAL)
     hint = "Press Enter to return to menu"
-    _write_str(renderer, mid_y + 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+    write_str(renderer, mid_y + 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
 def update_death_screen(inp: InputState, state) -> None:
@@ -133,15 +116,15 @@ def update_death_screen(inp: InputState, state) -> None:
 
 
 def render_win_screen(renderer, state) -> None:
-    _clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     mid_x = math.floor(renderer.width) // 2
     mid_y = math.floor(renderer.height) // 2
     title = "  HALL OF FAME!  "
-    _write_str(renderer, mid_y - 3, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
+    write_str(renderer, mid_y - 3, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
     msg = f"You earned ${state.lifetime_earnings} as a prospector!"
-    _write_str(renderer, mid_y - 1, mid_x - len(msg) // 2, msg, COLOR_MENU_NORMAL)
+    write_str(renderer, mid_y - 1, mid_x - len(msg) // 2, msg, COLOR_MENU_NORMAL)
     hint = "Press Enter to continue playing"
-    _write_str(renderer, mid_y + 1, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+    write_str(renderer, mid_y + 1, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
 def update_win_screen(inp: InputState, state) -> None:
@@ -151,26 +134,26 @@ def update_win_screen(inp: InputState, state) -> None:
 
 
 def render_leaderboard(renderer, state) -> None:
-    _clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     mid_x = math.floor(renderer.width) // 2
     title = "  HALL OF FAME - TOP PROSPECTORS  "
-    _write_str(renderer, 3, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
+    write_str(renderer, 3, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
 
     entries = persistence.load_leaderboard()
     if not entries:
         msg = "No entries yet. Earn $10,000 to make history!"
-        _write_str(renderer, 8, mid_x - len(msg) // 2, msg, COLOR_MENU_DIMMED)
+        write_str(renderer, 8, mid_x - len(msg) // 2, msg, COLOR_MENU_DIMMED)
     else:
-        _write_str(
+        write_str(
             renderer, 6, mid_x - 20, f"{'Rank':<6}{'Earnings':>12}{'Date':>15}", COLOR_MENU_NORMAL
         )
         for i, entry in enumerate(entries[:10]):
             row = 7 + i
             line = f"  #{i + 1:<4}${entry.get('earnings', 0):>10}   {entry.get('date', 'N/A'):>12}"
-            _write_str(renderer, row, mid_x - 20, line, COLOR_MENU_NORMAL)
+            write_str(renderer, row, mid_x - 20, line, COLOR_MENU_NORMAL)
 
     hint = "Esc: Back to Menu"
-    _write_str(
+    write_str(
         renderer, math.floor(renderer.height) - 3, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED
     )
 

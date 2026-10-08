@@ -65,7 +65,9 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 | `gems.py` | `roll_gem_drop(biome, tool, rng)` weighted random; `add_gem_to_inventory`; polished gem value computation |
 | `enemies.py` | `Enemy` class; BFS pathfinding (cap 50 steps); `spawn_enemies`, `update_enemies`, `render_enemies`; difficulty scaling |
 | `combat.py` | F-key player attack (Chebyshev-1 adjacency); enemy auto-attacks on per-enemy cooldown |
-| `buildings.py` | Shop (buy/upgrade tools, sell gems/loot), Lapidary (cut gems, upgrade machine), Save point |
+| `buildings.py` | `check_building_interaction` (USE on S/L/P tile switches scene) and `check_win` |
+| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py`, `lapidary.py`, `save_point.py` |
+| `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
 | `menu.py` | Main menu, death screen, win/Hall of Fame screen, leaderboard display |
 
@@ -81,7 +83,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 
 ### Scene Graph
 
-`state.active_scene` controls the main loop dispatcher:
+`state.active_scene` names the current screen; `main.py` hands each frame to `SceneManager.frame()`, which calls `enter()` on a switch, then `update()`, then `render()` (skipped if the update switched away). New screens must be registered in `game/scenes/__init__.py::build_scenes()` (a test checks every name assigned in `game/`).
 `menu` → `game` → `shop` / `lapidary` / `save_point` / `death` / `win` / `leaderboard`
 
 ### Key Invariants
@@ -93,7 +95,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 - **Movement:** one step per move action in `inp.pressed` (or while in `inp.held`, for frontends that report releases), rate-limited by `MOVE_COOLDOWN`; a direction change during the cooldown is queued. Use `inp.pressed` for single-fire actions.
 - **Quitting:** scenes set `state.quit_requested`; only the main loop exits.
 - **Randomness:** gameplay rolls (drops, polishing, spawns) use `state.rng` (`gameplay_rng(seed)`), never the global `random` module; world generation uses its own `random.Random(seed)`. Render/preview code must not draw from `state.rng`.
-- **Time:** game logic uses the fixed step `dt` and `state.game_time` (advances only while the game scene is simulated) — never `time.time()`. Logic goes in `game/simulation.py::step_game`, drawing in `main.py::_render_game`; state the simulation reads (e.g. the camera) must be updated by the simulation, not by rendering.
+- **Time:** game logic uses the fixed step `dt` and `state.game_time` (advances only while the game scene is simulated) — never `time.time()`. Logic goes in `game/simulation.py::step_game`, drawing in `GameScene.render` (`game/scenes/game.py`); state the simulation reads (e.g. the camera) must be updated by the simulation, not by rendering.
 
 ## Save Files
 

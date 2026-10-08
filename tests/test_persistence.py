@@ -4,7 +4,6 @@ import os
 import pytest
 
 from game import persistence
-from game.buildings import update_save_point
 from game.input import Action, InputState
 from game.loop import STEP
 from game.menu import _select_menu_item, render_menu, update_menu
@@ -18,6 +17,7 @@ from game.persistence import (
     save_game,
     save_path,
 )
+from game.scenes.save_point import update_save_point
 from game.simulation import new_run, step_game
 from game.state import GameState
 from game.tools import _deplete_tile

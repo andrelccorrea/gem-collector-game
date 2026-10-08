@@ -3,11 +3,11 @@ import curses
 import pytest
 
 from clingine.keyboard import Keyboard, key_name
-from game.buildings import update_shop
 from game.constants import MOVE_COOLDOWN
 from game.input import EMPTY_INPUT, Action, InputState, map_keys
 from game.menu import update_menu
 from game.player import update_player
+from game.scenes.shop import update_shop
 from game.state import GameState
 
 FRAME = 1 / 30

@@ -1,10 +1,10 @@
 import random
 
 from game import camera
-from game.buildings import _build_lapidary_items, render_lapidary
 from game.input import Action, InputState
 from game.loop import STEP, FixedTimestep
 from game.menu import _select_menu_item
+from game.scenes.lapidary import _build_lapidary_items, render_lapidary
 from game.simulation import new_run, step_game
 from game.state import GameState, gameplay_rng
 
