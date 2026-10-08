@@ -94,17 +94,6 @@ def _build_shop_items(state) -> list:
             )
         items.append(_gear_upgrade_item(state, "bag"))
         items.append(_gear_upgrade_item(state, "lantern"))
-        if not items:
-            items.append(
-                {
-                    "label": "  No tools owned yet.",
-                    "enabled": False,
-                    "action": "none",
-                    "key": None,
-                    "cost": 0,
-                    "value": 0,
-                }
-            )
 
     elif tab == 2:  # Sell Gems
         gems = state.inventory.get("gems", {})

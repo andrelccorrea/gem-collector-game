@@ -10,9 +10,9 @@ from game.gems import get_gem_raw_value, polished_prices, take_polished_gem
 from game.objects.registry import ENEMY_CATALOG
 
 # Each unit of saturation lowers the price: multiplier = 1 / (1 + PRICE_DROP * saturation)
-PRICE_DROP_PER_SALE = 0.06
+PRICE_DROP_PER_SALE = 0.10
 # Game seconds for one unit of saturation to wear off.
-RECOVERY_SECONDS_PER_SALE = 20.0
+RECOVERY_SECONDS_PER_SALE = 30.0
 
 _LOOT_VALUES = {e.loot: e.loot_value for e in ENEMY_CATALOG.values() if e.loot}
 

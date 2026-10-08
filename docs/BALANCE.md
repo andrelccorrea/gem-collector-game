@@ -69,3 +69,28 @@ now pays noticeably less, rewarding variety and spreading sales out.
 Unchanged for the bot (median 21.8 min): it heads home to sell often enough that its
 lantern rarely runs low. The lantern mainly limits how far into the caves a human can
 push before the view shrinks (2.5 fuel/s there vs 0.5 in the meadow).
+
+## Bot uses its whole bag; market retuned
+
+Until now the bot sold at 12 items. Once it filled the real bag (15, upgradable to 60),
+it made fewer trips and got *faster* (median 13.3 min): with 6%/sale saturation, big
+batches were barely penalized, so bigger bags simply meant more digging time.
+
+Sweep over the market parameters (8 seeds, bot sells everything at once — a worst case):
+
+| price drop per sale | recovery per sale | won | median min | gold/min |
+|---|---|---|---|---|
+| 6%  | 20 s | 8/8 | 13.3 | 804 |
+| 10% | 30 s | 8/8 | 16.3 | 674 |
+| 15% | 30 s | 6/8 | 16.5 | 608 |
+| 15% | 45 s | 3/8 | 18.3 | 156 |
+| 25% | 45 s | 0/8 | -    | 144 |
+
+Chosen: **10% per sale, one sale recovered every 30 s** — every run still wins, and
+selective selling (which the bot does not do) is clearly rewarded. 10 seeds:
+
+```
+won 10/10, died 0
+median minutes to win: 16.1
+median gold/min: 685
+```

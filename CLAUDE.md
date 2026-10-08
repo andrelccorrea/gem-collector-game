@@ -55,7 +55,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | Module | Role |
 |--------|------|
 | `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, HUD_ROWS=2, VIEW 79×21 (fixed simulation view), FPS=30, biome colors, tile properties, lapidary upgrades, difficulty tiers |
-| `data/catalogs.toml` + `objects/registry.py` | Gem, tool and enemy definitions (and tool upgrade costs) as data, loaded with stdlib `tomllib` into frozen `GemDef`/`ToolDef`/`EnemyDef` catalogs. File order is catalog order and world generation draws from it — reordering entries changes worlds (bump `WORLDGEN_VERSION`) |
+| `data/catalogs.toml` + `objects/registry.py` | Gem (`min_tier`), tool (`tier`) and enemy definitions plus tool-upgrade, bag and lantern tables as data, loaded with stdlib `tomllib` into frozen `GemDef`/`ToolDef`/`EnemyDef` catalogs. File order is catalog order and world generation draws from it — reordering entries changes worlds (bump `WORLDGEN_VERSION`) |
 | `state.py` | `GameState` dataclass — single source of truth for player, world, enemies, inventory, scene |
 | `simulation.py` | `new_run(seed)` (fresh GameState: world, player, fog, camera) and `step_game(inp, state, dt)` (one fixed simulation step, no drawing) — same seed + same inputs = same run |
 | `loop.py` | `FixedTimestep`: turns frame time into fixed 1/FPS simulation steps (clamped at 0.25 s), buffering pressed input until a step consumes it; `reset()` freezes time outside the game scene |
@@ -66,16 +66,21 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `camera.py` | `update_camera(state)` centers the fixed simulation view on the player (clamped); `on_screen` tests it. `render_view(state, renderer)` → `View` the frontend draws (≤ simulation view); `render_viewport(renderer, state, view)` draws it through `theme.tile_appearance`, touching only changed cells. |
 | `hud.py` | `render_hud(renderer, state)` writes to the last two rows: HP (color-coded), Gold, Tool, Biome, key hints, HUD messages |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
-| `tools.py` | E-key cycles tools; Space-key mines tiles, depletes them, rolls gem drops |
-| `gems.py` | `roll_gem_drop(biome, tool, rng)` weighted random; `add_gem_to_inventory`; polished gem value computation |
+| `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
+| `gems.py` | `effective_tier(tool, level)`, `roll_gem_drop(biome, tier, rng)` (gems need `min_tier`), bag capacity/count, polished prices (one per gem, highest first), `roll_cut_value` |
+| `market.py` | All selling: per-kind saturation lowers prices (recovers over game time), `sell_one`/`sell_all`/`preview_sell_all` |
+| `lantern.py` | Fuel drains per biome, refills in town; `light_radius` sets the fog radius |
+| `death.py` | Normal-mode revive in town for a fee with the bag dropped where the player fell (`recover_bag`); hardcore runs end on death |
+| `daily.py` | Daily run: seed from the date, 15-minute game-time limit, `daily_end` scene |
+| `bot.py` | Headless greedy bot that plays through `step_game` for balance runs (`scripts/balance_sim.py`, results in `docs/BALANCE.md`) |
 | `geography.py` | `in_town(x, y, margin)`, `biome_at(x, y)`, `region_name(x, y)` — the single definition of the town rectangle and biome regions |
 | `enemies.py` | `Enemy` class; `find_path_bfs` (parent-pointer BFS, depth cap, falls back to the reachable tile closest to the target, optional `blocked`); `spawn_enemies` (ring around the player: off-screen, out of town, 10 tiles inside the despawn distance), `update_enemies`, `render_enemies`; difficulty scaling |
-| `combat.py` | F-key player attack (Chebyshev-1 adjacency); enemy auto-attacks on per-enemy cooldown |
+| `combat.py` | F attack (Chebyshev-1 adjacency, `PLAYER_ATTACK_COOLDOWN`); kills give loot only; enemy auto-attacks on per-enemy cooldown |
 | `buildings.py` | `check_building_interaction` (USE on S/L/P tile switches scene) and `check_win` |
-| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py`, `lapidary.py`, `save_point.py` |
+| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy/upgrade tools and gear, sell via `market`), `lapidary.py` (LapidaryScene: cutting minigame), `save_point.py` (daily runs can't save) |
 | `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
-| `menu.py` | Main menu, death screen, win/Hall of Fame screen, leaderboard display |
+| `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Leaderboard), death screen, win screen, daily end screen, leaderboard display |
 
 ### Map Layout (200×80)
 

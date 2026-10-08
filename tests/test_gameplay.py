@@ -121,6 +121,7 @@ def test_loot_is_lost_when_the_bag_is_full():
     state.enemies = [enemy]
     player_attack(press(Action.ATTACK), state)
     assert state.inventory["loot"] == {}
+    assert state.player_gold == 50
     assert "lost" in state.hud_message
 
 

@@ -21,7 +21,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--seeds", type=int, default=10, help="number of seeds (1..N)")
     parser.add_argument("--minutes", type=float, default=60.0, help="game-time cap per run")
-    parser.add_argument("--bag", type=int, default=12, help="items carried before selling")
+    parser.add_argument(
+        "--bag",
+        type=int,
+        default=None,
+        help="sell at this many items (default: when the bag is full)",
+    )
     args = parser.parse_args()
 
     reports = [

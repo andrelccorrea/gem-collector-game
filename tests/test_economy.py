@@ -139,3 +139,95 @@ def test_hud_shows_bag_fill(stub_renderer):
     render_hud(stub_renderer, state)
     text = "".join(stub_renderer.get_cell(x, 23)[0] for x in range(80))
     assert f"Bag:{bag_count(state)}/{bag_capacity(state)}" in text
+
+
+# ── Equipped tool reaches the drop roll ───────────────────────────────────────
+
+
+def _dig_many(tool, level, tile, seeds=400):
+    """Dig a fresh ``tile`` (pretending it is in the caves) once per seed; gems found."""
+    import game.tools as tools_module
+    from game.state import gameplay_rng
+
+    found = []
+    original = tools_module.biome_at
+    tools_module.biome_at = lambda x, y: "cave"
+    try:
+        for seed in range(seeds):
+            state = make_state({(5, 5): tile})
+            state.inventory["tools"] = {tool: {"level": level}}
+            state.equipped_tool = tool
+            state.rng = gameplay_rng(seed)
+            use_tool(USE, state)
+            found += list(state.inventory["gems"])
+    finally:
+        tools_module.biome_at = original
+    return found
+
+
+def test_upgraded_pickaxe_digs_up_top_tier_gems():
+    found = _dig_many("pickaxe", 5, "mineable_rock")
+    assert any(GEM_CATALOG[g].min_tier >= 3 for g in found)
+
+
+def test_basic_pickaxe_never_digs_up_top_tier_gems():
+    found = _dig_many("pickaxe", 1, "mineable_rock")
+    assert found and all(GEM_CATALOG[g].min_tier <= 2 for g in found)
+
+
+def test_panning_uses_the_equipped_tool_tier():
+    from game.state import gameplay_rng
+
+    def pan(level, seeds=600):
+        found = []
+        for seed in range(seeds):
+            state = make_state({(5, 5): "stream"})
+            state.inventory["tools"] = {"gold_pan": {"level": level}}
+            state.equipped_tool = "gold_pan"
+            state.rng = gameplay_rng(seed)
+            use_tool(USE, state)
+            found += list(state.inventory["gems"])
+        return found
+
+    low, high = pan(1), pan(5)
+    assert all(GEM_CATALOG[g].min_tier <= 2 for g in low)
+    assert len(high) > len(low)  # higher tiers come up empty less often
+
+
+# ── Shop rows reflect the market; Sell All can win ────────────────────────────
+
+
+def test_sell_rows_show_recent_sale_discounts():
+    from game.gems import add_polished_gem
+    from game.market import price_multiplier
+
+    state = make_state(active_scene="shop", shop_tab=2)
+    state.inventory["gems"] = {"garnet": 2}
+    add_polished_gem(state, "opal", 200)
+    add_polished_gem(state, "opal", 100)
+    state.market = {"garnet": 5.0, "opal_polished": 5.0}
+    rows = {it["key"]: it["label"] for it in _build_shop_items(state)}
+    m = price_multiplier(5.0)
+    assert f"${int(25 * m)} each" in rows["garnet"] and "sold recently" in rows["garnet"]
+    assert f"${int(100 * m)}-${int(200 * m)}" in rows["opal_polished"]
+
+
+def test_selling_everything_can_win_the_game():
+    state = make_state(active_scene="shop", shop_tab=2)
+    state.lifetime_earnings = 9_990
+    state.inventory["gems"] = {"garnet": 2}
+    items = _build_shop_items(state)
+    state.shop_cursor = next(i for i, it in enumerate(items) if it["action"] == "sell_all_gems")
+    update_shop(CONFIRM, state)
+    assert state.active_scene == "win" and state.has_won
+
+
+def test_market_does_not_recover_while_the_shop_is_open():
+    from game.scenes import build_scenes
+
+    state = make_state(active_scene="shop")
+    state.market = {"garnet": 3.0}
+    scene = build_scenes()["shop"]
+    for _ in range(600):
+        scene.update(InputState(), state, 1 / 30)
+    assert state.market == {"garnet": 3.0}
