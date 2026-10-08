@@ -3,6 +3,15 @@ import random
 from game.constants import LAPIDARY_UPGRADES
 from game.objects.registry import BAG_CAPACITIES, GEM_CATALOG, TOOL_CATALOG
 
+# Geodes: rough stones dug up in rocky ground. Nearly worthless as they are, but the
+# lapidary cracks them open for a fee to reveal a gem from a better pool than digging.
+GEODE = "geode"
+GEODE_VALUE = 3
+GEODE_WEIGHT = 6
+GEODE_BIOMES = frozenset({"hillside", "cave"})
+GEODE_CRACK_FEE = 10
+GEODE_TIER_BONUS = 2  # cracking draws from the cave pool at tier = digging tier + bonus
+
 # Weight of "found nothing" for a tier-1 tool, and how much each extra tier removes
 NO_DROP_WEIGHT = 65
 NO_DROP_REDUCTION_PER_TIER = 8
@@ -35,6 +44,9 @@ def roll_gem_drop(biome: str, tier: int, rng: random.Random) -> str | None:
     names = [""] + list(eligible.keys())
     no_drop = max(NO_DROP_WEIGHT - NO_DROP_REDUCTION_PER_TIER * (tier - 1), 0)
     weights = [no_drop] + [eligible[n].rarity_weight for n in eligible]
+    if biome in GEODE_BIOMES:
+        names.append(GEODE)
+        weights.append(GEODE_WEIGHT)
 
     result = rng.choices(names, weights=weights, k=1)[0]
     return result if result else None
@@ -69,6 +81,8 @@ def add_loot_to_inventory(state, loot_name: str) -> None:
 
 def get_gem_raw_value(gem_name: str) -> int:
     """Return the base (raw) sell value for a gem."""
+    if gem_name == GEODE:
+        return GEODE_VALUE
     gem = GEM_CATALOG.get(gem_name)
     return gem.value if gem is not None else 0
 
@@ -149,3 +163,13 @@ def total_gem_count(state) -> int:
 
 def total_loot_count(state) -> int:
     return sum(state.inventory.get("loot", {}).values())
+
+
+def crack_geode(tier: int, rng: random.Random) -> str:
+    """The gem inside a geode: always something, from the cave pool at a boosted tier."""
+    eligible = [
+        gem
+        for gem in GEM_CATALOG.values()
+        if "cave" in gem.biomes and gem.min_tier <= tier + GEODE_TIER_BONUS
+    ]
+    return rng.choices([g.name for g in eligible], [g.rarity_weight for g in eligible])[0]

@@ -11,7 +11,11 @@ from game.constants import (
     LAPIDARY_UPGRADES,
 )
 from game.gems import (
+    GEODE,
+    GEODE_CRACK_FEE,
     add_polished_gem,
+    crack_geode,
+    effective_tier,
     get_gem_raw_value,
     polished_value_range,
     roll_cut_value,
@@ -54,6 +58,19 @@ def _build_lapidary_items(state) -> list:
     for gem_key, count in gems.items():
         # Only raw gems (no polished suffix)
         if gem_key.endswith("_polished") or count <= 0:
+            continue
+        if gem_key == GEODE:
+            items.append(
+                {
+                    "label": f"  {'Geode':16s}  x{count}  |  Crack fee: ${GEODE_CRACK_FEE}"
+                    "  |  Result: a random gem",
+                    "enabled": state.player_gold >= GEODE_CRACK_FEE,
+                    "action": "crack_geode",
+                    "key": GEODE,
+                    "cut_fee": GEODE_CRACK_FEE,
+                    "polished_range": (0, 0),
+                }
+            )
             continue
         raw_val = get_gem_raw_value(gem_key)
         cut_fee = int(math.ceil(raw_val * LAPIDARY_CUT_FEE_RATIO))
@@ -198,6 +215,21 @@ def update_lapidary(inp: InputState, state, dt: float = 0.0) -> None:
         else:
             state.cutting = {"gem": gem_key, "fee": cut_fee, "elapsed": 0.0}
 
+    elif action == "crack_geode":
+        gems = state.inventory["gems"]
+        if gems.get(GEODE, 0) <= 0:
+            set_hud_message(state, "No geodes to crack!", 1.5)
+        elif state.player_gold < GEODE_CRACK_FEE:
+            set_hud_message(state, "Not enough gold for the crack fee!", 1.5)
+        else:
+            state.player_gold -= GEODE_CRACK_FEE
+            gems[GEODE] -= 1
+            if gems[GEODE] == 0:
+                del gems[GEODE]
+            found = crack_geode(_best_tier(state), state.rng)
+            gems[found] = gems.get(found, 0) + 1
+            set_hud_message(state, f"The geode held a {found.replace('_', ' ').title()}!", 3.0)
+
     elif action == "upgrade_lapidary":
         upgrade_cost = item["cut_fee"]
         max_level = max(LAPIDARY_UPGRADES.keys())
@@ -212,6 +244,12 @@ def update_lapidary(inp: InputState, state, dt: float = 0.0) -> None:
             state.player_gold -= upgrade_cost
             state.lapidary_level += 1
             set_hud_message(state, f"Lapidary upgraded to level {state.lapidary_level}!", 2.5)
+
+
+def _best_tier(state) -> int:
+    """Effective tier of the best tool owned (geodes reward a well-equipped prospector)."""
+    tools = state.inventory.get("tools", {})
+    return max((effective_tier(t, info["level"]) for t, info in tools.items()), default=1)
 
 
 def _update_cutting(pressed, state, dt: float) -> None:

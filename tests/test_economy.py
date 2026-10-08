@@ -4,7 +4,7 @@ import random
 
 import pytest
 
-from game.gems import bag_capacity, bag_count, effective_tier, roll_gem_drop
+from game.gems import GEODE, bag_capacity, bag_count, effective_tier, roll_gem_drop
 from game.hud import render_hud
 from game.input import Action, InputState
 from game.objects.registry import (
@@ -40,7 +40,7 @@ def test_effective_tier_grows_with_upgrades():
 
 @pytest.mark.parametrize("tier", [1, 2, 3])
 def test_low_tiers_never_find_gems_above_their_tier(tier):
-    found = {g for g in _drops("cave", tier) if g}
+    found = {g for g in _drops("cave", tier) if g and g != GEODE}
     assert found
     assert all(GEM_CATALOG[g].min_tier <= tier for g in found)
 
@@ -166,12 +166,12 @@ def _dig_many(tool, level, tile, seeds=400):
 
 
 def test_upgraded_pickaxe_digs_up_top_tier_gems():
-    found = _dig_many("pickaxe", 5, "mineable_rock")
+    found = [g for g in _dig_many("pickaxe", 5, "mineable_rock") if g != GEODE]
     assert any(GEM_CATALOG[g].min_tier >= 3 for g in found)
 
 
 def test_basic_pickaxe_never_digs_up_top_tier_gems():
-    found = _dig_many("pickaxe", 1, "mineable_rock")
+    found = [g for g in _dig_many("pickaxe", 1, "mineable_rock") if g != GEODE]
     assert found and all(GEM_CATALOG[g].min_tier <= 2 for g in found)
 
 

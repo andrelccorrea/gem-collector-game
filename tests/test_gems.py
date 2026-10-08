@@ -99,7 +99,7 @@ def test_roll_gem_drop_cave():
     """100 cave rolls only return gems that belong to the cave biome (or None)."""
     rng = random.Random(42)
     catalog = build_gem_catalog()
-    cave_gem_names = {name for name, gem in catalog.items() if "cave" in gem.biomes}
+    cave_gem_names = {name for name, gem in catalog.items() if "cave" in gem.biomes} | {"geode"}
     for _ in range(100):
         result = roll_gem_drop("cave", 3, rng)
         if result is not None:
