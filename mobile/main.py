@@ -75,6 +75,7 @@ TOUCH_HINTS = {
     Action.CONFIRM: "OK",
     Action.CANCEL: "Back",
     Action.RECALL: "Recall",
+    Action.USE_ITEM: "Item",
 }
 DEFAULT_BG = (0, 0, 0)
 DEFAULT_FG = (255, 255, 255)
@@ -461,20 +462,20 @@ class GemCollectorApp(App):
 
     def _controls(self):
         panel = BoxLayout(orientation="vertical", size_hint=(0.26, 1), padding=dp(6), spacing=dp(6))
-        # 4 rows of actions above 3 rows of d-pad: rows share the height evenly, so the
-        # panel fits short landscape screens (360 dp gives ~44 dp per row).
-        actions = GridLayout(cols=2, spacing=dp(6), size_hint_y=4 / 7)
+        # 5 rows of actions above 3 rows of d-pad: rows share the height evenly, so the
+        # panel fits short landscape screens (360 dp gives ~40 dp per row).
+        actions = GridLayout(cols=2, spacing=dp(6), size_hint_y=5 / 8)
         for label, action in [("Use", Action.USE), ("Attack", Action.ATTACK),
                               ("Tool", Action.CYCLE_TOOL), ("Recall", Action.RECALL),
                               ("OK", Action.CONFIRM), ("Back", Action.CANCEL),
-                              ("Tab", Action.NEXT_TAB)]:  # fmt: skip
+                              ("Tab", Action.NEXT_TAB), ("Item", Action.USE_ITEM)]:  # fmt: skip
             button = Button(text=label)
             button.bind(on_press=lambda _b, a=action: self.touch.press(a))
             actions.add_widget(button)
         self.sound_button = Button(text=self._sound_label())
         self.sound_button.bind(on_press=lambda _b: self._toggle_sound())
         actions.add_widget(self.sound_button)
-        pad = GridLayout(cols=3, spacing=dp(6), size_hint_y=3 / 7)
+        pad = GridLayout(cols=3, spacing=dp(6), size_hint_y=3 / 8)
         for label, action in [("", None), ("^", Action.MOVE_UP), ("", None),
                               ("<", Action.MOVE_LEFT), ("", None), (">", Action.MOVE_RIGHT),
                               ("", None), ("v", Action.MOVE_DOWN), ("", None)]:  # fmt: skip

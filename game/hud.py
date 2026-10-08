@@ -8,6 +8,7 @@ from game.gems import bag_capacity, bag_count
 from game.geography import region_name
 from game.input import Action, hint_label
 from game.lantern import LOW_FUEL_SHARE, fuel_share
+from game.supplies import supplies_label
 from game.tile_info import describe_here
 
 # A changed counter blinks for PULSE_FRAMES drawn frames (~0.5 s at 30 FPS), in the
@@ -106,7 +107,13 @@ def render_hud(renderer, state, pulse: HudPulse | None = None) -> None:
             row2 += bag.rjust(width - len(row2))
 
     _write_hud_str(renderer, row_1, 0, row1[:width], COLOR_HUD_BG)
-    _write_hud_str(renderer, row_here, 0, f" {describe_here(state)}"[:width], COLOR_HUD_BG)
+    here = f" {describe_here(state)}"
+    carried_supplies = supplies_label(state)
+    if carried_supplies:
+        tag = f"{hint_label(Action.USE_ITEM, 'Item')}:{carried_supplies} "
+        if len(here) + len(tag) + 2 <= width:
+            here += tag.rjust(width - len(here))
+    _write_hud_str(renderer, row_here, 0, here[:width], COLOR_HUD_BG)
     _write_hud_str(renderer, row_2, 0, row2[:width], COLOR_HUD_BG)
 
     hp_text = f"HP:{state.player_hp}/{state.player_max_hp}"

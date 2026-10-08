@@ -87,6 +87,8 @@ class GameState:
     dropped_bag: Any = None
 
     recall_charms: int = 0
+    # Consumables by key ("bandage", "lamp_oil"), see game/supplies.py
+    supplies: dict = field(default_factory=dict)
     museum: list = field(default_factory=list)  # gem kinds donated, in donation order
 
     # Lantern: fuel left (seconds of light at drain 1) and upgrade level

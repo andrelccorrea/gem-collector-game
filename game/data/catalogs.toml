@@ -301,6 +301,19 @@ step_multipliers = [1.0, 0.85, 0.7]
 costs = [0, 130, 340]
 unlock_at = [0, 0, 2000]
 
+# Supplies: consumables used with the Item action (the most needed one is used)
+[supplies.bandage]
+name = "Bandage"
+cost = 25
+heal = 8
+desc = "Heals 8 HP"
+
+[supplies.lamp_oil]
+name = "Lamp Oil"
+cost = 30
+fuel_share = 0.5
+desc = "Refills half of your lantern, anywhere"
+
 # Permanent perks bought with reputation between runs (see game/profile.py).
 # Each level adds `per_level`; `costs` lists the reputation price of each level.
 [perks.start_gold]

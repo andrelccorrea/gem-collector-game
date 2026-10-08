@@ -15,6 +15,7 @@ from game import (
     lantern,
     market,
     player,
+    supplies,
     tips,
     tools,
     world,
@@ -58,6 +59,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     combat.player_attack(inp, state)
     tools.update_tools(inp, state)
     tools.use_tool(inp, state)
+    supplies.use_supply(inp, state)
 
     lantern.update_lantern(state, dt)
     if state.world_tiles is not None:

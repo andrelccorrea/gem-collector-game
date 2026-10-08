@@ -69,7 +69,7 @@ def test_map_keys_arrows_and_wasd_share_actions():
 
 
 def test_map_keys_ignores_unmapped_keys():
-    assert map_keys({"z", "1"}, {"q"}) == EMPTY_INPUT
+    assert map_keys({"z", "1"}, {"x"}) == EMPTY_INPUT
 
 
 def test_map_keys_accepts_custom_keymap():

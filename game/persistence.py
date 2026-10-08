@@ -1,11 +1,11 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 11, compact JSON):
+Save format (``schema_version`` 12, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
     lapidary_level, bag_level, armor_level, boots_level, market {kind: saturation},
-    lantern {level, fuel},
-    hardcore, dropped_bag {x, y, gems, loot, polished} or null, recall_charms, museum,
+    lantern {level, fuel}, hardcore, dropped_bag {x, y, gems, loot, polished} or null,
+    recall_charms, supplies {key: count}, museum,
     perk_bonuses {bag, lantern}, run_id,
     depleted_tiles [[x, y]...],
     world_gems [[x, y, name]...], fog (run-length string, row-major),
@@ -24,7 +24,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 DAILY_NAME = "daily.json"
@@ -244,6 +244,12 @@ def _migrate_v10_to_v11(data: dict) -> dict:
     return data
 
 
+def _migrate_v11_to_v12(data: dict) -> dict:
+    """v12 adds supplies (consumables); older saves carry none."""
+    data["supplies"] = {}
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -257,6 +263,7 @@ MIGRATIONS = {
     8: _migrate_v8_to_v9,
     9: _migrate_v9_to_v10,
     10: _migrate_v10_to_v11,
+    11: _migrate_v11_to_v12,
 }
 
 
@@ -311,6 +318,7 @@ def save_game(state) -> str | None:
         "hardcore": state.hardcore,
         "dropped_bag": state.dropped_bag,
         "recall_charms": state.recall_charms,
+        "supplies": state.supplies,
         "museum": state.museum,
         "perk_bonuses": {"bag": state.bag_bonus, "lantern": state.lantern_bonus},
         "depleted_tiles": [[x, y] for x, y in sorted(state.depleted_tiles)],
@@ -410,6 +418,7 @@ def _state_from_save(data: dict):
     state.hardcore = data["hardcore"]
     state.dropped_bag = data["dropped_bag"]
     state.recall_charms = data["recall_charms"]
+    state.supplies = {str(k): int(v) for k, v in data["supplies"].items()}
     state.museum = data["museum"]
     state.bag_bonus = data["perk_bonuses"]["bag"]
     state.lantern_bonus = data["perk_bonuses"]["lantern"]

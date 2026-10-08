@@ -37,6 +37,15 @@ TIPS = [
         ),
     ),
     (
+        "low_hp",
+        lambda s: s.player_hp <= s.player_max_hp // 2,
+        lambda: (
+            "Tip: hurt? Rest in town, or buy Bandages at the Shop and use them with "
+            + hint_label(Action.USE_ITEM, "Item")
+            + "."
+        ),
+    ),
+    (
         "bag_full",
         lambda s: not bag_has_room(s),
         lambda: "Tip: your bag is full. Sell at the Shop (S) in town.",

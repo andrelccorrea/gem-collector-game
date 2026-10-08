@@ -22,6 +22,7 @@ from game.objects.registry import (
     BOOTS,
     GEM_CATALOG,
     LANTERN,
+    SUPPLIES,
     TOOL_CATALOG,
     TOOL_MAX_LEVEL,
     TOOL_UPGRADE_COSTS,
@@ -84,6 +85,18 @@ def _build_shop_items(state) -> list:
                 "value": 0,
             }
         )
+        for key, supply in SUPPLIES.items():
+            have = state.supplies.get(key, 0)
+            items.append(
+                {
+                    "label": f"  {supply['name']:16s}  ${supply['cost']}  (have {have})",
+                    "enabled": state.player_gold >= supply["cost"],
+                    "action": "buy_supply",
+                    "key": key,
+                    "cost": supply["cost"],
+                    "value": 0,
+                }
+            )
 
     elif tab == 1:  # Upgrade Tools
         owned_tools = state.inventory.get("tools", {})
@@ -263,6 +276,8 @@ def _describe(item: dict) -> str:
         return _GEAR_DESC[key]
     if action == "buy_charm":
         return f"One use: {hint_of(Action.RECALL)} takes you back to town from anywhere"
+    if action == "buy_supply":
+        return f"{SUPPLIES[key]['desc']}. [{hint_of(Action.USE_ITEM)}] uses the most needed supply"
     return ""
 
 
@@ -376,6 +391,14 @@ def update_shop(inp: InputState, state) -> None:
             state.player_gold -= RECALL_CHARM_COST
             state.recall_charms += 1
             set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
+
+    elif action == "buy_supply":
+        if state.player_gold < item["cost"]:
+            set_hud_message(state, "Not enough gold!", 1.5)
+        else:
+            state.player_gold -= item["cost"]
+            state.supplies[item["key"]] = state.supplies.get(item["key"], 0) + 1
+            set_hud_message(state, f"Bought {SUPPLIES[item['key']]['name']}!", 1.5)
 
     elif action == "buy_tool":
         tool_name = item["key"]

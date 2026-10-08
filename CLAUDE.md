@@ -32,6 +32,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | E | Cycle equipped tool |
 | F | Attack nearest enemy |
 | R | Use a Recall Charm (teleport to town) |
+| Q | Use the most needed supply (Bandage or Lamp Oil) |
 | Esc | Open menu / close sub-screen |
 | Enter | Confirm selection |
 
@@ -68,6 +69,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `hud.py` | `render_hud(renderer, state)` writes to the last three rows: HP (color-coded), Gold, Tool, Biome; the player's tile (`tile_info.describe_here`); key hints or HUD messages (bag fill kept). `HudPulse` (owned by GameScene, render-only) blinks HP/Gold/Bag when they change |
 | `events.py` | `emit`/`emit_gem` record world events (finds, damage, healing) in `state.events` (capped, never saved); a frontend `take_events` once per frame and animates them (Kivy: floating text with an icon). The HUD message stays the text record |
 | `tips.py` | First-time tips (`check_tips`, run by `step_game`): one mechanic at a time, when it first matters, never over another message, `TIP_GAP` apart; `state.tips_seen` is merged with and saved to the profile by `GameScene` |
+| `supplies.py` | Consumables (`state.supplies`, data in `catalogs.toml [supplies.*]`): the Item action uses the most needed one (Bandage heals, Lamp Oil refuels) |
 | `tile_info.py` | `describe_here(state)`: tile name, what Use does there (enter, dig/pan with which tools, worked out), gem and dropped bag on the tile |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
