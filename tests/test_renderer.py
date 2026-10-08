@@ -12,18 +12,30 @@ def test_stub_renderer_default_cell():
     assert renderer.get_cell(0, 0) == (" ", None)
 
 
-def test_stub_renderer_boundary_guard_x():
-    # The last column (x == width-1 = 79) must be a no-op, matching CursesRenderer behaviour.
+def test_stub_renderer_uses_its_full_area():
     renderer = StubRenderer(80, 24)
+    renderer.set_cell(79, 23, "X", None)
+    assert renderer.get_cell(79, 23) == ("X", None)
+
+
+class FakeWindow:
+    def __init__(self, width, height):
+        self.width, self.height = width, height
+        self.screen_array = [[[False, " ", None] for _ in range(width)] for _ in range(height)]
+
+
+def test_curses_renderer_hides_last_row_and_column():
+    # curses cannot safely draw the bottom-right cell, so the renderer reports only the
+    # usable area and silently ignores the reserved row and column.
+    window = FakeWindow(80, 24)
+    renderer = CursesRenderer(window)
+    assert (renderer.width, renderer.height) == (79, 23)
     renderer.set_cell(79, 0, "X", None)
-    assert renderer.get_cell(79, 0) == (" ", None)
-
-
-def test_stub_renderer_boundary_guard_y():
-    # The last row (y == height-1 = 23) must be a no-op, matching CursesRenderer behaviour.
-    renderer = StubRenderer(80, 24)
     renderer.set_cell(0, 23, "X", None)
-    assert renderer.get_cell(0, 23) == (" ", None)
+    renderer.set_cell(78, 22, "Y", None)
+    assert window.screen_array[0][79][1] == " "
+    assert window.screen_array[23][0][1] == " "
+    assert window.screen_array[22][78] == [True, "Y", None]
 
 
 def test_stub_renderer_out_of_bounds():

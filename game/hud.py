@@ -1,24 +1,20 @@
-import math
-
 from game.constants import (
     COLOR_HUD_BG,
     COLOR_HUD_HP_HIGH,
     COLOR_HUD_HP_LOW,
     COLOR_HUD_HP_MID,
-    HUD_ROW_1,
-    HUD_ROW_2,
 )
 
 
 def render_hud(renderer, state) -> None:
-    max_x = math.floor(renderer.width) - 1
-    max_y = math.floor(renderer.height) - 1
-
-    if HUD_ROW_1 >= max_y or HUD_ROW_2 >= max_y:
+    """Draw the two status rows at the bottom of the screen."""
+    width = renderer.width
+    row_1, row_2 = renderer.height - 2, renderer.height - 1
+    if row_1 < 0:
         return
 
-    for row in (HUD_ROW_1, HUD_ROW_2):
-        for x in range(max_x):
+    for row in (row_1, row_2):
+        for x in range(width):
             renderer.set_cell(x, row, " ", COLOR_HUD_BG)
 
     hp_pct = state.player_hp / max(state.player_max_hp, 1)
@@ -47,21 +43,19 @@ def render_hud(renderer, state) -> None:
     if state.hud_message and state.hud_message_timer > 0:
         row2 = f" >>> {state.hud_message} <<<"
 
-    _write_hud_str(renderer, HUD_ROW_1, 0, row1[: max_x - 1], COLOR_HUD_BG)
-    _write_hud_str(renderer, HUD_ROW_2, 0, row2[: max_x - 1], COLOR_HUD_BG)
+    _write_hud_str(renderer, row_1, 0, row1[:width], COLOR_HUD_BG)
+    _write_hud_str(renderer, row_2, 0, row2[:width], COLOR_HUD_BG)
 
     hp_text = f"HP:{state.player_hp}/{state.player_max_hp}"
-    _write_hud_str(renderer, HUD_ROW_1, 1, hp_text, hp_color)
+    _write_hud_str(renderer, row_1, 1, hp_text, hp_color)
 
 
 def _write_hud_str(renderer, y: int, x: int, text: str, color_pair: tuple) -> None:
-    max_x = math.floor(renderer.width) - 1
-    max_y = math.floor(renderer.height) - 1
-    if y >= max_y:
+    if not 0 <= y < renderer.height:
         return
     for i, ch in enumerate(text):
         cx = x + i
-        if cx >= max_x:
+        if cx >= renderer.width:
             break
         existing_char, existing_cp = renderer.get_cell(cx, y)
         if existing_char != ch or existing_cp != color_pair:

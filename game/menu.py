@@ -153,9 +153,7 @@ def render_leaderboard(renderer, state) -> None:
             write_str(renderer, row, mid_x - 20, line, COLOR_MENU_NORMAL)
 
     hint = "Esc: Back to Menu"
-    write_str(
-        renderer, math.floor(renderer.height) - 3, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED
-    )
+    write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
 def update_leaderboard(inp: InputState, state) -> None:

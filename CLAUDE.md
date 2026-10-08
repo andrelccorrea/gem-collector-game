@@ -21,7 +21,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
 Game code must stay Python 3.13-compatible (the Android toolchain stops at 3.13). See `docs/ROADMAP.md`.
 
-Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 80×20 viewport and 2-row HUD.
+Requires a 256-color terminal at ≥80×24. The world view sits above a 2-row HUD; its drawn size comes from the renderer at runtime, capped at the 79×21 simulation view (an 80×24 terminal shows all of it).
 
 ## Controls
 
@@ -52,7 +52,7 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 
 | Module | Role |
 |--------|------|
-| `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, VIEWPORT=78×20, FPS=30, biome colors, gem catalog, tool catalog, enemy catalog, difficulty tiers |
+| `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, HUD_ROWS=2, VIEW 79×21 (fixed simulation view), FPS=30, biome colors, gem catalog, tool catalog, enemy catalog, difficulty tiers |
 | `state.py` | `GameState` dataclass — single source of truth for player, world, enemies, inventory, scene |
 | `simulation.py` | `new_run(seed)` (fresh GameState: world, player, fog, camera) and `step_game(inp, state, dt)` (one fixed simulation step, no drawing) — same seed + same inputs = same run |
 | `loop.py` | `FixedTimestep`: turns frame time into fixed 1/FPS simulation steps (clamped at 0.25 s), buffering pressed input until a step consumes it; `reset()` freezes time outside the game scene |
@@ -60,8 +60,8 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 | `tilemap.py` | `TileMap`: the world as data — `meta[(x, y)] = {type, walkable, interactable, depleted, visibility}`, `start_pos`; no glyphs |
 | `theme.py` | Terminal theme: `TILE_APPEARANCE` (type → char, colors), depleted/unseen looks, `tile_appearance(meta)` with fog dimming |
 | `world.py` | `generate_world(seed)` → 200×80 `TileMap` with biomes + town. `ensure_connectivity()` BFS flood-fill. |
-| `camera.py` | `update_camera(state)` centers on player clamped to map. `render_viewport(renderer, state)` draws the visible slice through `theme.tile_appearance`, touching only changed cells. |
-| `hud.py` | `render_hud(window, state)` writes to rows 20-21: HP (color-coded), Gold, Tool, Biome, key hints, HUD messages |
+| `camera.py` | `update_camera(state)` centers the fixed simulation view on the player (clamped); `on_screen` tests it. `render_view(state, renderer)` → `View` the frontend draws (≤ simulation view); `render_viewport(renderer, state, view)` draws it through `theme.tile_appearance`, touching only changed cells. |
+| `hud.py` | `render_hud(renderer, state)` writes to the last two rows: HP (color-coded), Gold, Tool, Biome, key hints, HUD messages |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E-key cycles tools; Space-key mines tiles, depletes them, rolls gem drops |
 | `gems.py` | `roll_gem_drop(biome, tool, rng)` weighted random; `add_gem_to_inventory`; polished gem value computation |
@@ -91,7 +91,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 ### Key Invariants
 
 - **`screen_array` cell:** always `[is_changed: bool, char: str, color_pair: tuple|None]`. Never change this structure.
-- **Boundary guard:** never write to `window.height-1` row or `window.width-1` col.
+- **Screen size:** never hard-code it in drawing code: use `renderer.width/height` (the usable area; `CursesRenderer` hides the curses-unsafe last row/col itself) and the `camera.View` from `camera.render_view()`. Simulation code must never depend on the screen: it uses the fixed `VIEW_WIDTH×VIEW_HEIGHT` view (`state.camera_*`, `camera.on_screen`), and the drawn view always lies inside it.
 - **Tiles are types:** game code stores/changes tile `type`/`depleted`/`visibility` in `TileMap.meta`; never chars or colors (those come from `theme.py`). `game/` must not import `clingine`.
 - **Color pairs:** always `((r,g,b),(r,g,b))` tuples. Never call `curses.init_pair` directly.
 - **Input:** game code never reads raw keys. Update functions take an `InputState` (`game/input.py`) of `Action`s; raw key names appear only in `DEFAULT_KEYMAP`. `main.py` calls `window.keyboard.poll()` then `map_keys()` exactly once per frame.

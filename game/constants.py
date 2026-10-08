@@ -5,10 +5,12 @@ MAP_HEIGHT = 80
 # Window/Viewport
 WINDOW_WIDTH = 80
 WINDOW_HEIGHT = 24
-VIEWPORT_WIDTH = 78  # leave last col as curses guard
-VIEWPORT_HEIGHT = 20  # rows 0-19
-HUD_ROW_1 = 20
-HUD_ROW_2 = 21
+HUD_ROWS = 2  # status rows below the world view
+# The simulation's view of the world, centered on the player. Enemies spawn outside it,
+# so it is fixed (never derived from a device's screen) to keep runs reproducible.
+# Frontends draw a view of at most this size, so spawns are never in sight.
+VIEW_WIDTH = 79
+VIEW_HEIGHT = 21
 FPS = 30
 FOG_RADIUS: int = 8
 

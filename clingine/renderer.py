@@ -22,21 +22,25 @@ class Renderer(ABC):
 
 
 class CursesRenderer(Renderer):
+    """Renderer over a curses Window.
+
+    curses raises when writing the bottom-right cell, so the last row and column are
+    never drawn; width/height report only the usable area and callers need no guard.
+    """
+
     def __init__(self, window) -> None:
         self._window = window
 
     @property
     def width(self) -> int:
-        return self._window.width
+        return math.floor(self._window.width) - 1
 
     @property
     def height(self) -> int:
-        return self._window.height
+        return math.floor(self._window.height) - 1
 
     def set_cell(self, x: int, y: int, char: str, color_pair: tuple) -> None:
-        max_y = math.floor(self._window.height) - 1
-        max_x = math.floor(self._window.width) - 1
-        if 0 <= x < max_x and 0 <= y < max_y:
+        if 0 <= x < self.width and 0 <= y < self.height:
             self._window.screen_array[y][x] = [True, char, color_pair]
 
     def get_cell(self, x: int, y: int) -> tuple:
@@ -46,10 +50,8 @@ class CursesRenderer(Renderer):
     def clear(self, color_pair: tuple | None = None) -> None:
         if color_pair is None:
             color_pair = ((0, 0, 0), (0, 0, 0))
-        max_y = math.floor(self._window.height) - 1
-        max_x = math.floor(self._window.width) - 1
-        for y in range(max_y):
-            for x in range(max_x):
+        for y in range(self.height):
+            for x in range(self.width):
                 self._window.screen_array[y][x] = [True, " ", color_pair]
 
 
@@ -68,9 +70,7 @@ class StubRenderer(Renderer):
         return self._height
 
     def set_cell(self, x: int, y: int, char: str, color_pair: tuple) -> None:
-        max_x = self._width - 1
-        max_y = self._height - 1
-        if 0 <= x < max_x and 0 <= y < max_y:
+        if 0 <= x < self._width and 0 <= y < self._height:
             self._cells[y][x] = (char, color_pair)
 
     def get_cell(self, x: int, y: int) -> tuple:

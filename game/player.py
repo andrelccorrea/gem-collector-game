@@ -1,5 +1,3 @@
-import math
-
 from game.constants import (
     COLOR_PLAYER,
     HP_REGEN_INTERVAL,
@@ -12,8 +10,6 @@ from game.constants import (
     PLAYER_START_HP,
     TOWN_CENTER_X,
     TOWN_CENTER_Y,
-    VIEWPORT_HEIGHT,
-    VIEWPORT_WIDTH,
 )
 from game.input import Action, InputState
 
@@ -135,18 +131,12 @@ def _check_death(state) -> None:
         state.active_scene = "death"
 
 
-def render_player(renderer, state) -> None:
+def render_player(renderer, state, view) -> None:
     if state.world_tiles is None:
         return
-
-    screen_x = state.player_x - state.camera_x
-    screen_y = state.player_y - state.camera_y
-
-    max_x = math.floor(renderer.width) - 1
-    max_y = math.floor(renderer.height) - 1
-
-    if 0 <= screen_x < min(VIEWPORT_WIDTH, max_x) and 0 <= screen_y < min(VIEWPORT_HEIGHT, max_y):
-        renderer.set_cell(screen_x, screen_y, PLAYER_CHAR, COLOR_PLAYER)
+    if view.contains(state.player_x, state.player_y):
+        sx, sy = state.player_x - view.x, state.player_y - view.y
+        renderer.set_cell(sx, sy, PLAYER_CHAR, COLOR_PLAYER)
 
 
 def set_hud_message(state, msg: str, duration: float = 2.0) -> None:

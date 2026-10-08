@@ -47,7 +47,7 @@ class GameState:
         }
     )
 
-    # Camera
+    # Top-left corner of the simulation view (constants.VIEW_WIDTH x VIEW_HEIGHT)
     camera_x: int = 0
     camera_y: int = 0
 

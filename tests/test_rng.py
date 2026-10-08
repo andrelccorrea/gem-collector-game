@@ -1,9 +1,10 @@
 import random
 
-from game import camera
+from clingine.renderer import StubRenderer
 from game.input import Action, InputState
 from game.loop import STEP, FixedTimestep
 from game.menu import _select_menu_item
+from game.scenes.game import GameScene
 from game.scenes.lapidary import _build_lapidary_items, render_lapidary
 from game.simulation import new_run, step_game
 from game.state import GameState, gameplay_rng
@@ -70,24 +71,25 @@ def test_same_seed_and_inputs_replay_the_same_run():
     assert _replay(new_run(7), frames) == _replay(new_run(7), frames)
 
 
-def test_rendering_does_not_affect_the_simulation(stub_renderer):
-    # Same per-step inputs; one run is drawn after every step (rendering updates the
-    # camera), the other is headless. Spawning reads the camera, so it must be kept in
-    # sync by the simulation itself or the two runs diverge.
-    def run(render):
-        state = new_run(7)
+def test_rendering_and_screen_size_do_not_affect_the_simulation():
+    # Same per-step inputs; runs are drawn through the real game scene on different
+    # screens (terminal, portrait phone, tablet) or not at all. Spawning depends on the
+    # simulation view, so the screen must never leak into it.
+    def run(screen):
+        state, scene = new_run(7), GameScene()
+        renderer = StubRenderer(*screen) if screen else None
         for i in range(1800):
             pressed = {_SCRIPT[(i // 5) % len(_SCRIPT)]} if i % 5 == 0 else set()
             step_game(InputState(pressed=frozenset(pressed)), state, STEP)
             state.active_scene = "game"
-            if render:
-                camera.update_camera(state)
-                camera.render_viewport(stub_renderer, state)
+            if renderer:
+                scene.render(renderer, state)
         return state
 
-    drawn, headless = run(render=True), run(render=False)
-    assert drawn.enemies, "the scripted run should spawn enemies"
-    assert _snapshot(drawn) == _snapshot(headless)
+    headless = run(None)
+    assert headless.enemies, "the scripted run should spawn enemies"
+    for screen in [(80, 24), (40, 60), (120, 30), (220, 90)]:
+        assert _snapshot(run(screen)) == _snapshot(headless), screen
 
 
 def test_new_game_after_a_played_run_matches_a_fresh_run(monkeypatch):

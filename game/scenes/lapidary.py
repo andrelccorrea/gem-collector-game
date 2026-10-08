@@ -83,7 +83,7 @@ def _build_lapidary_items(state) -> list:
 def render_lapidary(renderer, state) -> None:
     clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
 
-    width = math.floor(renderer.width) - 1
+    width = renderer.width
     max_level = max(LAPIDARY_UPGRADES.keys())
 
     title = "=== LAPIDARY ==="
@@ -109,7 +109,7 @@ def render_lapidary(renderer, state) -> None:
     hint = "[Up/Down] Navigate  [Enter] Cut/Upgrade  [Esc] Close"
     write_str(
         renderer,
-        math.floor(renderer.height) - 2,
+        renderer.height - 1,
         (width - len(hint)) // 2,
         hint,
         COLOR_MENU_DIMMED,

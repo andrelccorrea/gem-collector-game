@@ -20,9 +20,8 @@ class GameScene(Scene):
 
     def render(self, renderer, state) -> None:
         """Draw the world; runs once per frame regardless of simulation steps."""
-        if state.world_tiles is not None:
-            camera.update_camera(state)
-            camera.render_viewport(renderer, state)
-        enemies.render_enemies(renderer, state)
-        player.render_player(renderer, state)
+        view = camera.render_view(state, renderer)
+        camera.render_viewport(renderer, state, view)
+        enemies.render_enemies(renderer, state, view)
+        player.render_player(renderer, state, view)
         hud.render_hud(renderer, state)

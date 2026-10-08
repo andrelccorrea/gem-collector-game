@@ -1,7 +1,5 @@
 """General Store: buy and upgrade tools, sell gems and loot."""
 
-import math
-
 from game.buildings import check_win
 from game.constants import (
     COLOR_MENU_DIMMED,
@@ -198,7 +196,7 @@ def _build_shop_items(state) -> list:
 def render_shop(renderer, state) -> None:
     clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
 
-    width = math.floor(renderer.width) - 1
+    width = renderer.width
 
     title = "=== GENERAL STORE ==="
     write_str(renderer, 0, (width - len(title)) // 2, title, COLOR_MENU_TITLE)
@@ -224,7 +222,7 @@ def render_shop(renderer, state) -> None:
     hint = "[Up/Down] Navigate  [Left/Right] Switch Tab  [Enter] Confirm  [Esc] Close"
     write_str(
         renderer,
-        math.floor(renderer.height) - 2,
+        renderer.height - 1,
         (width - len(hint)) // 2,
         hint,
         COLOR_MENU_DIMMED,

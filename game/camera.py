@@ -1,46 +1,77 @@
-from game.constants import MAP_HEIGHT, MAP_WIDTH, VIEWPORT_HEIGHT, VIEWPORT_WIDTH
+from typing import NamedTuple
+
+from game.constants import HUD_ROWS, MAP_HEIGHT, MAP_WIDTH, VIEW_HEIGHT, VIEW_WIDTH
 from game.objects.registry import GEM_CATALOG
 from game.theme import UNSEEN_APPEARANCE, dim, tile_appearance
 
 
+class View(NamedTuple):
+    """A rectangle of the world: top-left tile (x, y) and size in tiles."""
+
+    x: int
+    y: int
+    width: int
+    height: int
+
+    def contains(self, wx: int, wy: int) -> bool:
+        return self.x <= wx < self.x + self.width and self.y <= wy < self.y + self.height
+
+
+def _centered(center: int, size: int, limit: int) -> int:
+    """Start of a span of ``size`` centered on ``center``, clamped to [0, limit)."""
+    return max(0, min(center - size // 2, limit - size))
+
+
 def update_camera(state) -> None:
-    """Center camera on player, clamped to map bounds."""
-    cam_x = state.player_x - VIEWPORT_WIDTH // 2
-    cam_y = state.player_y - VIEWPORT_HEIGHT // 2
-    state.camera_x = max(0, min(cam_x, MAP_WIDTH - VIEWPORT_WIDTH))
-    state.camera_y = max(0, min(cam_y, MAP_HEIGHT - VIEWPORT_HEIGHT))
+    """Center the simulation view on the player, clamped to map bounds."""
+    state.camera_x = _centered(state.player_x, VIEW_WIDTH, MAP_WIDTH)
+    state.camera_y = _centered(state.player_y, VIEW_HEIGHT, MAP_HEIGHT)
 
 
-def render_viewport(renderer, state) -> None:
+def on_screen(state, x: int, y: int) -> bool:
+    """Whether world tile (x, y) is inside the simulation view (where nothing spawns)."""
+    return View(state.camera_x, state.camera_y, VIEW_WIDTH, VIEW_HEIGHT).contains(x, y)
+
+
+def render_view(state, renderer) -> View:
+    """The part of the world a frontend draws: the screen above the HUD, centered on the
+    player and never larger than the simulation view (so it always lies inside it)."""
+    width = max(1, min(renderer.width, VIEW_WIDTH))
+    height = max(1, min(renderer.height - HUD_ROWS, VIEW_HEIGHT))
+    return View(
+        _centered(state.player_x, width, MAP_WIDTH),
+        _centered(state.player_y, height, MAP_HEIGHT),
+        width,
+        height,
+    )
+
+
+def render_viewport(renderer, state, view: View) -> None:
     if state.world_tiles is None:
         return
 
     meta = state.world_tiles.meta
-    max_x = min(VIEWPORT_WIDTH, renderer.width - 1)
-    max_y = min(VIEWPORT_HEIGHT, renderer.height - 1)
-    for sy in range(max_y):
-        for sx in range(max_x):
-            tile = meta.get((state.camera_x + sx, state.camera_y + sy))
+    for sy in range(view.height):
+        for sx in range(view.width):
+            tile = meta.get((view.x + sx, view.y + sy))
             char, color_pair = tile_appearance(tile) if tile is not None else UNSEEN_APPEARANCE
             # Only touch cells that changed, so the frontend redraws as little as possible.
             if renderer.get_cell(sx, sy) != (char, color_pair):
                 renderer.set_cell(sx, sy, char, color_pair)
 
-    _render_world_gems(renderer, state)
+    _render_world_gems(renderer, state, view)
 
 
-def _render_world_gems(renderer, state) -> None:
+def _render_world_gems(renderer, state, view: View) -> None:
     """Draw visible gems on top of the world tiles, respecting fog of war."""
     if not state.world_gems:
         return
 
     meta = state.world_tiles.meta
-    cam_x, cam_y = state.camera_x, state.camera_y
-
     for (gx, gy), gem_name in state.world_gems.items():
-        sx, sy = gx - cam_x, gy - cam_y
-        if not (0 <= sx < VIEWPORT_WIDTH and 0 <= sy < VIEWPORT_HEIGHT):
+        if not view.contains(gx, gy):
             continue
+        sx, sy = gx - view.x, gy - view.y
 
         visibility = meta.get((gx, gy), {}).get("visibility", "visible")
         if visibility == "unseen":

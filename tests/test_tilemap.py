@@ -86,7 +86,7 @@ def test_viewport_draws_tiles_through_the_theme():
     state = GameState(world_tiles=tiles, world_gems={}, camera_x=0, camera_y=0)
     renderer = StubRenderer(80, 24)
 
-    camera.render_viewport(renderer, state)
+    camera.render_viewport(renderer, state, camera.View(state.camera_x, state.camera_y, 79, 21))
 
     assert renderer.get_cell(3, 2) == TILE_APPEARANCE["tree"]
     assert renderer.get_cell(4, 2) == (TILE_APPEARANCE["tree"][0], dim(TILE_APPEARANCE["tree"][1]))
@@ -102,7 +102,7 @@ def test_depleting_a_tile_changes_how_it_is_drawn():
     state.world_tiles.meta[(x + 1, y)]["visibility"] = "visible"
     _deplete_tile(state, x + 1, y)
     renderer = StubRenderer(80, 24)
-    camera.render_viewport(renderer, state)
+    camera.render_viewport(renderer, state, camera.View(state.camera_x, state.camera_y, 79, 21))
     assert renderer.get_cell(x + 1 - state.camera_x, y - state.camera_y) == DEPLETED_APPEARANCE
 
 
@@ -122,8 +122,8 @@ def test_redrawing_an_unchanged_viewport_writes_no_cells():
     state = new_run(6)
     state.world_gems = {}
     renderer = CountingRenderer(80, 24)
-    camera.render_viewport(renderer, state)
+    camera.render_viewport(renderer, state, camera.View(state.camera_x, state.camera_y, 79, 21))
     assert renderer.writes > 0
     renderer.writes = 0
-    camera.render_viewport(renderer, state)
+    camera.render_viewport(renderer, state, camera.View(state.camera_x, state.camera_y, 79, 21))
     assert renderer.writes == 0

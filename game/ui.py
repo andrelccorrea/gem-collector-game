@@ -1,18 +1,14 @@
 """Shared text-UI drawing helpers for menus and building screens."""
 
-import math
-
 from game.constants import COLOR_MENU_DIMMED, COLOR_MENU_NORMAL, COLOR_MENU_SELECTED
 
 
 def write_str(renderer, y: int, x: int, text: str, color_pair: tuple) -> None:
-    max_y = math.floor(renderer.height) - 1
-    max_x = math.floor(renderer.width) - 1
-    if y < 0 or y >= max_y:
+    if not 0 <= y < renderer.height:
         return
     for i, ch in enumerate(text):
         cx = x + i
-        if cx < 0 or cx >= max_x:
+        if not 0 <= cx < renderer.width:
             continue
         renderer.set_cell(cx, y, ch, color_pair)
 
@@ -47,7 +43,7 @@ def render_list(renderer, items: list, cursor: int, top: int, bottom: int) -> No
             color = COLOR_MENU_NORMAL
         write_str(renderer, row, 0, item["label"], color)
 
-    marker_x = math.floor(renderer.width) - 3
+    marker_x = renderer.width - 2
     if page.start > 0:
         write_str(renderer, top, marker_x, "^", COLOR_MENU_DIMMED)
     if page.stop < len(items):

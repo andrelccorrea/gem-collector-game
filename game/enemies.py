@@ -1,6 +1,6 @@
-import math
 from collections import deque
 
+from game.camera import on_screen
 from game.constants import (
     BIOME_CAVE_MIN_X,
     BIOME_HILLSIDE_MAX_Y,
@@ -14,8 +14,6 @@ from game.constants import (
     MAX_ENEMIES_BASE,
     TOWN_CENTER_X,
     TOWN_CENTER_Y,
-    VIEWPORT_HEIGHT,
-    VIEWPORT_WIDTH,
 )
 from game.objects.registry import ENEMY_CATALOG
 
@@ -92,9 +90,7 @@ def _is_in_town_area(x: int, y: int) -> bool:
 
 
 def _is_on_screen(x: int, y: int, state) -> bool:
-    sx = x - state.camera_x
-    sy = y - state.camera_y
-    return 0 <= sx < VIEWPORT_WIDTH and 0 <= sy < VIEWPORT_HEIGHT
+    return on_screen(state, x, y)
 
 
 def spawn_enemies(state, dt: float) -> None:
@@ -261,23 +257,15 @@ def update_enemies(state, dt: float) -> None:
         state.enemies.remove(e)
 
 
-def render_enemies(renderer, state) -> None:
-    max_x = math.floor(renderer.width) - 1
-    max_y = math.floor(renderer.height) - 1
-
+def render_enemies(renderer, state, view) -> None:
     for enemy in state.enemies:
         tile_vis = state.world_tiles.meta.get((enemy.x, enemy.y), {}).get("visibility", "visible")
         if tile_vis != "visible":
             continue
 
-        screen_x = enemy.x - state.camera_x
-        screen_y = enemy.y - state.camera_y
-
-        if not (
-            0 <= screen_x < min(VIEWPORT_WIDTH, max_x)
-            and 0 <= screen_y < min(VIEWPORT_HEIGHT, max_y)
-        ):
+        if not view.contains(enemy.x, enemy.y):
             continue
+        screen_x, screen_y = enemy.x - view.x, enemy.y - view.y
 
         color = enemy.color
         if enemy.flash_timer > 0:
