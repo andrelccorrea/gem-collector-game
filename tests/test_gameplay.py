@@ -14,6 +14,7 @@ from game.enemies import Enemy
 from game.gems import bag_capacity, get_gem_raw_value
 from game.input import EMPTY_INPUT, Action, InputState
 from game.loop import STEP
+from game.market import price_multiplier
 from game.objects.registry import ENEMY_CATALOG, TOOL_CATALOG, TOOL_UPGRADE_COSTS
 from game.player import update_player
 from game.scenes.shop import _build_shop_items, update_shop
@@ -266,5 +267,7 @@ def test_loot_sells_for_its_catalog_value():
     pelt = ENEMY_CATALOG["bear"].loot
     state.inventory["loot"] = {pelt: 2}
     _select(state, "sell_all_loot")
-    assert state.player_gold == 50 + 2 * ENEMY_CATALOG["bear"].loot_value
+    value = ENEMY_CATALOG["bear"].loot_value
+    # The second pelt sells into a market that just took one: slightly cheaper.
+    assert state.player_gold == 50 + value + int(value * price_multiplier(1))
     assert state.inventory["loot"] == {}

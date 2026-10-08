@@ -8,6 +8,7 @@ from game.gems import (
     polished_value_range,
 )
 from game.input import Action, InputState
+from game.market import price_multiplier
 from game.scenes.lapidary import _build_lapidary_items, render_lapidary, update_lapidary
 from game.scenes.shop import _build_shop_items, update_shop
 from game.state import GameState
@@ -89,10 +90,12 @@ def test_sell_all_adds_every_individual_price():
     state.inventory["gems"]["quartz"] = 2
     items = _build_shop_items(state)
     sell_all = next(i for i, it in enumerate(items) if it["action"] == "sell_all_gems")
-    assert "$430 total" in items[sell_all]["label"]
+    # Highest polished first at full price, then each repeat sale a little cheaper.
+    expected = 300 + int(120 * price_multiplier(1)) + 5 + int(5 * price_multiplier(1))
+    assert f"${expected} total" in items[sell_all]["label"]
     state.shop_cursor = sell_all
     update_shop(CONFIRM, state)
-    assert state.player_gold == 50 + 420 + 2 * 5
+    assert state.player_gold == 50 + expected
     assert state.inventory["gems"] == {} and state.polished_gem_values == {}
 
 

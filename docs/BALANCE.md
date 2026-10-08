@@ -52,3 +52,14 @@ Barely changed (median 15.0 -> 15.3 min). Most income comes from gems lying visi
 the map and from panning river water, which tool tiers do not gate, and the bot already
 sold every 12 items (below the new 15-item bag). Pacing has to come from prices that
 react to flooding the market, the lantern and enemy pressure.
+
+## After market saturation (prices drop 6% per recent sale, recover 1 sale per 20 s)
+
+```
+won 10/10, died 0
+median minutes to win: 21.8
+median gold/min: 477
+```
+
+The biggest single pacing lever so far (15.3 -> 21.8 min): dumping a bag of one gem kind
+now pays noticeably less, rewarding variety and spreading sales out.

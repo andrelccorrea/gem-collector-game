@@ -4,7 +4,7 @@ Nothing here draws or reads the wall clock, so the same seed and the same inputs
 always reproduce the same run (replays, balance simulations, daily seeded runs).
 """
 
-from game import buildings, camera, combat, enemies, fog, player, tools, world
+from game import buildings, camera, combat, enemies, fog, market, player, tools, world
 from game.input import Action, InputState
 from game.state import GameState, gameplay_rng
 
@@ -23,6 +23,7 @@ def new_run(seed: int) -> GameState:
 def step_game(inp: InputState, state, dt: float) -> bool:
     """Advance the game by one fixed step. Returns False once the scene changed."""
     state.game_time += dt
+    market.update_market(state, dt)
 
     # Enemy spawning and movement
     enemies.spawn_enemies(state, dt)

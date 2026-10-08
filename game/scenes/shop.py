@@ -1,5 +1,6 @@
 """General Store: buy and upgrade tools, sell gems and loot."""
 
+from game import market
 from game.buildings import check_win
 from game.constants import (
     COLOR_MENU_DIMMED,
@@ -7,13 +8,12 @@ from game.constants import (
     COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
 )
-from game.gems import bag_capacity, get_gem_raw_value, polished_prices, take_polished_gem
+from game.gems import bag_capacity, polished_prices
 from game.input import Action, InputState
 from game.objects.registry import (
     BAG_CAPACITIES,
     BAG_COSTS,
     BAG_UNLOCK_AT,
-    ENEMY_CATALOG,
     TOOL_CATALOG,
     TOOL_MAX_LEVEL,
     TOOL_UPGRADE_COSTS,
@@ -105,112 +105,67 @@ def _build_shop_items(state) -> list:
 
     elif tab == 2:  # Sell Gems
         gems = state.inventory.get("gems", {})
-        total = 0
-
         for gem_key, count in gems.items():
             if count <= 0:
                 continue
             if gem_key.endswith("_polished"):
                 raw_name = gem_key[: -len("_polished")]
-                prices = polished_prices(state, gem_key)
                 display_name = f"{raw_name.replace('_', ' ').title()} (Polished)"
-                # Selling one sells the most valuable; show the spread if they differ.
-                unit_val = prices[0]
-                subtotal = sum(prices)
-                price_text = (
-                    f"${prices[-1]}-${prices[0]}" if prices[0] != prices[-1] else f"${unit_val}"
-                )
             else:
-                unit_val = get_gem_raw_value(gem_key)
                 display_name = gem_key.replace("_", " ").title()
-                subtotal = unit_val * count
-                price_text = f"${unit_val}"
-            total += subtotal
-            label = f"  {display_name:20s}  x{count}  {price_text} each"
-            items.append(
-                {
-                    "label": label,
-                    "enabled": True,
-                    "action": "sell_gem",
-                    "key": gem_key,
-                    "cost": 0,
-                    "value": unit_val,
-                }
-            )
-
-        if items:
-            items.append(
-                {
-                    "label": f"  >> Sell All Gems (${total} total)",
-                    "enabled": True,
-                    "action": "sell_all_gems",
-                    "key": None,
-                    "cost": 0,
-                    "value": total,
-                }
-            )
-        else:
-            items.append(
-                {
-                    "label": "  No gems in inventory.",
-                    "enabled": False,
-                    "action": "none",
-                    "key": None,
-                    "cost": 0,
-                    "value": 0,
-                }
-            )
+            items.append(_sell_row(state, gem_key, display_name, count, "sell_gem"))
+        _add_sell_all_row(items, state, list(gems), "sell_all_gems", "Gems")
 
     elif tab == 3:  # Sell Loot
         loot = state.inventory.get("loot", {})
-        total = 0
-
         for loot_key, count in loot.items():
             if count <= 0:
                 continue
-            unit_val = 0
-            for enemy_def in ENEMY_CATALOG.values():
-                if enemy_def.loot == loot_key:
-                    unit_val = enemy_def.loot_value
-                    break
-            subtotal = unit_val * count
-            total += subtotal
-            label = f"  {loot_key.replace('_', ' ').title():20s}  x{count}  ${unit_val} each"
-            items.append(
-                {
-                    "label": label,
-                    "enabled": True,
-                    "action": "sell_loot",
-                    "key": loot_key,
-                    "cost": 0,
-                    "value": unit_val,
-                }
-            )
-
-        if items:
-            items.append(
-                {
-                    "label": f"  >> Sell All Loot (${total} total)",
-                    "enabled": True,
-                    "action": "sell_all_loot",
-                    "key": None,
-                    "cost": 0,
-                    "value": total,
-                }
-            )
-        else:
-            items.append(
-                {
-                    "label": "  No loot in inventory.",
-                    "enabled": False,
-                    "action": "none",
-                    "key": None,
-                    "cost": 0,
-                    "value": 0,
-                }
-            )
+            display_name = loot_key.replace("_", " ").title()
+            items.append(_sell_row(state, loot_key, display_name, count, "sell_loot"))
+        _add_sell_all_row(items, state, list(loot), "sell_all_loot", "Loot")
 
     return items
+
+
+def _sell_row(state, key: str, name: str, count: int, action: str) -> dict:
+    """Shop row for selling one kind; shows the price spread and any market discount."""
+    if key.endswith("_polished"):
+        multiplier = market.price_multiplier(state.market.get(key, 0.0))
+        prices = polished_prices(state, key)
+        low, high = int(prices[-1] * multiplier), int(prices[0] * multiplier)
+        price_text = f"${low}-${high}" if low != high else f"${high}"
+    else:
+        price_text = f"${market.unit_price(state, key)}"
+    discount = market.discount_percent(state, key)
+    note = f"  (-{discount}% sold recently)" if discount > 0 else ""
+    return {
+        "label": f"  {name:20s}  x{count}  {price_text} each{note}",
+        "enabled": True,
+        "action": action,
+        "key": key,
+        "cost": 0,
+        "value": market.unit_price(state, key),
+    }
+
+
+def _add_sell_all_row(items: list, state, keys: list, action: str, kind: str) -> None:
+    if items:
+        total = market.preview_sell_all(state, keys)
+        label = f"  >> Sell All {kind} (${total} total)"
+        row = {"label": label, "enabled": True, "action": action, "key": None, "cost": 0}
+        items.append({**row, "value": total})
+    else:
+        items.append(
+            {
+                "label": f"  No {kind.lower()} in inventory.",
+                "enabled": False,
+                "action": "none",
+                "key": None,
+                "cost": 0,
+                "value": 0,
+            }
+        )
 
 
 def _bag_upgrade_item(state) -> dict:
@@ -344,80 +299,17 @@ def update_shop(inp: InputState, state) -> None:
             state.bag_level += 1
             set_hud_message(state, f"New bag: carries {bag_capacity(state)} items!", 2.0)
 
-    elif action == "sell_gem":
-        gem_key = item["key"]
-        unit_val = item["value"]
-        gems = state.inventory.get("gems", {})
-        if gems.get(gem_key, 0) <= 0:
+    elif action in ("sell_gem", "sell_loot"):
+        price = market.sell_one(state, item["key"])
+        if price == 0:
             set_hud_message(state, "None left!", 1.5)
-        else:
-            if gem_key.endswith("_polished"):
-                unit_val = take_polished_gem(state, gem_key)
-            else:
-                gems[gem_key] -= 1
-                if gems[gem_key] == 0:
-                    del gems[gem_key]
-            state.player_gold += unit_val
-            state.lifetime_earnings += unit_val
-            set_hud_message(state, f"Sold for ${unit_val}!", 2.0)
-            check_win(state)
-            if state.active_scene == "win":
-                return
+            return
+        set_hud_message(state, f"Sold for ${price}!", 2.0)
+        check_win(state)
 
-    elif action == "sell_all_gems":
-        gems = state.inventory.get("gems", {})
-        total = 0
-        for gem_key, count in list(gems.items()):
-            if count <= 0:
-                continue
-            if gem_key.endswith("_polished"):
-                total += sum(polished_prices(state, gem_key))
-            else:
-                total += get_gem_raw_value(gem_key) * count
-        state.inventory["gems"] = {}
-        state.polished_gem_values.clear()
-        state.player_gold += total
-        state.lifetime_earnings += total
-        set_hud_message(state, f"Sold all gems for ${total}!", 2.5)
+    elif action in ("sell_all_gems", "sell_all_loot"):
+        total = market.sell_all(state, loot=action == "sell_all_loot")
+        kind = "loot" if action == "sell_all_loot" else "gems"
+        set_hud_message(state, f"Sold all {kind} for ${total}!", 2.5)
         state.shop_cursor = 0
         check_win(state)
-        if state.active_scene == "win":
-            return
-
-    elif action == "sell_loot":
-        loot_key = item["key"]
-        unit_val = item["value"]
-        loot = state.inventory.get("loot", {})
-        if loot.get(loot_key, 0) <= 0:
-            set_hud_message(state, "None left!", 1.5)
-        else:
-            loot[loot_key] -= 1
-            if loot[loot_key] == 0:
-                del loot[loot_key]
-            state.player_gold += unit_val
-            state.lifetime_earnings += unit_val
-            set_hud_message(state, f"Sold for ${unit_val}!", 2.0)
-            check_win(state)
-            if state.active_scene == "win":
-                return
-
-    elif action == "sell_all_loot":
-        loot = state.inventory.get("loot", {})
-        total = 0
-        for loot_key, count in loot.items():
-            if count <= 0:
-                continue
-            unit_val = 0
-            for enemy_def in ENEMY_CATALOG.values():
-                if enemy_def.loot == loot_key:
-                    unit_val = enemy_def.loot_value
-                    break
-            total += unit_val * count
-        state.inventory["loot"] = {}
-        state.player_gold += total
-        state.lifetime_earnings += total
-        set_hud_message(state, f"Sold all loot for ${total}!", 2.5)
-        state.shop_cursor = 0
-        check_win(state)
-        if state.active_scene == "win":
-            return

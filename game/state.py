@@ -74,6 +74,9 @@ class GameState:
     # Fog of war: set of (x, y) coords currently marked "visible"
     visible_tiles: set = field(default_factory=set)
 
+    # Shop saturation per item kind (sales recently made); see game/market.py
+    market: dict = field(default_factory=dict)
+
     # Bag upgrade level (index into the catalog's bag capacities)
     bag_level: int = 0
 
