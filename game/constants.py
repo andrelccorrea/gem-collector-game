@@ -126,6 +126,9 @@ TYPE_STREAM = "stream"
 TYPE_LAKE = "lake"
 
 # Tile definitions: type -> (char, color_pair, walkable, interactable)
+# Tile types that block line of sight (fog of war)
+OPAQUE_TILE_TYPES = frozenset({TYPE_TREE, TYPE_ROCK, TYPE_CAVE_WALL})
+
 # Gameplay properties per tile type: (walkable, interactable). Appearance lives in theme.py.
 TILE_PROPS = {
     TYPE_GRASS: (True, False),

@@ -75,6 +75,8 @@ class GameState:
 
     # Fog of war: set of (x, y) coords currently marked "visible"
     visible_tiles: set = field(default_factory=set)
+    # (x, y, radius) the fog was last computed for; None forces a recompute
+    fog_key: Any = None
 
     # Shop saturation per item kind (sales recently made); see game/market.py
     market: dict = field(default_factory=dict)

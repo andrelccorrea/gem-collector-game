@@ -236,3 +236,66 @@ def test_fog_load_rebuilds_visible_tiles_set(save_path):
         coord for coord, m in loaded.world_tiles.meta.items() if m.get("visibility") == "visible"
     }
     assert loaded.visible_tiles == expected
+
+
+# ---------------------------------------------------------------------------
+# Line of sight
+# ---------------------------------------------------------------------------
+
+
+def _open_field_state():
+    """30x30 grass world with the player in the middle and a full lantern."""
+    from game.tilemap import TileMap
+    from game.world import _apply_tile
+
+    tiles = TileMap(30, 30)
+    for y in range(30):
+        for x in range(30):
+            _apply_tile(tiles, x, y, "grass")
+    return GameState(world_tiles=tiles, player_x=15, player_y=15)
+
+
+def test_walls_hide_what_is_behind_them_but_not_themselves():
+    from game.world import _apply_tile
+
+    state = _open_field_state()
+    for y in range(10, 21):
+        _apply_tile(state.world_tiles, 18, y, "rock")  # a wall 3 tiles east
+    update_fog(state)
+    assert (18, 15) in state.visible_tiles  # the wall face
+    assert (20, 15) not in state.visible_tiles  # behind it
+    assert (12, 15) in state.visible_tiles  # open side
+
+
+def test_open_ground_shows_the_whole_light_square():
+    state = _open_field_state()
+    update_fog(state)
+    side = 2 * FOG_RADIUS + 1
+    assert len(state.visible_tiles) == side * side
+
+
+def test_water_and_dirt_do_not_block_sight():
+    from game.world import _apply_tile
+
+    state = _open_field_state()
+    _apply_tile(state.world_tiles, 17, 15, "deep")
+    _apply_tile(state.world_tiles, 18, 15, "dirt")
+    update_fog(state)
+    assert (19, 15) in state.visible_tiles
+
+
+def test_fog_is_recomputed_only_when_the_player_moves_or_the_light_changes():
+    state = _open_field_state()
+    update_fog(state)
+    state.world_tiles.meta[(16, 15)]["visibility"] = "unseen"  # tamper
+    update_fog(state)
+    assert state.world_tiles.meta[(16, 15)]["visibility"] == "unseen"  # cached, untouched
+
+    state.player_x += 1
+    update_fog(state)
+    assert state.world_tiles.meta[(16, 15)]["visibility"] == "visible"
+
+    before = set(state.visible_tiles)
+    state.lantern_fuel = 0
+    update_fog(state)
+    assert state.visible_tiles < before
