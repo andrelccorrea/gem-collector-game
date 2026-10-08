@@ -37,21 +37,12 @@ from game.constants import (
     TYPE_TOWN,
     TYPE_TREE,
 )
+from game.geography import TOWN_BOTTOM, TOWN_LEFT, TOWN_RIGHT, TOWN_TOP, in_town
 from game.tilemap import TileMap
-
-# Town boundaries: 12-wide x 8-tall cluster centered at TOWN_CENTER
-TOWN_LEFT = TOWN_CENTER_X - 6
-TOWN_RIGHT = TOWN_CENTER_X + 5  # 12 tiles wide: [94..105]
-TOWN_TOP = TOWN_CENTER_Y - 4
-TOWN_BOTTOM = TOWN_CENTER_Y + 3  # 8 tiles tall: [36..43]
 
 # River band: winding horizontal strip centred near y=58
 RIVER_CENTER_Y = 58
 RIVER_HALF_WIDTH = 2  # band spans ±2 rows around the centre line
-
-
-def _is_town(x: int, y: int) -> bool:
-    return TOWN_LEFT <= x <= TOWN_RIGHT and TOWN_TOP <= y <= TOWN_BOTTOM
 
 
 def _biome_corridor_tile(x: int, y: int) -> str:
@@ -102,12 +93,12 @@ def _carve_stream(
     steps = 0
 
     while (cx, cy) != (x_end, y_end) and steps < max_steps:
-        if bx_min <= cx < bx_max and by_min <= cy < by_max and not _is_town(cx, cy):
+        if bx_min <= cx < bx_max and by_min <= cy < by_max and not in_town(cx, cy):
             _apply_tile(surface, cx, cy, TYPE_STREAM)
             # Occasional widening for organic feel
             if rng.random() < 0.25:
                 wx, wy = cx + rng.choice([-1, 1]), cy
-                if bx_min <= wx < bx_max and by_min <= wy < by_max and not _is_town(wx, wy):
+                if bx_min <= wx < bx_max and by_min <= wy < by_max and not in_town(wx, wy):
                     _apply_tile(surface, wx, wy, TYPE_STREAM)
 
         # Bias movement toward target with random perturbation
@@ -138,7 +129,7 @@ def _carve_stream(
         steps += 1
 
     # Ensure end point is also water
-    if bx_min <= x_end < bx_max and by_min <= y_end < by_max and not _is_town(x_end, y_end):
+    if bx_min <= x_end < bx_max and by_min <= y_end < by_max and not in_town(x_end, y_end):
         _apply_tile(surface, x_end, y_end, TYPE_STREAM)
 
 
@@ -168,7 +159,7 @@ def _carve_lake(
             tx, ty = cx + dx, cy + dy
             if not (bx_min <= tx < bx_max and by_min <= ty < by_max):
                 continue
-            if _is_town(tx, ty):
+            if in_town(tx, ty):
                 continue
 
             dist = (dx * dx + dy * dy) ** 0.5
@@ -197,7 +188,7 @@ def _scatter_mineable(
     """Convert a fraction of base_type tiles within bounds to mineable_type."""
     for y in range(y_min, y_max):
         for x in range(x_min, x_max):
-            if _is_town(x, y):
+            if in_town(x, y):
                 continue
             if surface.meta.get((x, y), {}).get("type") == base_type:
                 if rng.random() < density:
@@ -215,7 +206,7 @@ def _add_water_banks(
     changes: list[tuple[int, int]] = []
     for y in range(y_min, y_max):
         for x in range(x_min, x_max):
-            if _is_town(x, y):
+            if in_town(x, y):
                 continue
             if surface.meta.get((x, y), {}).get("type") != TYPE_GRASS:
                 continue
@@ -254,7 +245,7 @@ def _place_visible_gems(
     x_min, y_min, x_max, y_max = region_bounds
     for y in range(y_min, y_max):
         for x in range(x_min, x_max):
-            if _is_town(x, y):
+            if in_town(x, y):
                 continue
             if surface.meta.get((x, y), {}).get("type") not in eligible_types:
                 continue
@@ -272,7 +263,7 @@ def _generate_meadow(surface: TileMap, rng: random.Random) -> None:
 
     for y in range(y_min, y_max):
         for x in range(x_min, x_max):
-            if not _is_town(x, y):
+            if not in_town(x, y):
                 _apply_tile(surface, x, y, TYPE_GRASS)
 
     # Scatter trees (~15%) — they act as walls but cluster naturally with density
@@ -300,7 +291,7 @@ def _generate_hillside(surface: TileMap, rng: random.Random) -> None:
 
     for y in range(y_min, y_max):
         for x in range(x_min, x_max):
-            if not _is_town(x, y):
+            if not in_town(x, y):
                 _apply_tile(surface, x, y, TYPE_DIRT)
 
     # Scatter rocks (~18%) — impassable obstacles
@@ -378,7 +369,7 @@ def _generate_river_delta(
     # 1. Fill region with grass (replaces the previous deep-water fill)
     for y in range(y_min, y_max):
         for x in range(x_min, x_max):
-            if not _is_town(x, y):
+            if not in_town(x, y):
                 _apply_tile(surface, x, y, TYPE_GRASS)
 
     # 2. Carve 2-3 streams crossing the region
@@ -432,7 +423,7 @@ def _apply_cave_automata(surface: TileMap) -> None:
         changes: dict = {}
         for y in range(MAP_HEIGHT):
             for x in range(cave_min_x, MAP_WIDTH):
-                if _is_town(x, y):
+                if in_town(x, y):
                     continue
                 current = surface.meta.get((x, y), {}).get("type", TYPE_CAVE_WALL)
                 if current in (TYPE_ORE, TYPE_RICH_ORE):
@@ -619,7 +610,7 @@ def generate_world(seed: int) -> tuple[TileMap, dict[tuple[int, int], str]]:
     # Town perimeter: ring of PATH tiles around the town cluster
     for bx in range(TOWN_LEFT - 1, TOWN_RIGHT + 2):
         for by in range(TOWN_TOP - 1, TOWN_BOTTOM + 2):
-            if not _is_town(bx, by) and 0 <= bx < MAP_WIDTH and 0 <= by < MAP_HEIGHT:
+            if not in_town(bx, by) and 0 <= bx < MAP_WIDTH and 0 <= by < MAP_HEIGHT:
                 _apply_tile(surface, bx, by, TYPE_PATH)
 
     # Town interior: buildings and ground tiles

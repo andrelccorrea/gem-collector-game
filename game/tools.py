@@ -1,7 +1,4 @@
 from game.constants import (
-    BIOME_CAVE_MIN_X,
-    BIOME_HILLSIDE_MAX_Y,
-    BIOME_MEADOW_MAX_X,
     TYPE_LAKE,
     TYPE_LAPIDARY,
     TYPE_MINEABLE_DIRT,
@@ -11,6 +8,7 @@ from game.constants import (
     TYPE_SHOP,
     TYPE_STREAM,
 )
+from game.geography import biome_at
 from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
 from game.player import set_hud_message
@@ -111,7 +109,7 @@ def _dig_mineable_tile(state, x: int, y: int, tile_type: str) -> None:
 
     from game import gems as gems_module
 
-    biome = _coord_to_biome(x, y)
+    biome = biome_at(x, y)
     gem_name = gems_module.roll_gem_drop(biome, state.equipped_tool, state.rng)
 
     if gem_name:
@@ -145,14 +143,3 @@ def _deplete_tile(state, x: int, y: int) -> None:
     meta["interactable"] = False
     state.depleted_tiles.add((x, y))
     state.world_tiles.meta[(x, y)] = meta
-
-
-def _coord_to_biome(x: int, y: int) -> str:
-    """Map (x, y) to its region biome — used for gem drop table lookup."""
-    if x <= BIOME_MEADOW_MAX_X:
-        return "meadow"
-    if x >= BIOME_CAVE_MIN_X:
-        return "cave"
-    if y <= BIOME_HILLSIDE_MAX_Y:
-        return "hillside"
-    return "river"

@@ -67,7 +67,8 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E-key cycles tools; Space-key mines tiles, depletes them, rolls gem drops |
 | `gems.py` | `roll_gem_drop(biome, tool, rng)` weighted random; `add_gem_to_inventory`; polished gem value computation |
-| `enemies.py` | `Enemy` class; BFS pathfinding (cap 50 steps); `spawn_enemies`, `update_enemies`, `render_enemies`; difficulty scaling |
+| `geography.py` | `in_town(x, y, margin)`, `biome_at(x, y)`, `region_name(x, y)` — the single definition of the town rectangle and biome regions |
+| `enemies.py` | `Enemy` class; `find_path_bfs` (parent-pointer BFS, depth cap, falls back to the reachable tile closest to the target, optional `blocked`); `spawn_enemies` (ring around the player: off-screen, out of town, 10 tiles inside the despawn distance), `update_enemies`, `render_enemies`; difficulty scaling |
 | `combat.py` | F-key player attack (Chebyshev-1 adjacency); enemy auto-attacks on per-enemy cooldown |
 | `buildings.py` | `check_building_interaction` (USE on S/L/P tile switches scene) and `check_win` |
 | `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py`, `lapidary.py`, `save_point.py` |

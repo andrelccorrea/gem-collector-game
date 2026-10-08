@@ -11,6 +11,7 @@ from game.constants import (
     TOWN_CENTER_X,
     TOWN_CENTER_Y,
 )
+from game.geography import in_town
 from game.input import Action, InputState
 
 
@@ -100,7 +101,7 @@ def _handle_hp_regen(state, dt: float) -> None:
         return
 
     # Check if in town
-    if not _is_in_town(state):
+    if not in_town(state.player_x, state.player_y):
         return
 
     # Check not in recent combat (5 second window)
@@ -111,10 +112,6 @@ def _handle_hp_regen(state, dt: float) -> None:
     if state.regen_timer >= HP_REGEN_INTERVAL:
         state.regen_timer = 0.0
         state.player_hp = min(state.player_max_hp, state.player_hp + HP_REGEN_RATE)
-
-
-def _is_in_town(state) -> bool:
-    return abs(state.player_x - TOWN_CENTER_X) <= 7 and abs(state.player_y - TOWN_CENTER_Y) <= 5
 
 
 def _handle_hud_message(state, dt: float) -> None:

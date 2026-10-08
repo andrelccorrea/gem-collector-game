@@ -4,6 +4,7 @@ from game.constants import (
     COLOR_HUD_HP_LOW,
     COLOR_HUD_HP_MID,
 )
+from game.geography import region_name
 
 
 def render_hud(renderer, state) -> None:
@@ -26,7 +27,7 @@ def render_hud(renderer, state) -> None:
         hp_color = COLOR_HUD_HP_LOW
 
     tool = state.equipped_tool or "none"
-    biome = _get_biome_name(state)
+    biome = region_name(state.player_x, state.player_y)
 
     row1 = (
         f" HP:{state.player_hp}/{state.player_max_hp}"
@@ -60,19 +61,3 @@ def _write_hud_str(renderer, y: int, x: int, text: str, color_pair: tuple) -> No
         existing_char, existing_cp = renderer.get_cell(cx, y)
         if existing_char != ch or existing_cp != color_pair:
             renderer.set_cell(cx, y, ch, color_pair)
-
-
-def _get_biome_name(state) -> str:
-    from game.constants import BIOME_CAVE_MIN_X, BIOME_MEADOW_MAX_X, TOWN_CENTER_X, TOWN_CENTER_Y
-
-    px, py = state.player_x, state.player_y
-    # Check if in town area
-    if abs(px - TOWN_CENTER_X) <= 6 and abs(py - TOWN_CENTER_Y) <= 4:
-        return "Town"
-    if px <= BIOME_MEADOW_MAX_X:
-        return "Meadow"
-    if px >= BIOME_CAVE_MIN_X:
-        return "Cave"
-    if py <= 39:  # BIOME_HILLSIDE_MAX_Y
-        return "Hillside"
-    return "River Delta"
