@@ -99,7 +99,7 @@ class Image:
 
 def load_image(source):
     val = []
-    with open(source, "r") as file:
+    with open(source) as file:
         lines = file.readlines()
         height = len(lines)
         width = 0
@@ -116,7 +116,7 @@ def load_images(source):
     imgs = []
     files = sorted(os.listdir(source), key=lambda name: int(name.split("_")[1].split(".")[0]))
     for file in files:
-        imgs.append(load_image("{}/{}".format(source, file)))
+        imgs.append(load_image(f"{source}/{file}"))
     return imgs
 
 

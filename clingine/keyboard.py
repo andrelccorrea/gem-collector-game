@@ -12,7 +12,7 @@ class Keyboard:
     def on_press(self, key):
         try:
             key = key.char
-        except:
+        except AttributeError:
             key = key.name
         self.pressed.add(key)
         self.held.add(key)
@@ -22,7 +22,7 @@ class Keyboard:
     def on_release(self, key):
         try:
             key = key.char
-        except:
+        except AttributeError:
             key = key.name
         self.released.add(key)
         if key in self.held:

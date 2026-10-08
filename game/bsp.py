@@ -11,10 +11,10 @@ class BSPNode:
     height: int
     left: Optional["BSPNode"] = field(default=None, repr=False)
     right: Optional["BSPNode"] = field(default=None, repr=False)
-    room_x: Optional[int] = None
-    room_y: Optional[int] = None
-    room_w: Optional[int] = None
-    room_h: Optional[int] = None
+    room_x: int | None = None
+    room_y: int | None = None
+    room_w: int | None = None
+    room_h: int | None = None
 
 
 def split(node: BSPNode, rng: random.Random, min_size: int = 8) -> None:
@@ -85,7 +85,7 @@ def place_rooms(node: BSPNode, rng: random.Random, margin: int = 1) -> None:
         leaf.room_h = room_h
 
 
-def _get_room_center(node: BSPNode) -> Optional[tuple[int, int]]:
+def _get_room_center(node: BSPNode) -> tuple[int, int] | None:
     if node.left is None and node.right is None:
         if node.room_x is None:
             return None

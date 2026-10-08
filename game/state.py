@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -22,7 +22,7 @@ class GameState:
     player_max_hp: int = 20
     player_gold: int = 50
     lifetime_earnings: int = 0
-    equipped_tool: Optional[str] = None
+    equipped_tool: str | None = None
 
     # Inventory: {"gems": {"quartz": 2, ...}, "tools": {"shovel": {"level": 1}}, "loot": {...}}
     inventory: dict = field(

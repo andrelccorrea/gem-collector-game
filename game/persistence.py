@@ -62,7 +62,7 @@ def load_game():
         return None
 
     try:
-        with open(SAVE_FILE, "r") as f:
+        with open(SAVE_FILE) as f:
             data = json.load(f)
     except Exception:
         return None
@@ -153,7 +153,7 @@ def load_leaderboard() -> list:
     if not os.path.exists(LEADERBOARD_FILE):
         return []
     try:
-        with open(LEADERBOARD_FILE, "r") as f:
+        with open(LEADERBOARD_FILE) as f:
             data = json.load(f)
         return sorted(data.get("runs", []), key=lambda e: e.get("earnings", 0), reverse=True)
     except Exception:

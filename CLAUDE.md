@@ -9,15 +9,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Setup & Running
 
 ```bash
-# Activate virtual environment (Python 3.14)
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (incl. dev tools) into .venv — dependencies live in pyproject.toml / uv.lock
+uv sync
 
 # Run the game
-python main.py
+uv run python main.py
+
+# Checks (same as CI: Python 3.13 and 3.14)
+uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 ```
+
+Game code must stay Python 3.13-compatible (the Android toolchain stops at 3.13). See `docs/ROADMAP.md`.
 
 Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 80×20 viewport and 2-row HUD.
 

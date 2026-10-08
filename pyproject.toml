@@ -1,0 +1,29 @@
+[project]
+name = "gem-collector"
+version = "0.1.0"
+description = "Terminal gem prospecting RPG built on the clingine curses engine."
+requires-python = ">=3.13"
+dependencies = [
+    "pynput>=1.8.1",
+    "python-xlib==0.27; sys_platform == 'linux'",
+    "six>=1.17.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "ruff>=0.16",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

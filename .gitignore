@@ -1,0 +1,15 @@
+# Runtime data
+save.json
+save.json.tmp
+leaderboard.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# OS / tooling
+.DS_Store
+.claude/

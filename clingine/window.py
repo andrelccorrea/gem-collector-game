@@ -1,16 +1,20 @@
-import os, time, sys, curses, pynput, math
-from . import util, keyboard, clock, mouse
+import curses
+import math
+import os
+import sys
+
+from . import clock, keyboard, util
 
 
 class Window:
     def __init__(self, width=80, height=22, char=" ", fps=60):
         if sys.platform == "win32" or sys.platform == "cygwin":
-            os.system("mode {}, {}".format(width, height))
+            os.system(f"mode {width}, {height}")
         else:
-            sys.stdout.write(
-                "\x1b[8;{rows};{cols}t".format(rows=height, cols=width)
-            )  # changes terminal dimensions
-            print()  # this print is necessary; we need to print something to update the terminal dimensions after executing the line above
+            # Ask the terminal to resize itself; the trailing print flushes the escape sequence
+            # so the new dimensions apply before curses initializes.
+            sys.stdout.write(f"\x1b[8;{height};{width}t")
+            print()
         self.width = width
         self.height = height
         self.char = char
@@ -28,8 +32,6 @@ class Window:
             self.running = True
             self.clock = clock.Clock()
             self.keyboard = keyboard.Keyboard(self)
-            self.mouse = mouse.Mouse(self)
-            curses.mouseinterval(0)
             self.color_pairs = util.ColorPairs(self)
             self.color_pair = ((255, 255, 255), (0, 0, 0))
             self.color_pairs.add(self.color_pair)
@@ -49,16 +51,12 @@ class Window:
 
     def reset(self):
 
-        self.screen_array = []  # 2D array of arrays, each with three values, flag, char, and color_pair
-        # flag is a boolean that indicates whether that particular screen_arr value is changed / updated
-        for i in range(math.floor(self.height)):
+        # 2D array of [is_changed, char, color_pair] cells; is_changed marks cells to redraw.
+        self.screen_array = []
+        for _ in range(math.floor(self.height)):
             self.screen_array.append(
-                [[True, self.char, self.color_pair] for j in range(math.floor(self.width))]
+                [[True, self.char, self.color_pair] for _ in range(math.floor(self.width))]
             )
-
-    def run(self):
-        # your game logic here...
-        pass
 
     def exit(self):
         self.running = False
@@ -96,10 +94,9 @@ class Window:
                                     y, x, self.screen_array[y][x][1], curses.color_pair(0)
                                 )
                         self.screen_array[y][x][0] = False
-                    except:
-                        # this happens when the terminal size is smaller than the self.screen_array size
+                    except curses.error:
+                        # Raised when the terminal is smaller than screen_array.
                         self.screen.resize(math.floor(self.height), math.floor(self.width))
-        self.mouse.clear_events()
         self.screen.refresh()
         self.clock.update()
         self.clock.delay(1 / fps)
