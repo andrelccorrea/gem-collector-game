@@ -30,13 +30,26 @@ def test_every_sprite_the_game_draws_has_pixel_art():
     assert needed <= set(sprites.SPRITES)
 
 
-def test_sprites_are_well_formed():
+def test_sprites_and_their_frames_are_well_formed():
     for sprite_id in sprites.SPRITES:
-        rows = sprites.sprite_rows(sprite_id)
-        assert len(rows) == sprites.HEIGHT, sprite_id
-        assert all(len(row) == sprites.WIDTH for row in rows), sprite_id
-        assert all(letter in sprites.PALETTE for row in rows for letter in row), sprite_id
-        assert len(sprites.sprite_rgba(sprite_id)) == sprites.WIDTH * sprites.HEIGHT * 4
+        for frame in range(sprites.frame_count(sprite_id)):
+            rows = sprites.sprite_rows(sprite_id, frame)
+            assert len(rows) == sprites.HEIGHT, (sprite_id, frame)
+            assert all(len(row) == sprites.WIDTH for row in rows), (sprite_id, frame)
+            assert all(letter in sprites.PALETTE for row in rows for letter in row)
+            pixels = sprites.sprite_rgba(sprite_id, frame)
+            assert len(pixels) == sprites.WIDTH * sprites.HEIGHT * 4
+
+
+def test_animated_sprites_cycle_through_their_frames():
+    assert set(sprites.FPS) == set(sprites.FRAMES) <= set(sprites.SPRITES)
+    for sprite_id in sprites.FRAMES:
+        count, fps = sprites.frame_count(sprite_id), sprites.FPS[sprite_id]
+        seen = [sprites.frame_at(sprite_id, i / fps) for i in range(count)]
+        assert seen == list(range(count)), sprite_id
+        assert sprites.frame_at(sprite_id, 0, phase=1) == 1
+        assert sprites.sprite_rgba(sprite_id, 1) != sprites.sprite_rgba(sprite_id, 0)
+    assert sprites.frame_at("grass", 123.4, phase=5) == 0  # still sprites never move
 
 
 def test_rgba_starts_at_the_bottom_row_and_keeps_transparency():

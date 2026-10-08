@@ -3,7 +3,8 @@
 Each sprite is 8 pixels wide and 16 tall, the ~1:2 shape of a grid cell, and maps a
 sprite id from the game (tile type, "depleted", "player", "gem", "bag" or an enemy
 name) to rows of palette letters. "." is transparent. Textures with 8 rows repeat
-them to fill 16. "gem" is drawn in grays so the game can tint it with the gem's color.
+them to fill 16. "gem" is drawn in grays so the game can tint it with the gem's color. Some sprites
+have extra animation frames (FRAMES), shown at a low frame rate (FPS).
 """
 
 WIDTH, HEIGHT = 8, 16
@@ -464,17 +465,76 @@ SPRITES = {
 }
 
 
-def sprite_rows(sprite_id: str) -> list[str] | None:
+# ── Animation ─────────────────────────────────────────────────────────────────
+# Extra frames after the sprite itself (frame 0). Pixel art reads well at a low frame
+# rate; cells get a phase offset so neighbouring trees or waves do not move in step.
+
+
+def _shifted(rows: list[str], step: int) -> list[str]:
+    """Each row rotated ``step`` pixels to the right (flowing water)."""
+    return [row[-step:] + row[:-step] for row in rows]
+
+
+def _swap(rows: list[str], changes: dict) -> list[str]:
+    """A copy of ``rows`` with whole rows replaced: {row index: new row}."""
+    return [changes.get(i, row) for i, row in enumerate(rows)]
+
+
+FRAMES = {
+    "stream": [_shifted(SPRITES["stream"], n) for n in (2, 4, 6)],
+    "shallow": [_shifted(SPRITES["shallow"], n) for n in (2, 4, 6)],
+    "lake": [_shifted(SPRITES["lake"], 1)],
+    "deep": [_shifted(SPRITES["deep"], 1)],
+    "tree": [  # the canopy leans one pixel
+        _swap(SPRITES["tree"], {i: "G" + SPRITES["tree"][i][:-1] for i in range(0, 9)}),
+    ],
+    "rich_ore": [_swap(SPRITES["rich_ore"], {1: "cccccccc", 4: "cccccWcc"})],  # glint
+    "gem": [  # sparkle, then rest
+        _swap(SPRITES["gem"], {4: "..W.....", 5: "..WWWW.."}),
+        SPRITES["gem"],
+        SPRITES["gem"],
+    ],
+    "player": [  # breathing: the body dips one pixel
+        ["........"] + SPRITES["player"][:12] + SPRITES["player"][13:],
+    ],
+    "bear": [["........"] + SPRITES["bear"][:15]],
+    "cave_bat": [  # wings up
+        _swap(
+            SPRITES["cave_bat"],
+            {4: "i......i", 5: "ii....ii", 6: ".i.II.i.", 7: "..iIIi.."},
+        ),
+    ],
+    "snake": [_swap(SPRITES["snake"], {8: "...ffff.", 7: "...fZffS"})],  # tongue
+}
+FPS = {"stream": 4, "shallow": 4, "lake": 2, "deep": 2, "tree": 1, "rich_ore": 2,
+       "gem": 3, "player": 2, "bear": 2, "cave_bat": 6, "snake": 2}  # fmt: skip
+
+
+def frame_count(sprite_id: str) -> int:
+    return 1 + len(FRAMES.get(sprite_id, ()))
+
+
+def frame_at(sprite_id: str, seconds: float, phase: int = 0) -> int:
+    """Which frame of the sprite shows at time ``seconds`` (``phase`` shifts a cell's cycle)."""
+    count = frame_count(sprite_id)
+    if count == 1:
+        return 0
+    return (int(seconds * FPS[sprite_id]) + phase) % count
+
+
+def sprite_rows(sprite_id: str, frame: int = 0) -> list[str] | None:
     """The sprite's 16 rows (8-row textures repeated), or None if there is no sprite."""
     rows = SPRITES.get(sprite_id)
     if rows is None:
         return None
+    if frame:
+        rows = FRAMES[sprite_id][frame - 1]
     return rows * (HEIGHT // len(rows))
 
 
-def sprite_rgba(sprite_id: str) -> bytes | None:
+def sprite_rgba(sprite_id: str, frame: int = 0) -> bytes | None:
     """RGBA pixels, bottom row first (the order Kivy textures expect)."""
-    rows = sprite_rows(sprite_id)
+    rows = sprite_rows(sprite_id, frame)
     if rows is None:
         return None
     pixels = bytearray()

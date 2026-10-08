@@ -47,7 +47,7 @@ from kivy.uix.widget import Widget  # noqa: E402
 from sfx import write_sounds  # noqa: E402
 from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
 from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
-from sprites import sprite_rgba  # noqa: E402
+from sprites import frame_at, sprite_rgba  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
@@ -126,17 +126,18 @@ _WHITE = (255, 255, 255)
 _textures: dict = {}
 
 
-def _sprite_texture(sprite):
-    """The sprite's texture (built once, scaled without smoothing), or None."""
-    if sprite not in _textures:
-        pixels = sprite_rgba(sprite)
+def _sprite_texture(sprite, frame=0):
+    """The texture of one frame of a sprite (built once, scaled without smoothing), or None."""
+    key = (sprite, frame)
+    if key not in _textures:
+        pixels = sprite_rgba(sprite, frame)
         texture = None
         if pixels is not None:
             texture = Texture.create(size=(SPRITE_WIDTH, SPRITE_HEIGHT), colorfmt="rgba")
             texture.blit_buffer(pixels, colorfmt="rgba", bufferfmt="ubyte")
             texture.mag_filter = texture.min_filter = "nearest"
-        _textures[sprite] = texture
-    return _textures[sprite]
+        _textures[key] = texture
+    return _textures[key]
 
 
 class GridView(Widget):
@@ -195,6 +196,13 @@ class GridView(Widget):
         """Update only the cells whose character or sprites changed since the last flush."""
         self._renderer = renderer
         sprites, renderer.sprites = renderer.sprites, {}
+        # Each layer becomes (sprite, tint, frame): an animation step is then just another
+        # change of the cell, redrawn like any other.
+        now = time.perf_counter()
+        for (x, y), layers in sprites.items():
+            phase = x * 7 + y * 13
+            for layer, (sprite, tint) in layers.items():
+                layers[layer] = (sprite, tint, frame_at(sprite, now, phase))
         changed = renderer.dirty
         for cell in sprites.keys() | self._shown_sprites.keys():
             if sprites.get(cell) != self._shown_sprites.get(cell):
@@ -235,10 +243,10 @@ class GridView(Widget):
 
     @staticmethod
     def _sprite(layer):
-        """(texture, tint) for a (sprite, tint) layer, or None if it has no sprite."""
+        """(texture, tint) for a (sprite, tint, frame) layer, or None if it has no sprite."""
         if layer is None:
             return None
-        texture = _sprite_texture(layer[0])
+        texture = _sprite_texture(layer[0], layer[2])
         return (texture, layer[1] or _WHITE) if texture is not None else None
 
     def on_touch_down(self, touch):
