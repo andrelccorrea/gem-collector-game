@@ -1,10 +1,10 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 7, compact JSON):
+Save format (``schema_version`` 8, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
     lapidary_level, bag_level, market {kind: saturation}, lantern {level, fuel},
-    hardcore, dropped_bag {x, y, gems, loot, polished} or null, recall_charms,
+    hardcore, dropped_bag {x, y, gems, loot, polished} or null, recall_charms, museum,
     depleted_tiles [[x, y]...],
     world_gems [[x, y, name]...], fog (run-length string, row-major),
     rng_state (gameplay RNG state, so a continued run keeps its roll sequence)
@@ -22,7 +22,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 DAILY_NAME = "daily.json"
@@ -196,6 +196,12 @@ def _migrate_v6_to_v7(data: dict) -> dict:
     return data
 
 
+def _migrate_v7_to_v8(data: dict) -> dict:
+    """v8 adds the museum."""
+    data["museum"] = []
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -205,6 +211,7 @@ MIGRATIONS = {
     4: _migrate_v4_to_v5,
     5: _migrate_v5_to_v6,
     6: _migrate_v6_to_v7,
+    7: _migrate_v7_to_v8,
 }
 
 
@@ -256,6 +263,7 @@ def save_game(state) -> str | None:
         "hardcore": state.hardcore,
         "dropped_bag": state.dropped_bag,
         "recall_charms": state.recall_charms,
+        "museum": state.museum,
         "depleted_tiles": [[x, y] for x, y in sorted(state.depleted_tiles)],
         "world_gems": [[x, y, name] for (x, y), name in sorted(state.world_gems.items())],
         "fog": _encode_fog(state.world_tiles.meta),
@@ -350,6 +358,7 @@ def _state_from_save(data: dict):
     state.hardcore = data["hardcore"]
     state.dropped_bag = data["dropped_bag"]
     state.recall_charms = data["recall_charms"]
+    state.museum = data["museum"]
 
     if data["worldgen_version"] == world_module.WORLDGEN_VERSION:
         _restore_map(state, data)

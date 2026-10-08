@@ -7,7 +7,7 @@ from game.constants import MOVE_COOLDOWN
 from game.input import EMPTY_INPUT, Action, InputState, map_keys
 from game.menu import update_menu
 from game.player import update_player
-from game.scenes.shop import update_shop
+from game.scenes.shop import SHOP_TABS, update_shop
 from game.state import GameState
 
 FRAME = 1 / 30
@@ -194,4 +194,4 @@ def test_shop_move_left_goes_to_previous_tab():
     state = GameState()
     state.shop_tab = 0
     update_shop(InputState(pressed=frozenset({Action.MOVE_LEFT})), state)
-    assert state.shop_tab == 3
+    assert state.shop_tab == len(SHOP_TABS) - 1

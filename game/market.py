@@ -16,6 +16,15 @@ RECOVERY_SECONDS_PER_SALE = 30.0
 
 _LOOT_VALUES = {e.loot: e.loot_value for e in ENEMY_CATALOG.values() if e.loot}
 
+# Museum: every MUSEUM_MILESTONE gem kinds donated raises all sale prices by MUSEUM_BONUS.
+MUSEUM_MILESTONE = 4
+MUSEUM_BONUS = 0.05
+
+
+def museum_bonus(state) -> float:
+    """Sale price multiplier earned by the gem kinds donated to the museum."""
+    return 1.0 + MUSEUM_BONUS * (len(state.museum) // MUSEUM_MILESTONE)
+
 
 def update_market(state, dt: float) -> None:
     """Let saturation wear off as game time passes."""
@@ -48,7 +57,8 @@ def _base_price(state, key: str) -> int:
 def unit_price(state, key: str, extra_saturation: float = 0.0) -> int:
     """What the shop pays right now for one unit of ``key``."""
     saturation = state.market.get(key, 0.0) + extra_saturation
-    return max(1, int(_base_price(state, key) * price_multiplier(saturation)))
+    multiplier = price_multiplier(saturation) * museum_bonus(state)
+    return max(1, int(_base_price(state, key) * multiplier))
 
 
 def discount_percent(state, key: str) -> int:
@@ -95,8 +105,10 @@ def preview_sell_all(state, keys: list) -> int:
         if key.endswith("_polished"):
             prices = polished_prices(state, key)
             saturation = state.market.get(key, 0.0)
+            bonus = museum_bonus(state)
             total += sum(
-                max(1, int(p * price_multiplier(saturation + i))) for i, p in enumerate(prices)
+                max(1, int(p * price_multiplier(saturation + i) * bonus))
+                for i, p in enumerate(prices)
             )
         else:
             total += sum(unit_price(state, key, extra_saturation=i) for i in range(count))

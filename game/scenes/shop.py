@@ -16,6 +16,7 @@ from game.objects.registry import (
     BAG_CAPACITIES,
     BAG_COSTS,
     BAG_UNLOCK_AT,
+    GEM_CATALOG,
     LANTERN,
     TOOL_CATALOG,
     TOOL_MAX_LEVEL,
@@ -24,6 +25,8 @@ from game.objects.registry import (
 )
 from game.player import set_hud_message
 from game.ui import clear_screen, render_list, write_str
+
+SHOP_TABS = ["Buy", "Upgrade", "Sell Gems", "Sell Loot", "Museum"]
 
 
 def _build_shop_items(state) -> list:
@@ -131,6 +134,34 @@ def _build_shop_items(state) -> list:
             items.append(_sell_row(state, loot_key, display_name, count, "sell_loot"))
         _add_sell_all_row(items, state, list(loot), "sell_all_loot", "Loot")
 
+    elif tab == 4:  # Museum
+        bonus = round((market.museum_bonus(state) - 1) * 100)
+        items.append(
+            {
+                "label": f"  Donated {len(state.museum)}/{len(GEM_CATALOG)} gem kinds"
+                f"  |  all sale prices +{bonus}%"
+                f"  (+{round(market.MUSEUM_BONUS * 100)}% every {market.MUSEUM_MILESTONE})",
+                "enabled": False,
+                "action": "none",
+                "key": None,
+                "cost": 0,
+                "value": 0,
+            }
+        )
+        for gem_key, count in state.inventory.get("gems", {}).items():
+            if count > 0 and gem_key in GEM_CATALOG and gem_key not in state.museum:
+                name = gem_key.replace("_", " ").title()
+                items.append(
+                    {
+                        "label": f"  Donate a {name}",
+                        "enabled": True,
+                        "action": "donate",
+                        "key": gem_key,
+                        "cost": 0,
+                        "value": 0,
+                    }
+                )
+
     return items
 
 
@@ -214,7 +245,7 @@ def render_shop(renderer, state) -> None:
     title = "=== GENERAL STORE ==="
     write_str(renderer, 0, (width - len(title)) // 2, title, COLOR_MENU_TITLE)
 
-    tab_labels = ["[ Buy Tools ]", "[ Upgrade ]", "[ Sell Gems ]", "[ Sell Loot ]"]
+    tab_labels = [f"[ {name} ]" for name in SHOP_TABS]
     tab_x = 2
     for i, label in enumerate(tab_labels):
         color = COLOR_MENU_SELECTED if i == state.shop_tab else COLOR_MENU_NORMAL
@@ -248,11 +279,11 @@ def update_shop(inp: InputState, state) -> None:
 
     # Tab switching: Left/Right or Tab (next tab)
     if Action.MOVE_LEFT in pressed:
-        state.shop_tab = (state.shop_tab - 1) % 4
+        state.shop_tab = (state.shop_tab - 1) % len(SHOP_TABS)
         state.shop_cursor = 0
         return
     if Action.MOVE_RIGHT in pressed or Action.NEXT_TAB in pressed:
-        state.shop_tab = (state.shop_tab + 1) % 4
+        state.shop_tab = (state.shop_tab + 1) % len(SHOP_TABS)
         state.shop_cursor = 0
         return
 
@@ -319,6 +350,15 @@ def update_shop(inp: InputState, state) -> None:
             tools[tool_name]["level"] += 1
             new_level = tools[tool_name]["level"]
             set_hud_message(state, f"{tool_name.title()} upgraded to Lv{new_level}!", 2.0)
+
+    elif action == "donate":
+        gem_key = item["key"]
+        gems = state.inventory["gems"]
+        gems[gem_key] -= 1
+        if gems[gem_key] == 0:
+            del gems[gem_key]
+        state.museum.append(gem_key)
+        set_hud_message(state, f"The museum thanks you for the {gem_key.replace('_', ' ')}!", 2.5)
 
     elif action == "upgrade_gear":
         gear = item["key"]

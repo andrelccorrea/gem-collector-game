@@ -85,6 +85,7 @@ class GameState:
     dropped_bag: Any = None
 
     recall_charms: int = 0
+    museum: list = field(default_factory=list)  # gem kinds donated, in donation order
 
     # Lantern: fuel left (seconds of light at drain 1) and upgrade level
     lantern_fuel: float = 240.0
