@@ -7,6 +7,7 @@ from game.constants import (
     COLOR_MENU_NORMAL,
     COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
+    MOVE_COOLDOWN,
     RECALL_CHARM_COST,
 )
 from game.gems import polished_prices
@@ -14,9 +15,11 @@ from game.input import Action, InputState
 from game.input import hint as hint_of
 from game.lantern import lantern_capacity
 from game.objects.registry import (
+    ARMOR,
     BAG_CAPACITIES,
     BAG_COSTS,
     BAG_UNLOCK_AT,
+    BOOTS,
     GEM_CATALOG,
     LANTERN,
     TOOL_CATALOG,
@@ -110,8 +113,8 @@ def _build_shop_items(state) -> list:
                     "value": 0,
                 }
             )
-        items.append(_gear_upgrade_item(state, "bag"))
-        items.append(_gear_upgrade_item(state, "lantern"))
+        for gear in _GEAR:
+            items.append(_gear_upgrade_item(state, gear))
 
     elif tab == 2:  # Sell Gems
         gems = state.inventory.get("gems", {})
@@ -207,28 +210,67 @@ def _add_sell_all_row(items: list, state, keys: list, action: str, kind: str) ->
         )
 
 
-# Gear bought in levels: (state attribute, capacities, costs, unlock_at, unit of capacity)
+# Gear bought in levels: (state attribute, what each level gives as the player will get
+# it (perk bonuses included), costs, unlock_at, unit of that value)
 _GEAR = {
-    "bag": ("bag_level", BAG_CAPACITIES, BAG_COSTS, BAG_UNLOCK_AT, "items"),
+    "bag": (
+        "bag_level",
+        lambda s: [c + s.bag_bonus for c in BAG_CAPACITIES],
+        BAG_COSTS,
+        BAG_UNLOCK_AT,
+        "items",
+    ),
     "lantern": (
         "lantern_level",
-        LANTERN["capacities"],
+        lambda s: [round(c * (1 + s.lantern_bonus)) for c in LANTERN["capacities"]],
         LANTERN["costs"],
         LANTERN["unlock_at"],
         "s of light",
     ),
+    "armor": (
+        "armor_level",
+        lambda s: ARMOR["reductions"],
+        ARMOR["costs"],
+        ARMOR["unlock_at"],
+        "dmg blocked per hit",
+    ),
+    "boots": (
+        "boots_level",
+        lambda s: [round(1 / (MOVE_COOLDOWN * m), 1) for m in BOOTS["step_multipliers"]],
+        BOOTS["costs"],
+        BOOTS["unlock_at"],
+        "steps/s",
+    ),
 }
+
+
+_GEAR_DESC = {
+    "bag": "Carry more gems and loot per trip",
+    "lantern": "Light lasts longer away from town",
+    "armor": "Enemy hits hurt less (a hit always does at least 1)",
+    "boots": "Walk faster",
+}
+
+
+def _describe(item: dict) -> str:
+    """One line on what the selected shop row is for ("" if nothing to add)."""
+    action, key = item["action"], item["key"]
+    if action == "buy_tool":
+        return TOOL_CATALOG[key].desc
+    if action == "upgrade_tool":
+        return "Higher levels hit harder and, every two levels, find rarer gems"
+    if action == "upgrade_gear":
+        return _GEAR_DESC[key]
+    if action == "buy_charm":
+        return f"One use: {hint_of(Action.RECALL)} takes you back to town from anywhere"
+    return ""
 
 
 def _gear_upgrade_item(state, gear: str) -> dict:
     """Shop row for the next level of a piece of gear (disabled when unavailable)."""
-    attr, base_capacities, costs, unlock_at, unit = _GEAR[gear]
+    attr, values, costs, unlock_at, unit = _GEAR[gear]
     level = getattr(state, attr)
-    # Show capacities as the player will get them, perk bonuses included.
-    if gear == "bag":
-        capacities = [c + state.bag_bonus for c in base_capacities]
-    else:
-        capacities = [round(c * (1 + state.lantern_bonus)) for c in base_capacities]
+    capacities = values(state)
     name = gear.title()
     item = {"action": "upgrade_gear", "key": gear, "cost": 0, "value": 0, "enabled": False}
     if level + 1 >= len(capacities):
@@ -269,6 +311,9 @@ def render_shop(renderer, state) -> None:
     state.shop_cursor = cursor
 
     render_list(renderer, items, cursor, top=6, bottom=18)
+    if items:
+        about = _describe(items[cursor])
+        write_str(renderer, renderer.height - 3, 2, about[: width - 4], COLOR_MENU_NORMAL)
 
     hint = (
         f"[{hint_of(Action.MOVE_UP)}/{hint_of(Action.MOVE_DOWN)}] Navigate  "

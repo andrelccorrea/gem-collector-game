@@ -95,6 +95,9 @@ class GameState:
 
     # Bag upgrade level (index into the catalog's bag capacities)
     bag_level: int = 0
+    # Armor and boots levels (indexes into the catalog's armor / boots tables)
+    armor_level: int = 0
+    boots_level: int = 0
     # Run-long bonuses from perks bought between runs (game/profile.py)
     bag_bonus: int = 0
     lantern_bonus: float = 0.0

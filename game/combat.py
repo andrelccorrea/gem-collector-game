@@ -1,7 +1,7 @@
 from game.constants import PLAYER_ATTACK_COOLDOWN
 from game.events import FULL, GAIN_COLOR, HIT, HURT, LOOT, LOSS_COLOR, emit
 from game.input import Action, InputState
-from game.objects.registry import TOOL_CATALOG
+from game.objects.registry import ARMOR, TOOL_CATALOG
 from game.player import set_hud_message
 
 HIT_COLOR = (255, 255, 255)  # damage dealt to an enemy
@@ -95,9 +95,10 @@ def enemy_attacks(state, dt: float) -> None:
 
         # Attack!
         enemy.attack_cooldown = enemy.attack_cooldown_max
-        state.player_hp -= enemy.attack
+        damage = max(1, enemy.attack - ARMOR["reductions"][state.armor_level])
+        state.player_hp -= damage
         state.last_combat_time = state.game_time
-        emit(state, HURT, f"-{enemy.attack}", LOSS_COLOR, "heart")
+        emit(state, HURT, f"-{damage}", LOSS_COLOR, "heart")
 
         if state.player_hp <= 0:
             state.player_hp = 0
@@ -106,7 +107,7 @@ def enemy_attacks(state, dt: float) -> None:
 
         set_hud_message(
             state,
-            f"A {enemy.name} hit you for {enemy.attack} damage!"
+            f"A {enemy.name} hit you for {damage} damage!"
             f" ({state.player_hp}/{state.player_max_hp} HP)",
             1.5,
         )

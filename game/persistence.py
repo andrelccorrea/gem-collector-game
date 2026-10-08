@@ -1,9 +1,10 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 10, compact JSON):
+Save format (``schema_version`` 11, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
-    lapidary_level, bag_level, market {kind: saturation}, lantern {level, fuel},
+    lapidary_level, bag_level, armor_level, boots_level, market {kind: saturation},
+    lantern {level, fuel},
     hardcore, dropped_bag {x, y, gems, loot, polished} or null, recall_charms, museum,
     perk_bonuses {bag, lantern}, run_id,
     depleted_tiles [[x, y]...],
@@ -23,7 +24,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 DAILY_NAME = "daily.json"
@@ -236,6 +237,13 @@ def _migrate_v9_to_v10(data: dict) -> dict:
     return data
 
 
+def _migrate_v10_to_v11(data: dict) -> dict:
+    """v11 adds armor and boots; older saves get the basic ones."""
+    data["armor_level"] = 0
+    data["boots_level"] = 0
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -248,6 +256,7 @@ MIGRATIONS = {
     7: _migrate_v7_to_v8,
     8: _migrate_v8_to_v9,
     9: _migrate_v9_to_v10,
+    10: _migrate_v10_to_v11,
 }
 
 
@@ -294,6 +303,8 @@ def save_game(state) -> str | None:
         "polished_gem_values": state.polished_gem_values,
         "lapidary_level": state.lapidary_level,
         "bag_level": state.bag_level,
+        "armor_level": state.armor_level,
+        "boots_level": state.boots_level,
         "market": state.market,
         "lantern": {"level": state.lantern_level, "fuel": state.lantern_fuel},
         "run_id": state.run_id,
@@ -390,6 +401,8 @@ def _state_from_save(data: dict):
     state.polished_gem_values = data.get("polished_gem_values", {})
     state.lapidary_level = data.get("lapidary_level", 1)
     state.bag_level = data["bag_level"]
+    state.armor_level = data["armor_level"]
+    state.boots_level = data["boots_level"]
     state.market = data["market"]
     state.lantern_level = data["lantern"]["level"]
     state.lantern_fuel = data["lantern"]["fuel"]

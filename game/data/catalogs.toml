@@ -216,6 +216,15 @@ melee_damage = 3
 tier = 1
 desc = "Digs promising patches of grass and dirt"
 
+[[tools]]
+name = "drill"
+cost = 600
+compatible_biomes = ["meadow", "hillside", "cave"]
+compatible_types = ["mineable_grass", "mineable_dirt", "mineable_rock"]
+melee_damage = 4
+tier = 3
+desc = "Bores through any ground and reaches the rarest gems"
+
 [[enemies]]
 name = "bear"
 hp = 25
@@ -279,6 +288,18 @@ unlock_at = [0, 0, 2500]
 drain = { meadow = 0.5, hillside = 1.0, river = 1.5, cave = 2.5 }
 # Light radius in tiles goes from min_radius (empty) to the full fog radius
 min_radius = 2
+
+[armor]
+# Damage an enemy hit loses per armor level (a hit always does at least 1)
+reductions = [0, 1, 2, 3]
+costs = [0, 110, 260, 520]
+unlock_at = [0, 0, 1500, 4000]
+
+[boots]
+# Time between steps per boots level, as a share of MOVE_COOLDOWN (lower is faster)
+step_multipliers = [1.0, 0.85, 0.7]
+costs = [0, 130, 340]
+unlock_at = [0, 0, 2000]
 
 # Permanent perks bought with reputation between runs (see game/profile.py).
 # Each level adds `per_level`; `costs` lists the reputation price of each level.

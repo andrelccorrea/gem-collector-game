@@ -15,6 +15,7 @@ from game.constants import (
 from game.events import HEAL, HEAL_COLOR, emit
 from game.geography import in_town
 from game.input import Action, InputState
+from game.objects.registry import BOOTS
 
 
 def init_player(state) -> None:
@@ -96,7 +97,7 @@ def _handle_movement(inp: InputState, state, dt: float) -> None:
     state.player_x = new_x
     state.player_y = new_y
     state.last_move = action
-    state.move_cooldown = MOVE_COOLDOWN
+    state.move_cooldown = MOVE_COOLDOWN * BOOTS["step_multipliers"][state.boots_level]
 
 
 def _handle_hp_regen(state, dt: float) -> None:

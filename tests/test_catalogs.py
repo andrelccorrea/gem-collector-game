@@ -18,10 +18,10 @@ from game.objects.registry import (
 # ---------------------------------------------------------------------------
 
 
-def test_tool_catalog_has_3_tools():
-    """build_tool_catalog() returns exactly 3 entries."""
+def test_tool_catalog_has_4_tools():
+    """build_tool_catalog() returns exactly 4 entries."""
     catalog = build_tool_catalog()
-    assert len(catalog) == 3
+    assert len(catalog) == 4
 
 
 def test_tool_catalog_has_expected_names():

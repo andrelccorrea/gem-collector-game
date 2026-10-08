@@ -57,7 +57,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 |--------|------|
 | `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, HUD_ROWS=3, VIEW 79×21 (fixed simulation view), FPS=30, biome colors, tile properties, lapidary upgrades, difficulty tiers |
 | `data/catalogs.toml` + `objects/registry.py` | Gem (`min_tier`), tool (`tier`) and enemy definitions plus tool-upgrade, bag and lantern tables as data, loaded with stdlib `tomllib` into frozen `GemDef`/`ToolDef`/`EnemyDef` catalogs. File order is catalog order and world generation draws from it — reordering entries changes worlds (bump `WORLDGEN_VERSION`) |
-| `state.py` | `GameState` dataclass — single source of truth for player, world, enemies, inventory, scene |
+| `state.py` | `GameState` dataclass (incl. bag/lantern/armor/boots levels) — single source of truth for player, world, enemies, inventory, scene |
 | `simulation.py` | `new_run(seed)` (fresh GameState: world, player, fog, camera) and `step_game(inp, state, dt)` (one fixed simulation step, no drawing) — same seed + same inputs = same run |
 | `loop.py` | `FixedTimestep`: turns frame time into fixed 1/FPS simulation steps (clamped at 0.25 s), buffering pressed input until a step consumes it; `reset()` freezes time outside the game scene |
 | `input.py` | `Action` enum, `InputState` (`pressed`/`held` actions), `DEFAULT_KEYMAP`, `map_keys()` — the frontend-agnostic input boundary |
@@ -83,7 +83,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `enemies.py` | `Enemy` class; `find_path_bfs` (parent-pointer BFS, depth cap, falls back to the reachable tile closest to the target, optional `blocked`); `spawn_enemies` (ring around the player: off-screen, out of town, 10 tiles inside the despawn distance), `update_enemies`, `render_enemies`; difficulty scaling |
 | `combat.py` | F attack (Chebyshev-1 adjacency, `PLAYER_ATTACK_COOLDOWN`); kills give loot only; enemy auto-attacks on per-enemy cooldown |
 | `buildings.py` | `check_building_interaction` (USE on S/L/P tile switches scene) and `check_win` |
-| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy tools/charms, upgrade tools and gear, sell via `market`, Museum donations), `lapidary.py` (LapidaryScene: cutting minigame, geode cracking), `save_point.py` (daily runs can't save) |
+| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy tools/charms, upgrade tools and gear (bag, lantern, armor, boots — `_GEAR`), a description line for the selected row, sell via `market`, Museum donations), `lapidary.py` (LapidaryScene: cutting minigame, geode cracking), `save_point.py` (daily runs can't save) |
 | `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
 | `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Leaderboard), death, win, daily-end, perks and leaderboard screens |

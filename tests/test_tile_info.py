@@ -19,7 +19,7 @@ def test_every_tile_type_has_a_name():
 
 def test_diggable_tile_names_the_tools_that_work_there():
     text = describe_here(_standing_on(TYPE_MINEABLE_DIRT))
-    assert text == "Here: Loose dirt - dig with Pickaxe/Shovel"
+    assert text == "Here: Loose dirt - dig with Pickaxe/Shovel/Drill"
 
 
 def test_worked_out_tile_says_so():

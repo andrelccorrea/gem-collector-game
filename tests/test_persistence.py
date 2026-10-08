@@ -335,6 +335,23 @@ def test_bag_level_round_trips_and_older_saves_get_the_basic_bag(played):
     assert load_game().bag_level == 0
 
 
+def test_armor_and_boots_round_trip_and_older_saves_get_the_basic_ones(played):
+    played.armor_level, played.boots_level = 2, 1
+    save_game(played)
+    loaded = load_game()
+    assert (loaded.armor_level, loaded.boots_level) == (2, 1)
+
+    with open(save_path()) as f:
+        data = json.load(f)
+    data["schema_version"] = 10
+    del data["armor_level"], data["boots_level"]
+    with open(save_path(), "w") as f:
+        json.dump(data, f)
+    loaded = load_game()
+    assert (loaded.armor_level, loaded.boots_level) == (0, 0)
+    played.armor_level = played.boots_level = 0
+
+
 def test_autosave_only_while_a_run_is_being_played(played):
     from game.persistence import autosave_allowed
 
