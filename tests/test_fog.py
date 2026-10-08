@@ -241,9 +241,9 @@ def test_fog_load_missing_fog_key_defaults_unseen(tmp_path, monkeypatch):
         assert "visibility" in tile_meta, f"Tile {coord} missing 'visibility' key"
     # Since no fog was saved, all should be 'unseen'
     for coord, tile_meta in loaded.world_tiles.meta.items():
-        assert (
-            tile_meta["visibility"] == "unseen"
-        ), f"Tile {coord} expected 'unseen' but got {tile_meta['visibility']!r}"
+        assert tile_meta["visibility"] == "unseen", (
+            f"Tile {coord} expected 'unseen' but got {tile_meta['visibility']!r}"
+        )
 
 
 def test_fog_load_rebuilds_visible_tiles_set(save_path):

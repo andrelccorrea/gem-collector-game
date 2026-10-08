@@ -130,12 +130,12 @@ def test_bsp_place_rooms_rooms_fit_in_partition():
     for leaf in get_leaves(node):
         if leaf.room_x is None:
             continue  # leaf was too small, correctly skipped
-        assert (
-            leaf.room_x >= leaf.x + margin
-        ), f"room_x {leaf.room_x} < leaf.x+margin {leaf.x + margin}"
-        assert (
-            leaf.room_y >= leaf.y + margin
-        ), f"room_y {leaf.room_y} < leaf.y+margin {leaf.y + margin}"
+        assert leaf.room_x >= leaf.x + margin, (
+            f"room_x {leaf.room_x} < leaf.x+margin {leaf.x + margin}"
+        )
+        assert leaf.room_y >= leaf.y + margin, (
+            f"room_y {leaf.room_y} < leaf.y+margin {leaf.y + margin}"
+        )
         assert leaf.room_x + leaf.room_w <= leaf.x + leaf.width - margin, (
             f"room right edge {leaf.room_x + leaf.room_w} "
             f"> leaf right inner edge {leaf.x + leaf.width - margin}"

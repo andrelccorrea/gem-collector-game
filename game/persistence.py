@@ -113,9 +113,7 @@ def load_game():
         # World gems — saved entries override the regenerated set, since the
         # player may have picked some up before saving.
         if "world_gems" in data:
-            state.world_gems = {
-                (entry[0], entry[1]): entry[2] for entry in data["world_gems"]
-            }
+            state.world_gems = {(entry[0], entry[1]): entry[2] for entry in data["world_gems"]}
         # else: keep the freshly regenerated dict (older saves predate this field)
 
         # Fog of war — restore visibility state

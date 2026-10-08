@@ -21,8 +21,7 @@ def main() -> None:
         if not curses.has_colors():
             curses.endwin()
             print(
-                "Error: Your terminal does not support colors."
-                " Please use a color-capable terminal."
+                "Error: Your terminal does not support colors. Please use a color-capable terminal."
             )
             return
 

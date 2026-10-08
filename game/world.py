@@ -291,9 +291,7 @@ def _generate_meadow(surface: Surface, rng: random.Random) -> None:
         surface, rng, x_min, y_min, x_max, y_max, TYPE_GRASS, TYPE_MINEABLE_GRASS, 0.03
     )
     # Mineable dirt patches on banks (if pond was placed)
-    _scatter_mineable(
-        surface, rng, x_min, y_min, x_max, y_max, TYPE_DIRT, TYPE_MINEABLE_DIRT, 0.10
-    )
+    _scatter_mineable(surface, rng, x_min, y_min, x_max, y_max, TYPE_DIRT, TYPE_MINEABLE_DIRT, 0.10)
 
 
 def _generate_hillside(surface: Surface, rng: random.Random) -> None:
@@ -317,12 +315,8 @@ def _generate_hillside(surface: Surface, rng: random.Random) -> None:
         _add_water_banks(surface, x_min, y_min, x_max, y_max)
 
     # Mineable dirt and rock patches
-    _scatter_mineable(
-        surface, rng, x_min, y_min, x_max, y_max, TYPE_DIRT, TYPE_MINEABLE_DIRT, 0.06
-    )
-    _scatter_mineable(
-        surface, rng, x_min, y_min, x_max, y_max, TYPE_ROCK, TYPE_MINEABLE_ROCK, 0.20
-    )
+    _scatter_mineable(surface, rng, x_min, y_min, x_max, y_max, TYPE_DIRT, TYPE_MINEABLE_DIRT, 0.06)
+    _scatter_mineable(surface, rng, x_min, y_min, x_max, y_max, TYPE_ROCK, TYPE_MINEABLE_ROCK, 0.20)
 
 
 def _retile_cave_resources(surface: Surface, rng: random.Random) -> None:
@@ -342,12 +336,26 @@ def _retile_cave_resources(surface: Surface, rng: random.Random) -> None:
 
     # Scatter prospecting patches on cave floor
     _scatter_mineable(
-        surface, rng, cave_min_x, 0, MAP_WIDTH, MAP_HEIGHT,
-        TYPE_CAVE_FLOOR, TYPE_MINEABLE_DIRT, 0.05,
+        surface,
+        rng,
+        cave_min_x,
+        0,
+        MAP_WIDTH,
+        MAP_HEIGHT,
+        TYPE_CAVE_FLOOR,
+        TYPE_MINEABLE_DIRT,
+        0.05,
     )
     _scatter_mineable(
-        surface, rng, cave_min_x, 0, MAP_WIDTH, MAP_HEIGHT,
-        TYPE_CAVE_FLOOR, TYPE_MINEABLE_ROCK, 0.03,
+        surface,
+        rng,
+        cave_min_x,
+        0,
+        MAP_WIDTH,
+        MAP_HEIGHT,
+        TYPE_CAVE_FLOOR,
+        TYPE_MINEABLE_ROCK,
+        0.03,
     )
 
     # Carve 1-2 small underground pools for visible gem placement
@@ -405,9 +413,7 @@ def _generate_river_delta(
     _add_water_banks(surface, x_min, y_min, x_max, y_max)
 
     # 5. Scatter mineable patches on banks (~10%) and grass (~3%)
-    _scatter_mineable(
-        surface, rng, x_min, y_min, x_max, y_max, TYPE_DIRT, TYPE_MINEABLE_DIRT, 0.10
-    )
+    _scatter_mineable(surface, rng, x_min, y_min, x_max, y_max, TYPE_DIRT, TYPE_MINEABLE_DIRT, 0.10)
     _scatter_mineable(
         surface, rng, x_min, y_min, x_max, y_max, TYPE_GRASS, TYPE_MINEABLE_GRASS, 0.03
     )

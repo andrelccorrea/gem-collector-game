@@ -35,9 +35,9 @@ def test_all_gems_have_valid_multipliers():
     """Every gem has polished_min_mult > 1.0 and polished_max_mult > polished_min_mult."""
     catalog = build_gem_catalog()
     for name, gem in catalog.items():
-        assert (
-            gem.polished_min_mult > 1.0
-        ), f"{name} polished_min_mult={gem.polished_min_mult} is not > 1.0"
+        assert gem.polished_min_mult > 1.0, (
+            f"{name} polished_min_mult={gem.polished_min_mult} is not > 1.0"
+        )
         assert gem.polished_max_mult > gem.polished_min_mult, (
             f"{name} polished_max_mult={gem.polished_max_mult} is not > "
             f"polished_min_mult={gem.polished_min_mult}"
@@ -61,9 +61,9 @@ def test_every_biome_has_at_least_two_gems():
     biomes_to_check = ["meadow", "hillside", "cave", "river"]
     for biome in biomes_to_check:
         gems_in_biome = [name for name, gem in catalog.items() if biome in gem.biomes]
-        assert (
-            len(gems_in_biome) >= 2
-        ), f"Biome '{biome}' has only {len(gems_in_biome)} gem(s): {gems_in_biome}"
+        assert len(gems_in_biome) >= 2, (
+            f"Biome '{biome}' has only {len(gems_in_biome)} gem(s): {gems_in_biome}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -83,9 +83,9 @@ def test_legendary_gems_are_cave_only():
 def test_rarity_weight_ordering():
     """quartz has highest rarity_weight (50); paraiba_tourmaline and diamond have the lowest (1)."""
     catalog = build_gem_catalog()
-    assert (
-        catalog["quartz"].rarity_weight == 50
-    ), f"quartz rarity_weight={catalog['quartz'].rarity_weight}, expected 50"
+    assert catalog["quartz"].rarity_weight == 50, (
+        f"quartz rarity_weight={catalog['quartz'].rarity_weight}, expected 50"
+    )
     assert catalog["paraiba_tourmaline"].rarity_weight == 1
     assert catalog["diamond"].rarity_weight == 1
 
@@ -162,9 +162,9 @@ def test_get_gem_polished_value_lapidary_bonus():
     samples_l3 = [get_gem_polished_value("ruby", lapidary_level=3) for _ in range(50)]
     mean_l1 = sum(samples_l1) / len(samples_l1)
     mean_l3 = sum(samples_l3) / len(samples_l3)
-    assert (
-        mean_l3 >= mean_l1
-    ), f"Expected mean polished value at level 3 ({mean_l3:.1f}) >= level 1 ({mean_l1:.1f})"
+    assert mean_l3 >= mean_l1, (
+        f"Expected mean polished value at level 3 ({mean_l3:.1f}) >= level 1 ({mean_l1:.1f})"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -201,6 +201,6 @@ def test_specific_gems_exist():
 
 def test_gem_catalog_not_in_constants():
     """game.constants no longer has a GEM_CATALOG attribute (the old catalog has been removed)."""
-    assert not hasattr(
-        game.constants, "GEM_CATALOG"
-    ), "game.constants still has GEM_CATALOG — it should have been removed in Checkpoint 3"
+    assert not hasattr(game.constants, "GEM_CATALOG"), (
+        "game.constants still has GEM_CATALOG — it should have been removed in Checkpoint 3"
+    )

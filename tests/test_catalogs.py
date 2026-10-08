@@ -33,17 +33,17 @@ def test_tool_catalog_has_expected_names():
 def test_tool_def_compatible_biomes_are_tuples():
     """Every tool's compatible_biomes is a tuple."""
     for name, tool_def in TOOL_CATALOG.items():
-        assert isinstance(
-            tool_def.compatible_biomes, tuple
-        ), f"{name}.compatible_biomes should be a tuple, got {type(tool_def.compatible_biomes)}"
+        assert isinstance(tool_def.compatible_biomes, tuple), (
+            f"{name}.compatible_biomes should be a tuple, got {type(tool_def.compatible_biomes)}"
+        )
 
 
 def test_tool_def_compatible_types_are_tuples():
     """Every tool's compatible_types is a tuple."""
     for name, tool_def in TOOL_CATALOG.items():
-        assert isinstance(
-            tool_def.compatible_types, tuple
-        ), f"{name}.compatible_types should be a tuple, got {type(tool_def.compatible_types)}"
+        assert isinstance(tool_def.compatible_types, tuple), (
+            f"{name}.compatible_types should be a tuple, got {type(tool_def.compatible_types)}"
+        )
 
 
 def test_tool_upgrade_costs_has_levels_2_to_5():
@@ -82,9 +82,9 @@ def test_enemy_catalog_has_expected_names():
 def test_enemy_def_biomes_are_tuples():
     """Every enemy's biomes is a tuple."""
     for name, enemy_def in ENEMY_CATALOG.items():
-        assert isinstance(
-            enemy_def.biomes, tuple
-        ), f"{name}.biomes should be a tuple, got {type(enemy_def.biomes)}"
+        assert isinstance(enemy_def.biomes, tuple), (
+            f"{name}.biomes should be a tuple, got {type(enemy_def.biomes)}"
+        )
 
 
 def test_enemy_def_has_valid_hp_and_attack():
@@ -215,9 +215,9 @@ def test_upgrade_costs_increase_with_level():
     """Each successive upgrade level costs more than the previous."""
     levels = sorted(TOOL_UPGRADE_COSTS.keys())
     for i in range(len(levels) - 1):
-        assert (
-            TOOL_UPGRADE_COSTS[levels[i]] < TOOL_UPGRADE_COSTS[levels[i + 1]]
-        ), f"Upgrade cost for level {levels[i]} should be less than level {levels[i + 1]}"
+        assert TOOL_UPGRADE_COSTS[levels[i]] < TOOL_UPGRADE_COSTS[levels[i + 1]], (
+            f"Upgrade cost for level {levels[i]} should be less than level {levels[i + 1]}"
+        )
 
 
 def test_upgrade_costs_are_positive():

@@ -47,9 +47,9 @@ def test_all_tiles_have_visibility_key(world_42):
 
 def test_all_tiles_start_as_unseen(world_42):
     for key, tile_meta in world_42.meta.items():
-        assert (
-            tile_meta["visibility"] == "unseen"
-        ), f"tile {key} has visibility={tile_meta['visibility']!r}, expected 'unseen'"
+        assert tile_meta["visibility"] == "unseen", (
+            f"tile {key} has visibility={tile_meta['visibility']!r}, expected 'unseen'"
+        )
 
 
 def test_generate_world_deterministic():
@@ -61,9 +61,9 @@ def test_generate_world_deterministic():
     for key in surface_a.meta:
         type_a = surface_a.meta[key]["type"]
         type_b = surface_b.meta[key]["type"]
-        assert isinstance(type_a, str) and isinstance(
-            type_b, str
-        ), f"tile {key}: tile type is not a string (run1={type_a!r}, run2={type_b!r})"
+        assert isinstance(type_a, str) and isinstance(type_b, str), (
+            f"tile {key}: tile type is not a string (run1={type_a!r}, run2={type_b!r})"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -139,9 +139,9 @@ def test_generate_world_bsp_biome_column_bands(world_99):
 
     for row in range(0, 5):
         tile_type = world_99.meta.get((10, row), {}).get("type", "")
-        assert (
-            tile_type in meadow_types
-        ), f"Col=10, row={row}: expected meadow tile, got {tile_type!r}"
+        assert tile_type in meadow_types, (
+            f"Col=10, row={row}: expected meadow tile, got {tile_type!r}"
+        )
 
     for row in range(0, 5):
         tile_type = world_99.meta.get((130, row), {}).get("type", "")

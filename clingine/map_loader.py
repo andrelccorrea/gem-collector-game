@@ -1,4 +1,4 @@
 class MapLoader:
-	def __init__(self):
-		# not yet implemented
-		pass
+    def __init__(self):
+        # not yet implemented
+        pass
