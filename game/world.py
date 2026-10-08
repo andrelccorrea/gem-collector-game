@@ -572,6 +572,11 @@ def _carve_bsp_band(
             _apply_tile(surface, x2, y2, _biome_corridor_tile(x2, y2))
 
 
+# Bump whenever a change to generation moves tiles for an existing seed: saved tile
+# coordinates (depleted tiles, fog, picked-up gems) are only valid for this version.
+WORLDGEN_VERSION = 1
+
+
 def generate_world(seed: int) -> tuple[Surface, dict[tuple[int, int], str]]:
     """Generate the 200×80 procedural world.
 

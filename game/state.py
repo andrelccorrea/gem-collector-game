@@ -19,6 +19,7 @@ class GameState:
     menu_cursor: int = 0
     has_won: bool = False
     quit_requested: bool = False
+    menu_notice: str = ""  # one-off message shown on the main menu
 
     # Map
     seed: int = 0

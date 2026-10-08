@@ -1,6 +1,6 @@
 import math
-import os
 
+from game import persistence
 from game.constants import (
     COLOR_MENU_DIMMED,
     COLOR_MENU_NORMAL,
@@ -42,7 +42,7 @@ def render_menu(renderer, state) -> None:
     subtitle = "A Terminal Prospecting Adventure"
     _write_str(renderer, mid_y - 4, mid_x - len(subtitle) // 2, subtitle, COLOR_MENU_NORMAL)
 
-    save_exists = os.path.exists("save.json")
+    save_exists = persistence.has_save()
     for i, item in enumerate(MENU_ITEMS):
         row = mid_y - 1 + i * 2
         label = f"  {item}  "
@@ -57,12 +57,16 @@ def render_menu(renderer, state) -> None:
 
         _write_str(renderer, row, col, label, cp)
 
+    if state.menu_notice:
+        notice = state.menu_notice[: math.floor(renderer.width) - 2]
+        _write_str(renderer, mid_y + 5, mid_x - len(notice) // 2, notice, COLOR_MENU_TITLE)
+
     hint = "Arrow Keys: Navigate  |  Enter: Select  |  Esc: Quit"
     _write_str(renderer, mid_y + 7, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
 def update_menu(inp: InputState, state) -> None:
-    save_exists = os.path.exists("save.json")
+    save_exists = persistence.has_save()
     pressed = inp.pressed
 
     if Action.MOVE_UP in pressed and state.menu_cursor > 0:
@@ -74,6 +78,7 @@ def update_menu(inp: InputState, state) -> None:
         if state.menu_cursor == 1 and not save_exists:
             state.menu_cursor = 2
     elif Action.CONFIRM in pressed:
+        state.menu_notice = ""
         _select_menu_item(state, save_exists)
     elif Action.CANCEL in pressed:
         state.quit_requested = True
@@ -86,7 +91,6 @@ def _replace_state(state, new_state) -> None:
 
 
 def _select_menu_item(state, save_exists: bool) -> None:
-    from game import persistence
 
     if state.menu_cursor == 0:  # New Game
         import random
@@ -96,7 +100,12 @@ def _select_menu_item(state, save_exists: bool) -> None:
         _replace_state(state, new_run(random.randint(1, 999999)))
 
     elif state.menu_cursor == 1 and save_exists:  # Continue
-        loaded = persistence.load_game()
+        try:
+            loaded = persistence.load_game()
+        except persistence.SaveLoadError as e:
+            state.menu_notice = str(e)
+            state.menu_cursor = 0
+            loaded = None
         if loaded is not None:
             _replace_state(state, loaded)
             state.active_scene = "game"
@@ -137,15 +146,11 @@ def render_win_screen(renderer, state) -> None:
 
 def update_win_screen(inp: InputState, state) -> None:
     if Action.CONFIRM in inp.pressed:
-        from game import persistence
-
         persistence.save_leaderboard_entry(state.lifetime_earnings)
         state.active_scene = "game"
 
 
 def render_leaderboard(renderer, state) -> None:
-    from game import persistence
-
     _clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     mid_x = math.floor(renderer.width) // 2
     title = "  HALL OF FAME - TOP PROSPECTORS  "

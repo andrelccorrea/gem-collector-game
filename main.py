@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from clingine.renderer import CursesRenderer  # noqa: E402
 from clingine.window import Window  # noqa: E402
 from game import menu as menu_module  # noqa: E402
+from game import persistence  # noqa: E402
 from game.constants import FPS, WINDOW_HEIGHT, WINDOW_WIDTH  # noqa: E402
 from game.input import map_keys  # noqa: E402
 from game.loop import FixedTimestep  # noqa: E402
@@ -15,6 +16,8 @@ from game.state import GameState  # noqa: E402
 
 
 def main() -> None:
+    # Older versions wrote saves to the launch directory (usually next to main.py).
+    persistence.import_legacy_files(os.getcwd(), os.path.dirname(os.path.abspath(__file__)))
     window = Window(WINDOW_WIDTH, WINDOW_HEIGHT, " ", FPS)
 
     def game_loop() -> None:

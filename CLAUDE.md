@@ -66,7 +66,7 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 | `enemies.py` | `Enemy` class; BFS pathfinding (cap 50 steps); `spawn_enemies`, `update_enemies`, `render_enemies`; difficulty scaling |
 | `combat.py` | F-key player attack (Chebyshev-1 adjacency); enemy auto-attacks on per-enemy cooldown |
 | `buildings.py` | Shop (buy/upgrade tools, sell gems/loot), Lapidary (cut gems, upgrade machine), Save point |
-| `persistence.py` | `save_game` (atomic JSON via tmp+rename), `load_game` (re-generates world from seed, re-applies depleted tiles), leaderboard |
+| `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
 | `menu.py` | Main menu, death screen, win/Hall of Fame screen, leaderboard display |
 
 ### Map Layout (200×80)
@@ -97,5 +97,8 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 
 ## Save Files
 
-- `save.json` — single save slot (gitignore this)
-- `leaderboard.json` — top 10 runs by lifetime earnings (gitignore this)
+Stored in `persistence.data_dir()`: `~/Library/Application Support/GemCollector` (macOS), `%APPDATA%\GemCollector` (Windows), `$XDG_DATA_HOME/gemcollector` (Linux), or `$GEM_COLLECTOR_DATA_DIR` when set (Android, tests). Older `save.json`/`leaderboard.json` next to `main.py` are copied there once at startup.
+
+- `save.json` — single slot, compact JSON with `schema_version` and `worldgen_version`; fog is a run-length string; includes the gameplay RNG state. Old formats are upgraded by `persistence.MIGRATIONS`; a damaged file is moved to `save.json.bak` and the menu shows why.
+- **Changing world generation for an existing seed? Bump `world.WORLDGEN_VERSION`** — saved tile coordinates are tied to it (on mismatch the map resets, progress is kept). **Changing the save layout? Bump `SCHEMA_VERSION` and add a migration.**
+- `leaderboard.json` — top 10 runs by lifetime earnings.

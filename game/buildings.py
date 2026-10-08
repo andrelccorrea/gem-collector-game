@@ -656,6 +656,6 @@ def update_save_point(inp: InputState, state) -> None:
     elif Action.CONFIRM in inp.pressed:
         from game import persistence
 
-        persistence.save_game(state)
-        set_hud_message(state, "Game Saved!", 3.0)
+        error = persistence.save_game(state)
+        set_hud_message(state, error or "Game Saved!", 3.0)
         state.active_scene = "game"

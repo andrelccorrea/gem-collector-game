@@ -146,40 +146,27 @@ def test_update_fog_no_unseen_in_visible_tiles():
 
 
 @pytest.fixture
-def save_path(tmp_path, monkeypatch):
-    """Redirect SAVE_FILE to a temp directory to avoid clobbering save.json."""
-    temp_save = str(tmp_path / "save.json")
-    monkeypatch.setattr("game.persistence.SAVE_FILE", temp_save)
-    return temp_save
+def save_path():
+    from game.persistence import save_path as current_save_path
+
+    return current_save_path()
 
 
-def test_fog_save_includes_fog_key(save_path):
-    """save_game must write a 'fog' key to the JSON file."""
+def test_fog_save_is_run_length_encoded_and_covers_the_map(save_path):
+    """'fog' is a run-length string covering every tile, with explored/visible runs."""
+    from game.persistence import _decode_fog
+
     state = _make_state(player_x=100, player_y=40)
     update_fog(state)
-    save_game(state)
+    assert save_game(state) is None
 
     with open(save_path) as f:
         data = json.load(f)
 
-    assert "fog" in data
-
-
-def test_fog_save_stores_only_non_unseen(save_path):
-    """'fog' list must be non-empty after update_fog and contain no 'unseen' entries."""
-    state = _make_state(player_x=100, player_y=40)
-    update_fog(state)
-    save_game(state)
-
-    with open(save_path) as f:
-        data = json.load(f)
-
-    fog_entries = data["fog"]
-    assert len(fog_entries) > 0, "Expected non-empty fog list after update_fog"
-    for entry in fog_entries:
-        x, y, vis = entry
-        assert vis != "unseen", f"Entry ({x},{y}) saved with visibility='unseen'"
-        assert vis in ("visible", "explored"), f"Unexpected visibility value {vis!r}"
+    cells = _decode_fog(data["fog"])
+    assert len(cells) == MAP_WIDTH * MAP_HEIGHT
+    assert cells.count("visible") == len(state.visible_tiles)
+    assert set(cells) <= {"unseen", "explored", "visible"}
 
 
 def test_fog_load_restores_visibility(save_path, monkeypatch):
@@ -202,12 +189,8 @@ def test_fog_load_restores_visibility(save_path, monkeypatch):
     assert loaded.world_tiles.meta[(100, 40)]["visibility"] == "explored"
 
 
-def test_fog_load_missing_fog_key_defaults_unseen(tmp_path, monkeypatch):
-    """load_game with a save file lacking 'fog' key should leave tiles as 'unseen'."""
-    save_file = str(tmp_path / "save.json")
-    monkeypatch.setattr("game.persistence.SAVE_FILE", save_file)
-
-    # Build a minimal valid save dict without the 'fog' key
+def test_fog_load_missing_fog_key_defaults_unseen(save_path):
+    """A legacy (unversioned) save without a 'fog' key loads with every tile 'unseen'."""
     minimal_save = {
         "seed": 42,
         "player": {
@@ -220,30 +203,20 @@ def test_fog_load_missing_fog_key_defaults_unseen(tmp_path, monkeypatch):
             "equipped_tool": "shovel",
             "has_won": False,
         },
-        "inventory": {
-            "gems": {},
-            "tools": {"shovel": 1},
-            "loot": {},
-        },
+        "inventory": {"gems": {}, "tools": {"shovel": 1}, "loot": {}},
         "polished_gem_values": {},
         "lapidary_level": 1,
         "depleted_tiles": [],
         # intentionally no "fog" key
     }
-    with open(save_file, "w") as f:
+    with open(save_path, "w") as f:
         json.dump(minimal_save, f)
 
     loaded = load_game()
 
     assert loaded is not None
-    # Every meta tile should still have a 'visibility' key
     for coord, tile_meta in loaded.world_tiles.meta.items():
-        assert "visibility" in tile_meta, f"Tile {coord} missing 'visibility' key"
-    # Since no fog was saved, all should be 'unseen'
-    for coord, tile_meta in loaded.world_tiles.meta.items():
-        assert tile_meta["visibility"] == "unseen", (
-            f"Tile {coord} expected 'unseen' but got {tile_meta['visibility']!r}"
-        )
+        assert tile_meta["visibility"] == "unseen", f"Tile {coord} is {tile_meta['visibility']!r}"
 
 
 def test_fog_load_rebuilds_visible_tiles_set(save_path):
