@@ -1,0 +1,6 @@
+worktree:
+  baseBranch: main
+
+assistants:
+  claude:
+    model: sonnet
