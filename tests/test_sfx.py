@@ -12,7 +12,8 @@ sfx = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(sfx)
 
 EVENT_KINDS = {
-    events.FIND, events.MISS, events.LOOT, events.FULL, events.HIT, events.HURT, events.HEAL
+    events.FIND, events.MISS, events.LOOT, events.FULL, events.HIT, events.HURT, events.HEAL,
+    events.ACHIEVE,
 }  # fmt: skip
 
 

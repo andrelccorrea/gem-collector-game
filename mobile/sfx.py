@@ -34,6 +34,12 @@ SOUNDS = {
     "hit": [("noise", 0, 0, 0.05, 0.7), ("sine", 200, 90, 0.08, 0.8)],  # punch
     "hurt": [("square", 320, 140, 0.18, 0.5)],  # falling buzz
     "heal": [("sine", 520, 780, 0.2, 0.5)],  # soft rise
+    "achievement": [  # little fanfare: C E G C'
+        ("square", 523, 523, 0.07, 0.35),
+        ("square", 659, 659, 0.07, 0.35),
+        ("square", 784, 784, 0.07, 0.35),
+        ("square", 1047, 1047, 0.25, 0.4),
+    ],
 }
 
 

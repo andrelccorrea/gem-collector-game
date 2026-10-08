@@ -22,6 +22,8 @@ PRESETS = {
                  damping=0.3, up=False),
     "loot": dict(count=6, speed=(1.5, 3.5), life=(0.5, 0.8), size=0.25, gravity=4.0,
                  damping=0.3, up=True),
+    "achievement": dict(count=24, speed=(3.0, 7.0), life=(0.7, 1.2), size=0.3, gravity=5.0,
+                        damping=0.3, up=False),
     "heal": dict(count=6, speed=(0.5, 1.5), life=(0.6, 0.9), size=0.25, gravity=-2.5,
                  damping=0.5, up=True),
 }  # fmt: skip

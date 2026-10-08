@@ -13,6 +13,7 @@ _SPEC.loader.exec_module(particles)
 
 def test_each_event_kind_with_a_burst_has_a_preset():
     kinds = {events.FIND, events.MISS, events.HIT, events.HURT, events.LOOT, events.HEAL}
+    kinds.add(events.ACHIEVE)
     assert kinds == set(particles.PRESETS)
     assert particles.burst(events.FULL, 0, 0, (1, 2, 3), random.Random(1)) == []
 

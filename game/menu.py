@@ -18,6 +18,7 @@ MENU_ITEMS = [
     ("daily", "Daily Run"),
     ("continue", "Continue"),
     ("perks", "Perks"),
+    ("achievements", "Achievements"),
     ("leaderboard", "Leaderboard"),
 ]
 
@@ -131,6 +132,9 @@ def _select_menu_item(state, save_exists: bool) -> None:
 
     elif choice == "leaderboard":
         state.active_scene = "leaderboard"
+
+    elif choice == "achievements":
+        state.active_scene = "achievements"
 
 
 def render_death_screen(renderer, state) -> None:
@@ -250,6 +254,23 @@ def render_leaderboard(renderer, state) -> None:
         write_str(renderer, 18, mid_x - len(line) // 2, line, COLOR_MENU_TITLE)
 
     hint = f"{hint_of(Action.CANCEL)}: Back to Menu"
+    write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+
+
+def render_achievements(renderer, state) -> None:
+    from game.achievements import ACHIEVEMENTS
+
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    mid_x = math.floor(renderer.width) // 2
+    unlocked = set(profile.load_profile()["achievements"])
+    title = f"  ACHIEVEMENTS  {len(unlocked & {a[0] for a in ACHIEVEMENTS})}/{len(ACHIEVEMENTS)}  "
+    write_str(renderer, 1, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
+    for i, (achievement_id, name, desc, reward, _) in enumerate(ACHIEVEMENTS):
+        done = achievement_id in unlocked
+        line = f"{'[x]' if done else '[ ]'} {name:15s} {desc}  (+{reward})"
+        color = COLOR_MENU_NORMAL if done else COLOR_MENU_DIMMED
+        write_str(renderer, 3 + i, 2, line[: renderer.width - 3], color)
+    hint = f"{hint_of(Action.CANCEL)}: Back to Menu   (rewards are reputation, spent on Perks)"
     write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 

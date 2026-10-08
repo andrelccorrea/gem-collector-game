@@ -29,6 +29,7 @@ def new_profile() -> dict:
         "runs_finished": 0,
         "rewarded_runs": [],
         "tips": [],
+        "achievements": [],
     }
 
 
@@ -46,6 +47,7 @@ def load_profile() -> dict:
         profile["runs_finished"] = int(data.get("runs_finished", 0))
         profile["rewarded_runs"] = [str(r) for r in data.get("rewarded_runs", [])]
         profile["tips"] = [str(t) for t in data.get("tips", [])]
+        profile["achievements"] = [str(a) for a in data.get("achievements", [])]
         for key in PERKS:
             profile["perks"][key] = int(data.get("perks", {}).get(key, 0))
     except (OSError, ValueError, TypeError, AttributeError, KeyError):
@@ -119,6 +121,19 @@ def remember_tips(tips) -> None:
     if not set(tips) <= known:
         profile["tips"] = sorted(known | set(tips))
         save_profile(profile)
+
+
+def unlock_achievements(ids, rewards: dict) -> int:
+    """Record achievements (each pays its reputation reward once); returns reputation won."""
+    profile = load_profile()
+    new = [i for i in ids if i not in profile["achievements"]]
+    if not new:
+        return 0
+    gained = sum(rewards[i] for i in new)
+    profile["achievements"] += new
+    profile["reputation"] += gained
+    save_profile(profile)
+    return gained
 
 
 def apply_perks(state, profile: dict) -> None:
