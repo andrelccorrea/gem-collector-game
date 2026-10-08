@@ -717,6 +717,12 @@ FRAMES = {
     ],
     "player": [  # breathing: the body dips one pixel
         ["........"] + SPRITES["player"][:12] + SPRITES["player"][13:],
+        # walking: two poses (frames 2 and 3); WALK mirrors them for the other leg
+        _swap(
+            SPRITES["player"],
+            {9: "s.uuuu..", 10: "..uuuus.", 13: ".j...j..", 14: "j.....j.", 15: "ZZ....ZZ"},
+        ),
+        _swap(SPRITES["player"], {13: "...jj...", 14: "...jj...", 15: "..ZZZZ.."}),
     ],
     "bear": [["........"] + SPRITES["bear"][:15]],
     "cave_bat": [  # wings up
@@ -739,16 +745,37 @@ FPS = {"stream": 4, "shallow": 4, "lake": 2, "deep": 2, "tree": 1, "rich_ore": 2
        "deer": 1, "bird": 6, "frog": 1, "fish": 3, "firefly": 3, "beetle": 4}  # fmt: skip
 
 
+# Frames shown while a thing moves, as (frame, mirrored) at WALK_FPS. The player's
+# walk is "draw two, mirror two": both poses, then both mirrored for the other leg.
+WALK_FPS = 8
+WALK = {"player": [(2, False), (3, False), (2, True), (3, True)]}
+for _name in ("rabbit", "deer", "bear", "snake", "frog", "fish", "beetle", "bird", "cave_bat"):
+    WALK[_name] = [(0, False), (1, False)]
+# Frames of the idle cycle, where they are not all of the sprite's frames.
+IDLE = {"player": [0, 1]}
+# Which way a sprite looks as drawn (1 = right, -1 = left, 0 = symmetric): it is
+# mirrored to face the way it moves.
+FACING = {"deer": -1, "fish": -1, "snake": 1}
+
+
+def walk_frame(sprite_id: str, seconds: float, phase: int = 0):
+    """(frame, mirrored) to show while the sprite moves, or None if it has no walk."""
+    cycle = WALK.get(sprite_id)
+    if cycle is None:
+        return None
+    return cycle[(int(seconds * WALK_FPS) + phase) % len(cycle)]
+
+
 def frame_count(sprite_id: str) -> int:
     return 1 + len(FRAMES.get(sprite_id, ()))
 
 
 def frame_at(sprite_id: str, seconds: float, phase: int = 0) -> int:
     """Which frame of the sprite shows at time ``seconds`` (``phase`` shifts a cell's cycle)."""
-    count = frame_count(sprite_id)
-    if count == 1:
+    frames = IDLE.get(sprite_id) or range(frame_count(sprite_id))
+    if len(frames) == 1:
         return 0
-    return (int(seconds * FPS[sprite_id]) + phase) % count
+    return frames[(int(seconds * FPS[sprite_id]) + phase) % len(frames)]
 
 
 def sprite_rows(sprite_id: str, frame: int = 0) -> list[str] | None:

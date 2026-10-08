@@ -47,9 +47,9 @@ from kivy.uix.gridlayout import GridLayout  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
 from particles import burst, step  # noqa: E402
 from sfx import write_sounds  # noqa: E402
+from sprites import FACING, frame_at, sprite_rgba, walk_frame  # noqa: E402
 from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
 from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
-from sprites import frame_at, sprite_rgba  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
@@ -426,7 +426,8 @@ class EntityLayer:
 
     def __init__(self, grid: GridView):
         self.grid = grid
-        self.tracks: dict = {}  # entity -> [from_x, from_y, to_x, to_y, start, duration]
+        # entity -> [from_x, from_y, to_x, to_y, start, duration, facing (1 right, -1 left)]
+        self.tracks: dict = {}
 
     def draw(self, entities: dict, view, now: float) -> None:
         if view is None:
@@ -439,27 +440,39 @@ class EntityLayer:
             wx, wy = view.x + sx, view.y + sy
             track = self.tracks.get(entity)
             if track is None or max(abs(wx - track[2]), abs(wy - track[3])) > 1:
-                track = [wx, wy, wx, wy, now, TWEEN_MAX]
+                track = [wx, wy, wx, wy, now, TWEEN_MAX, 1]
             elif (wx, wy) != (track[2], track[3]):
                 x, y = _glide(track, now)
                 gap = min(max(now - track[4], TWEEN_MIN), TWEEN_MAX)
-                track = [x, y, wx, wy, now, gap]
+                facing = track[6] if wx == track[2] else (1 if wx > track[2] else -1)
+                track = [x, y, wx, wy, now, gap, facing]
             tracks[entity] = track
             x, y = _glide(track, now)
-            frame = frame_at(sprite, now, hash(entity) % 7)
+            phase = hash(entity) % 7
+            # Moving (still gliding, or stepped a moment ago): walk cycle; else idle.
+            walking = now - track[4] < track[5] + 0.1
+            step = walk_frame(sprite, now, phase) if walking else None
+            frame, mirrored = step if step else (frame_at(sprite, now, phase), False)
+            if FACING.get(sprite, 0) * track[6] < 0:
+                mirrored = not mirrored
             texture = _sprite_texture(sprite, frame)
             if texture is None:
                 continue
             overlay.add(Color(*_rgba(tint or _WHITE)[:3], 1))
             pos = (grid.x + (x - view.x) * cw + grid.scroll.x,
                    grid.top - (y - view.y + 1) * ch + grid.scroll.y)  # fmt: skip
-            overlay.add(Rectangle(texture=texture, pos=pos, size=(cw, ch)))
+            coords = _MIRRORED if mirrored else _UPRIGHT
+            overlay.add(Rectangle(texture=texture, pos=pos, size=(cw, ch), tex_coords=coords))
         self.tracks = tracks
+
+
+_UPRIGHT = (0, 0, 1, 0, 1, 1, 0, 1)
+_MIRRORED = (1, 0, 0, 0, 0, 1, 1, 1)  # left-right flip
 
 
 def _glide(track, now: float) -> tuple:
     """Where a track's thing is drawn now (world tiles, fractional)."""
-    from_x, from_y, to_x, to_y, start, duration = track
+    from_x, from_y, to_x, to_y, start, duration = track[:6]
     t = min(1.0, (now - start) / duration)
     return from_x + (to_x - from_x) * t, from_y + (to_y - from_y) * t
 

@@ -51,8 +51,9 @@ def test_animated_sprites_cycle_through_their_frames():
     assert set(sprites.FPS) == set(sprites.FRAMES) <= set(sprites.SPRITES)
     for sprite_id in sprites.FRAMES:
         count, fps = sprites.frame_count(sprite_id), sprites.FPS[sprite_id]
-        seen = [sprites.frame_at(sprite_id, i / fps) for i in range(count)]
-        assert seen == list(range(count)), sprite_id
+        idle = sprites.IDLE.get(sprite_id) or list(range(count))
+        seen = [sprites.frame_at(sprite_id, i / fps) for i in range(len(idle))]
+        assert seen == idle, sprite_id
         assert sprites.frame_at(sprite_id, 0, phase=1) == 1
         assert sprites.sprite_rgba(sprite_id, 1) != sprites.sprite_rgba(sprite_id, 0)
     assert sprites.frame_at("grass", 123.4, phase=5) == 0  # still sprites never move
@@ -95,3 +96,12 @@ def test_explored_ground_is_dimmed_and_hit_enemies_tinted():
     # Moving things carry a stable key so a frontend can glide them between cells.
     assert renderer.entities[id(enemy)] == (ex, ey, "snake")
     assert renderer.entities["player"][2] == "player"
+
+
+def test_walk_cycles_use_real_frames_and_the_player_mirrors_its_poses():
+    for sprite_id, cycle in sprites.WALK.items():
+        assert all(frame < sprites.frame_count(sprite_id) for frame, _ in cycle), sprite_id
+    steps = [sprites.walk_frame("player", i / sprites.WALK_FPS) for i in range(4)]
+    assert steps == [(2, False), (3, False), (2, True), (3, True)]
+    assert sprites.walk_frame("grass", 1.0) is None
+    assert set(sprites.FACING) <= set(sprites.SPRITES)
