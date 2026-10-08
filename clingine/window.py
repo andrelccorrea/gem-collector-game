@@ -67,7 +67,7 @@ class Window:
         curses.echo()
         curses.endwin()
 
-    def update(self, fps):
+    def update(self):
         for y in range(math.floor(self.height)):
             for x in range(math.floor(self.width)):
                 if y != math.floor(self.height) - 1 and x != math.floor(self.width) - 1:
@@ -99,5 +99,3 @@ class Window:
                         # Raised when the terminal is smaller than screen_array.
                         self.screen.resize(math.floor(self.height), math.floor(self.width))
         self.screen.refresh()
-        self.clock.update()
-        self.clock.delay(1 / fps)

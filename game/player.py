@@ -1,5 +1,4 @@
 import math
-import time
 
 from game.constants import (
     COLOR_PLAYER,
@@ -39,7 +38,7 @@ def init_player(state) -> None:
     state.last_move = None
     state.queued_move = None
     state.regen_timer = 0.0
-    state.last_combat_time = 0.0
+    state.last_combat_time = float("-inf")
 
 
 def update_player(inp: InputState, state, dt: float) -> None:
@@ -109,7 +108,7 @@ def _handle_hp_regen(state, dt: float) -> None:
         return
 
     # Check not in recent combat (5 second window)
-    if time.time() - state.last_combat_time < 5.0:
+    if state.game_time - state.last_combat_time < 5.0:
         return
 
     state.regen_timer += dt

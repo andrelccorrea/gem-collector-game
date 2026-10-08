@@ -47,7 +47,9 @@ class GameState:
     move_cooldown: float = 0.0
     last_move: Any = None  # Action of the last step taken
     queued_move: Any = None  # direction change pressed during the move cooldown
-    last_combat_time: float = 0.0
+    # Seconds of in-game time; advances only while the game scene is simulated.
+    game_time: float = 0.0
+    last_combat_time: float = float("-inf")
 
     # Difficulty
     difficulty_level: int = 0

@@ -1,5 +1,3 @@
-import time
-
 from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
 from game.player import set_hud_message
@@ -27,7 +25,7 @@ def player_attack(inp: InputState, state) -> None:
     target.hp -= damage
     target.flash_timer = 0.2  # brief flash feedback
 
-    state.last_combat_time = time.time()
+    state.last_combat_time = state.game_time
 
     if target.hp <= 0:
         _kill_enemy(state, target)
@@ -91,7 +89,7 @@ def enemy_attacks(state, dt: float) -> None:
         # Attack!
         enemy.attack_cooldown = enemy.attack_cooldown_max
         state.player_hp -= enemy.attack
-        state.last_combat_time = time.time()
+        state.last_combat_time = state.game_time
 
         if state.player_hp <= 0:
             state.player_hp = 0

@@ -38,7 +38,7 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 
 ### Engine (`clingine/`)
 
-**`window.py`** — Central coordinator. Calls `curses.initscr()`, manages `screen_array[y][x] = [is_changed, char, color_pair]`, flushes only dirty cells via `window.update(fps)`. Color pairs are lazy-allocated via `window.color_pairs.get_color_pair(((r,g,b),(r,g,b)))`.
+**`window.py`** — Central coordinator. Calls `curses.initscr()`, manages `screen_array[y][x] = [is_changed, char, color_pair]`, flushes only dirty cells via `window.update()`. Color pairs are lazy-allocated via `window.color_pairs.get_color_pair(((r,g,b),(r,g,b)))`.
 
 **`surface.py`** — Off-screen tile buffer. `Surface(width, height)` with `set_tile(x, y, char, cp)`, `get_tile(x, y)`, `fill()`, and `blit(window, cam_x, cam_y, vp_w, vp_h, dest_y)` which copies a viewport slice into `screen_array` respecting dirty flags. Game code attaches a `surface.meta` dict: `(x,y) -> {"type", "walkable", "interactable", "depleted"}`.
 
@@ -46,7 +46,7 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 
 **`util.py`** — `ColorPairs`, `Colors`, `Image`, `load_image`, `load_images`, plus module-level `draw_line(window, x1, x2, y, char, cp)` and `draw_endpoints(...)`.
 
-**`clock.py`** — `get_dt()` returns seconds since last frame; `delay(sec)` caps FPS.
+**`clock.py`** — `Clock.tick(fps)` sleeps until the next fixed frame deadline (overshoot does not accumulate) and returns the full frame duration.
 
 ### Game (`game/`)
 
@@ -54,6 +54,7 @@ Requires a 256-color terminal at ≥80×24. The game renders at 80×24 with an 8
 |--------|------|
 | `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, VIEWPORT=78×20, FPS=30, biome colors, gem catalog, tool catalog, enemy catalog, difficulty tiers |
 | `state.py` | `GameState` dataclass — single source of truth for player, world, enemies, inventory, scene |
+| `loop.py` | `FixedTimestep`: turns frame time into fixed 1/FPS simulation steps (clamped at 0.25 s), buffering pressed input until a step consumes it; `reset()` freezes time outside the game scene |
 | `input.py` | `Action` enum, `InputState` (`pressed`/`held` actions), `DEFAULT_KEYMAP`, `map_keys()` — the frontend-agnostic input boundary |
 | `world.py` | `generate_world(seed)` → 200×80 `Surface` with biomes + town. `ensure_connectivity()` BFS flood-fill. |
 | `camera.py` | `update_camera(state)` centers on player clamped to map. `render_viewport(window, state)` blits tile slice. |
@@ -90,6 +91,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 - **Input:** game code never reads raw keys. Update functions take an `InputState` (`game/input.py`) of `Action`s; raw key names appear only in `DEFAULT_KEYMAP`. `main.py` calls `window.keyboard.poll()` then `map_keys()` exactly once per frame.
 - **Movement:** one step per move action in `inp.pressed` (or while in `inp.held`, for frontends that report releases), rate-limited by `MOVE_COOLDOWN`; a direction change during the cooldown is queued. Use `inp.pressed` for single-fire actions.
 - **Quitting:** scenes set `state.quit_requested`; only the main loop exits.
+- **Time:** game logic uses the fixed step `dt` and `state.game_time` (advances only while the game scene is simulated) — never `time.time()`. Logic goes in `_step_game`, drawing in `_render_game`.
 
 ## Save Files
 
