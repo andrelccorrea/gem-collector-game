@@ -17,6 +17,8 @@ _STEP_ACTIONS = {
     (0, 1): Action.MOVE_DOWN,
 }
 _MOVES = frozenset(_STEP_ACTIONS.values())
+# Buttons that stop a tap-walk in progress (moving by hand, fighting, recalling).
+_INTERRUPTS = _MOVES | {Action.ATTACK, Action.USE, Action.RECALL}
 # Longest walk a single tap plans (tiles).
 MAX_TAP_PATH = 200
 
@@ -32,7 +34,7 @@ class TouchController:
 
     def press(self, action: Action) -> None:
         """A button tap: the action fires once on the next poll."""
-        if action in _MOVES:
+        if action in _INTERRUPTS:
             self.cancel_walk()
         self._pressed.add(action)
 
@@ -44,6 +46,11 @@ class TouchController:
         else:
             self._held_buttons.discard(action)
 
+    def release_all(self) -> None:
+        """Forget held buttons (e.g. the app lost focus mid-hold)."""
+        self._held_buttons.clear()
+        self.cancel_walk()
+
     def cancel_walk(self) -> None:
         self.path = []
         self._use_on_arrival = False
@@ -52,25 +59,33 @@ class TouchController:
 
     def tap_world(self, state, x: int, y: int) -> None:
         here = (state.player_x, state.player_y)
-        if (x, y) == here:
-            self.cancel_walk()
-            self._pressed.add(Action.USE)
-            return
         adjacent = max(abs(x - here[0]), abs(y - here[1])) <= 1
-        if adjacent and any((e.x, e.y) == (x, y) for e in state.enemies):
+        if (x, y) == here or (adjacent and any((e.x, e.y) == (x, y) for e in state.enemies)):
+            # Act where the player stands now: drop the walk and any turn it queued.
             self.cancel_walk()
-            self._pressed.add(Action.ATTACK)
+            state.queued_move = None
+            self._pressed.add(Action.USE if (x, y) == here else Action.ATTACK)
             return
         if state.world_tiles is None:
             return
-        path = find_path_bfs(state.world_tiles, *here, x, y, max_steps=MAX_TAP_PATH)
+        meta = state.world_tiles.meta
+
+        def unseen(tx, ty):
+            # Plan only through ground the player has seen: no shortcuts through fog.
+            return meta.get((tx, ty), {}).get("visibility", "unseen") == "unseen"
+
+        path = find_path_bfs(state.world_tiles, *here, x, y, max_steps=MAX_TAP_PATH, blocked=unseen)
         self.path = path
         self._use_on_arrival = bool(path) and path[-1] == (x, y) and _worth_using(state, x, y)
 
     # ── Per-frame output ──────────────────────────────────────────────────────
 
     def poll(self, state) -> InputState:
-        """InputState for this frame; call once per frame."""
+        """InputState for this frame; call once per frame.
+
+        A walk step is sent as a press, not a hold: several simulation steps can run in
+        one frame, and a held direction would then move more than one tile per path step.
+        """
         held = set(self._held_buttons)
         here = (state.player_x, state.player_y)
         if state.active_scene != "game":
@@ -83,7 +98,7 @@ class TouchController:
             if action is None:  # knocked off the path (e.g. recalled): give up
                 self.cancel_walk()
             else:
-                held.add(action)
+                self._pressed.add(action)
         elif self._use_on_arrival:
             self._use_on_arrival = False
             self._pressed.add(Action.USE)

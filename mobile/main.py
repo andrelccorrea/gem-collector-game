@@ -130,10 +130,10 @@ class GridView(Widget):
     def _glyph(self, char):
         texture = self._glyphs.get(char)
         if texture is None:
-            _cw, ch = self.cell_size()
-            label = CoreLabel(
-                text=char, font_size=max(ch * 0.85, 6), font_name="RobotoMono-Regular"
-            )
+            cw, ch = self.cell_size()
+            # RobotoMono glyphs are 0.6 em wide: fit both the cell height and width.
+            size = max(min(ch * 0.85, cw / 0.6 * 0.95), 6)
+            label = CoreLabel(text=char, font_size=size, font_name="RobotoMono-Regular")
             label.refresh()
             texture = self._glyphs[char] = label.texture
         return texture
@@ -197,26 +197,28 @@ class GemCollectorApp(App):
 
     def _controls(self):
         panel = BoxLayout(orientation="vertical", size_hint=(0.26, 1), padding=dp(6), spacing=dp(6))
-        actions = GridLayout(cols=2, spacing=dp(6))
+        # 4 rows of actions above 3 rows of d-pad: rows share the height evenly, so the
+        # panel fits short landscape screens (360 dp gives ~44 dp per row).
+        actions = GridLayout(cols=2, spacing=dp(6), size_hint_y=4 / 7)
         for label, action in [("Use", Action.USE), ("Attack", Action.ATTACK),
                               ("Tool", Action.CYCLE_TOOL), ("Recall", Action.RECALL),
                               ("OK", Action.CONFIRM), ("Back", Action.CANCEL),
                               ("Tab", Action.NEXT_TAB)]:  # fmt: skip
-            button = Button(text=label, size_hint_min_y=dp(48))
+            button = Button(text=label)
             button.bind(on_press=lambda _b, a=action: self.touch.press(a))
             actions.add_widget(button)
-        pad = GridLayout(cols=3, spacing=dp(6))
+        pad = GridLayout(cols=3, spacing=dp(6), size_hint_y=3 / 7)
         for label, action in [("", None), ("^", Action.MOVE_UP), ("", None),
                               ("<", Action.MOVE_LEFT), ("", None), (">", Action.MOVE_RIGHT),
                               ("", None), ("v", Action.MOVE_DOWN), ("", None)]:  # fmt: skip
             if action is None:
                 pad.add_widget(Widget())
                 continue
-            button = Button(text=label, font_size=dp(22))
+            # always_release: lifting the finger anywhere (even after sliding off the
+            # button) ends the hold, so the player never keeps walking on their own.
+            button = Button(text=label, font_size=dp(22), always_release=True)
             # A d-pad tap moves one step (and navigates menus); holding keeps moving.
-            button.bind(
-                on_press=lambda _b, a=action: (self.touch.press(a), self.touch.hold(a, True))
-            )
+            button.bind(on_press=lambda _b, a=action: self._dpad_down(a))
             button.bind(on_release=lambda _b, a=action: self.touch.hold(a, False))
             pad.add_widget(button)
         panel.add_widget(actions)
@@ -254,10 +256,10 @@ class GemCollectorApp(App):
             self.stop()
 
     def on_pause(self):
-        # Android may kill a paused app: keep the run (daily runs are never saved).
-        state = self.state
-        if state.world_tiles is not None and not state.daily and state.active_scene != "death":
-            persistence.save_game(state)
+        # Android may kill a paused app: keep a run that is being played.
+        if persistence.autosave_allowed(self.state):
+            persistence.save_game(self.state)
+        self.touch.release_all()
         return True
 
     def on_resume(self):

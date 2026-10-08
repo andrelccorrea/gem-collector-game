@@ -170,3 +170,16 @@ def test_perks_notice_does_not_follow_to_the_main_menu():
     assert state.menu_notice
     update_perks(InputState(pressed=frozenset({Action.CANCEL})), state)
     assert state.active_scene == "menu" and state.menu_notice == ""
+
+
+def test_screens_promise_nothing_for_an_already_rewarded_run(stub_renderer):
+    from game.menu import render_win_screen
+
+    profile.award_reputation(10_000, "win", "run-X")
+    assert profile.reputation_preview(10_000, "hardcore_death", "run-X") == 0
+    state = GameState(lifetime_earnings=10_000, run_id="run-X", active_scene="win")
+    render_win_screen(stub_renderer, state)
+    screen = "\n".join(
+        "".join(stub_renderer.get_cell(x, y)[0] for x in range(80)) for y in range(24)
+    )
+    assert "+0 reputation" in screen

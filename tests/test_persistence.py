@@ -333,3 +333,29 @@ def test_bag_level_round_trips_and_older_saves_get_the_basic_bag(played):
     with open(save_path(), "w") as f:
         json.dump(data, f)
     assert load_game().bag_level == 0
+
+
+def test_autosave_only_while_a_run_is_being_played(played):
+    from game.persistence import autosave_allowed
+
+    for scene in ("game", "shop", "lapidary", "save_point"):
+        played.active_scene = scene
+        assert autosave_allowed(played)
+    for scene in ("menu", "death", "win", "daily_end", "perks", "leaderboard"):
+        played.active_scene = scene
+        assert not autosave_allowed(played)
+    played.active_scene, played.daily = "game", "2026-10-08"
+    assert not autosave_allowed(played)
+    played.daily = None
+
+
+def test_migrated_run_id_is_stable_across_reloads(played):
+    save_game(played)
+    with open(save_path()) as f:
+        data = json.load(f)
+    data["schema_version"] = 9
+    del data["run_id"]
+    with open(save_path(), "w") as f:
+        json.dump(data, f)
+    first, second = load_game().run_id, load_game().run_id
+    assert first == second and len(first) == 32

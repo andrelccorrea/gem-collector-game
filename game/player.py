@@ -40,9 +40,9 @@ def init_player(state) -> None:
 
 def update_player(inp: InputState, state, dt: float) -> None:
     """Handle movement, recall, HP regen, HUD message timer."""
-    if Action.RECALL in inp.pressed:
-        _use_recall_charm(state)
-    _handle_movement(inp, state, dt)
+    # A successful recall ends this step's movement: no step away from the town spawn.
+    if not (Action.RECALL in inp.pressed and _use_recall_charm(state)):
+        _handle_movement(inp, state, dt)
     _handle_hp_regen(state, dt)
     _handle_hud_message(state, dt)
     _check_death(state)
@@ -144,7 +144,8 @@ def set_hud_message(state, msg: str, duration: float = 2.0) -> None:
     state.hud_message_timer = duration
 
 
-def _use_recall_charm(state) -> None:
+def _use_recall_charm(state) -> bool:
+    """Teleport to town if possible; returns whether the player was recalled."""
     if in_town(state.player_x, state.player_y):
         set_hud_message(state, "You are already in town.", 1.5)
     elif state.recall_charms <= 0:
@@ -154,3 +155,5 @@ def _use_recall_charm(state) -> None:
         state.player_x, state.player_y = state.world_tiles.start_pos
         state.queued_move = None
         set_hud_message(state, f"Recalled to town ({state.recall_charms} charms left).", 2.0)
+        return True
+    return False

@@ -94,6 +94,20 @@ def has_save() -> bool:
     return os.path.isfile(save_path())
 
 
+# Scenes in which a run is being played (the only ones an automatic save may capture).
+PLAY_SCENES = frozenset({"game", "shop", "lapidary", "save_point"})
+
+
+def autosave_allowed(state) -> bool:
+    """Whether a run may be saved automatically (e.g. when a mobile app is paused).
+
+    Only while it is being played: not daily runs (never saved), not end screens (a win
+    pays its rewards when confirmed; a finished hardcore run must stay deleted) and not
+    menus (the run still in memory may already be over).
+    """
+    return state.active_scene in PLAY_SCENES and not state.daily and state.world_tiles is not None
+
+
 def delete_save() -> None:
     try:
         os.remove(save_path())
@@ -210,10 +224,15 @@ def _migrate_v8_to_v9(data: dict) -> dict:
 
 
 def _migrate_v9_to_v10(data: dict) -> dict:
-    """v10 adds the run id that keeps one-time rewards from being paid twice."""
-    import uuid
+    """v10 adds the run id that keeps one-time rewards from being paid twice.
 
-    data["run_id"] = uuid.uuid4().hex
+    Derived from the save's content, so reloading the same old save (without saving
+    again) always yields the same id instead of a fresh one each time.
+    """
+    import hashlib
+
+    digest = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+    data["run_id"] = digest[:32]
     return data
 
 

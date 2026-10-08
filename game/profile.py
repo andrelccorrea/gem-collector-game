@@ -85,6 +85,13 @@ def award_reputation(earnings: int, outcome: str, run_id: str) -> int:
     return gained
 
 
+def reputation_preview(earnings: int, outcome: str, run_id: str) -> int:
+    """What award_reputation would pay right now (0 if this run was already rewarded)."""
+    if run_id and run_id in load_profile()["rewarded_runs"]:
+        return 0
+    return earnings // REPUTATION[f"{outcome}_divisor"]
+
+
 def next_perk_cost(profile: dict, key: str) -> int | None:
     """Reputation price of the next level of a perk, or None when it is maxed."""
     level = profile["perks"][key]

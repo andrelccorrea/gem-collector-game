@@ -183,9 +183,7 @@ def render_win_screen(renderer, state) -> None:
 
 
 def _reputation_for(state, outcome: str) -> int:
-    from game.objects.registry import REPUTATION
-
-    return state.lifetime_earnings // REPUTATION[f"{outcome}_divisor"]
+    return profile.reputation_preview(state.lifetime_earnings, outcome, state.run_id)
 
 
 def update_win_screen(inp: InputState, state) -> None:
