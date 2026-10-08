@@ -5,7 +5,7 @@ MAP_HEIGHT = 80
 # Window/Viewport
 WINDOW_WIDTH = 80
 WINDOW_HEIGHT = 24
-HUD_ROWS = 2  # status rows below the world view
+HUD_ROWS = 3  # status rows below the world view
 # The simulation's view of the world, centered on the player. Enemies spawn outside it,
 # so it is fixed (never derived from a device's screen) to keep runs reproducible.
 # Frontends draw a view of at most this size, so spawns are never in sight.
@@ -17,7 +17,7 @@ FOG_RADIUS: int = 8
 # Player defaults
 PLAYER_START_HP = 20
 PLAYER_START_GOLD = 50
-PLAYER_CHAR = "@"
+PLAYER_CHAR = "☻"
 HP_REGEN_RATE = 1  # HP per 10 seconds in town
 HP_REGEN_INTERVAL = 10.0  # seconds
 
@@ -77,29 +77,30 @@ COLOR_MENU_NORMAL = ((200, 200, 200), (0, 0, 0))  # light gray
 COLOR_MENU_DIMMED = ((80, 80, 80), (0, 0, 0))  # dark gray (disabled)
 COLOR_BUILDING = ((255, 200, 0), (60, 40, 0))  # gold on dark brown
 
-# Tile characters — floor tiles use space (color-only), objects use ASCII
+# Tile characters — floor tiles use space (color-only), objects use single-width Unicode
+# glyphs (theme.ASCII_FALLBACK maps them back to ASCII for terminals without UTF-8)
 CHAR_GRASS = " "
-CHAR_TREE = "T"
+CHAR_TREE = "♣"
 CHAR_PATH = " "
-CHAR_ROCK = "^"
-CHAR_ORE = "*"
+CHAR_ROCK = "▲"
+CHAR_ORE = "◇"
 CHAR_DIRT = " "
 CHAR_SHALLOW = " "
 CHAR_BANK = " "
 CHAR_DEEP = " "
 CHAR_CAVE_FLOOR = " "
-CHAR_CAVE_WALL = "#"
-CHAR_RICH_ORE = "@"
-CHAR_DEPLETED = " "
+CHAR_CAVE_WALL = "▓"
+CHAR_RICH_ORE = "◈"
+CHAR_DEPLETED = "·"
 CHAR_TOWN_GROUND = " "
 CHAR_SHOP = "S"
 CHAR_LAPIDARY = "L"
 CHAR_SAVE = "P"
 # Prospecting tiles — subtle visual hints + water bodies
-CHAR_MINEABLE_GRASS = ","
-CHAR_MINEABLE_DIRT = "."
-CHAR_MINEABLE_ROCK = ":"
-CHAR_STREAM = "~"
+CHAR_MINEABLE_GRASS = '"'
+CHAR_MINEABLE_DIRT = "∴"
+CHAR_MINEABLE_ROCK = "░"
+CHAR_STREAM = "≈"
 CHAR_LAKE = " "
 
 # Tile types

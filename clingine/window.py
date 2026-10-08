@@ -7,7 +7,7 @@ from . import clock, colors, keyboard
 
 
 class Window:
-    def __init__(self, width=80, height=22, char=" ", fps=60):
+    def __init__(self, width=80, height=22, char=" ", fps=60, glyph_fallback=None):
         if sys.platform == "win32" or sys.platform == "cygwin":
             os.system(f"mode {width}, {height}")
         else:
@@ -19,6 +19,9 @@ class Window:
         self.height = height
         self.char = char
         self.fps = fps
+        # Replacement characters for terminals whose encoding is not UTF-8.
+        self.glyph_fallback = glyph_fallback or {}
+        self._fallback = {}
 
     def start(self, func):
         try:
@@ -31,6 +34,8 @@ class Window:
             self.screen.keypad(True)
             # Deliver a lone Esc after 25 ms instead of the 1 s escape-sequence default.
             curses.set_escdelay(25)
+            if self.screen.encoding.lower().replace("-", "") != "utf8":
+                self._fallback = self.glyph_fallback
             self.running = True
             self.clock = clock.Clock()
             self.keyboard = keyboard.Keyboard(self.screen)
@@ -100,9 +105,8 @@ class Window:
                 if drawn[x] == content:
                     continue
                 try:
-                    self.screen.addstr(
-                        y, x, content[0], self.color_pairs.get_color_pair(content[1])
-                    )
+                    char = self._fallback.get(content[0], content[0])
+                    self.screen.addstr(y, x, char, self.color_pairs.get_color_pair(content[1]))
                     drawn[x] = content
                 except curses.error:
                     # Raised when the terminal is smaller than screen_array; retry the cell

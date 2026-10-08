@@ -81,6 +81,22 @@ TILE_APPEARANCE = {
 }
 
 DEPLETED_APPEARANCE = (CHAR_DEPLETED, ((80, 80, 80), (20, 20, 20)))
+
+# ASCII stand-ins for the Unicode glyphs above (and for the player and gems), for
+# frontends whose output or font cannot show them.
+ASCII_FALLBACK = {
+    "♣": "T",
+    "▲": "^",
+    "◇": "*",
+    "◈": "@",
+    "▓": "#",
+    "·": ".",
+    "∴": ".",
+    "░": ":",
+    "≈": "~",
+    "☻": "@",
+    "♦": "o",
+}
 UNSEEN_APPEARANCE = (" ", None)
 
 

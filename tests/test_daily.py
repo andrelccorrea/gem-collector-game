@@ -74,7 +74,7 @@ def test_daily_scores_are_kept_per_day():
 def test_hud_shows_time_left_in_daily_runs(stub_renderer):
     state = GameState(daily="2026-10-08", game_time=DAILY_TIME_LIMIT - 75)
     render_hud(stub_renderer, state)
-    assert "Time:1:15" in _text(stub_renderer, 22)
+    assert "Time:1:15" in _text(stub_renderer, 21)
 
 
 def test_daily_run_is_in_the_menu_and_its_end_screen_is_registered(monkeypatch):

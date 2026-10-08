@@ -8,16 +8,18 @@ from game.gems import bag_capacity, bag_count
 from game.geography import region_name
 from game.input import Action, hint_label
 from game.lantern import LOW_FUEL_SHARE, fuel_share
+from game.tile_info import describe_here
 
 
 def render_hud(renderer, state) -> None:
-    """Draw the two status rows at the bottom of the screen."""
+    """Draw the three status rows at the bottom of the screen: status, the player's
+    tile, then key hints (or the latest message)."""
     width = renderer.width
-    row_1, row_2 = renderer.height - 2, renderer.height - 1
+    row_1, row_here, row_2 = renderer.height - 3, renderer.height - 2, renderer.height - 1
     if row_1 < 0:
         return
 
-    for row in (row_1, row_2):
+    for row in (row_1, row_here, row_2):
         for x in range(width):
             renderer.set_cell(x, row, " ", COLOR_HUD_BG)
 
@@ -59,6 +61,7 @@ def render_hud(renderer, state) -> None:
         row2 = f" >>> {state.hud_message} <<<"
 
     _write_hud_str(renderer, row_1, 0, row1[:width], COLOR_HUD_BG)
+    _write_hud_str(renderer, row_here, 0, f" {describe_here(state)}"[:width], COLOR_HUD_BG)
     _write_hud_str(renderer, row_2, 0, row2[:width], COLOR_HUD_BG)
 
     hp_text = f"HP:{state.player_hp}/{state.player_max_hp}"

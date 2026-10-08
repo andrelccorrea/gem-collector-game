@@ -15,9 +15,9 @@ from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
 from game.player import set_hud_message
 
-_MINEABLE_TYPES = {TYPE_MINEABLE_GRASS, TYPE_MINEABLE_DIRT, TYPE_MINEABLE_ROCK}
-_WATER_GEM_TYPES = {TYPE_STREAM, TYPE_LAKE}
-_DIGGABLE = _MINEABLE_TYPES | _WATER_GEM_TYPES
+MINEABLE_TYPES = {TYPE_MINEABLE_GRASS, TYPE_MINEABLE_DIRT, TYPE_MINEABLE_ROCK}
+WATER_GEM_TYPES = {TYPE_STREAM, TYPE_LAKE}
+_DIGGABLE = MINEABLE_TYPES | WATER_GEM_TYPES
 
 
 def update_tools(inp: InputState, state) -> None:
@@ -82,7 +82,7 @@ def use_tool(inp: InputState, state) -> None:
         return
 
     # Priority 2: mineable tile
-    if tile_type in _MINEABLE_TYPES:
+    if tile_type in MINEABLE_TYPES:
         if tile_type not in compatible_types:
             tool_label = state.equipped_tool.replace("_", " ").title()
             set_hud_message(state, f"{tool_label} won't work on this ground.", 2.0)
@@ -94,7 +94,7 @@ def use_tool(inp: InputState, state) -> None:
         return
 
     # Priority 3: prospect in water (no visible gem here, but pan can still try)
-    if tile_type in _WATER_GEM_TYPES and tile_type in compatible_types:
+    if tile_type in WATER_GEM_TYPES and tile_type in compatible_types:
         if meta.get("depleted", False):
             set_hud_message(state, "Already panned. Move along.", 2.0)
             return

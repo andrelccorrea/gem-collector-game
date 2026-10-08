@@ -17,11 +17,11 @@ def test_catalog_has_17_gems():
     assert len(catalog) == 17
 
 
-def test_all_gems_use_char_o():
-    """Every GemDef in the catalog has char == 'o'."""
+def test_all_gems_use_the_gem_glyph():
+    """Every GemDef in the catalog has char == '♦' (colored per gem)."""
     catalog = build_gem_catalog()
     for name, gem in catalog.items():
-        assert gem.char == "o", f"{name} has char={gem.char!r}, expected 'o'"
+        assert gem.char == "♦", f"{name} has char={gem.char!r}, expected '♦'"
 
 
 def test_all_gems_have_positive_value():

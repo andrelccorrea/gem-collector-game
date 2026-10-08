@@ -20,6 +20,15 @@ class Renderer(ABC):
     @abstractmethod
     def clear(self, color_pair: tuple | None = None) -> None: ...
 
+    def set_sprite(self, x: int, y: int, layer: str, sprite: str, tint: tuple | None) -> None:
+        """Show image ``sprite`` on cell (x, y) this frame, over the cell's character.
+
+        ``layer`` is "ground" (fills the cell) or "object" (drawn on the ground). ``tint``
+        is an RGB multiplier (None = original colors). Unlike cells, sprites last one
+        frame: whatever is not set again is gone. Text frontends ignore sprites.
+        """
+        return None
+
 
 class CursesRenderer(Renderer):
     """Renderer over a curses Window.

@@ -1,3 +1,4 @@
+from game.camera import OBJECT
 from game.constants import (
     COLOR_PLAYER,
     HP_REGEN_INTERVAL,
@@ -136,6 +137,7 @@ def render_player(renderer, state, view) -> None:
     if view.contains(state.player_x, state.player_y):
         sx, sy = state.player_x - view.x, state.player_y - view.y
         renderer.set_cell(sx, sy, PLAYER_CHAR, COLOR_PLAYER)
+        renderer.set_sprite(sx, sy, OBJECT, "player", None)
 
 
 def set_hud_message(state, msg: str, duration: float = 2.0) -> None:

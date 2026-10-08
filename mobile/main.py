@@ -1,7 +1,8 @@
 """Gem Collector: Kivy frontend (Android, also runs on the desktop for testing).
 
 The game itself is the same package the terminal version uses. This file only:
-draws the 80x24 cell grid with Kivy, turns touches/buttons/keys into InputState
+draws the 80x24 cell grid with Kivy (pixel-art sprites from sprites.py where the game
+sets them, characters elsewhere), turns touches/buttons/keys into InputState
 (game/touch.py), and handles the Android lifecycle (save on pause, back button).
 
 Desktop:  .venv-mobile/bin/python mobile/main.py
@@ -26,11 +27,15 @@ from kivy.clock import Clock  # noqa: E402
 from kivy.core.text import Label as CoreLabel  # noqa: E402
 from kivy.core.window import Window  # noqa: E402
 from kivy.graphics import Color, Rectangle  # noqa: E402
+from kivy.graphics.texture import Texture  # noqa: E402
 from kivy.metrics import dp  # noqa: E402
 from kivy.uix.boxlayout import BoxLayout  # noqa: E402
 from kivy.uix.button import Button  # noqa: E402
 from kivy.uix.gridlayout import GridLayout  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
+from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
+from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
+from sprites import sprite_rgba  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
@@ -38,6 +43,7 @@ from game.constants import FPS, HUD_ROWS  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
 from game.state import GameState  # noqa: E402
+from game.theme import ASCII_FALLBACK  # noqa: E402
 from game.touch import TouchController  # noqa: E402
 
 COLS, ROWS = 80, 24
@@ -70,6 +76,8 @@ class GridRenderer(Renderer):
     def __init__(self):
         self._cells = [[(" ", None)] * COLS for _ in range(ROWS)]
         self.dirty = {(x, y) for y in range(ROWS) for x in range(COLS)}
+        # Sprites set this frame: (x, y) -> {layer: (sprite, tint)}; emptied by each flush.
+        self.sprites: dict = {}
 
     @property
     def width(self) -> int:
@@ -92,13 +100,35 @@ class GridRenderer(Renderer):
             for x in range(COLS):
                 self.set_cell(x, y, " ", color_pair)
 
+    def set_sprite(self, x, y, layer, sprite, tint):
+        if 0 <= x < COLS and 0 <= y < ROWS:
+            self.sprites.setdefault((x, y), {})[layer] = (sprite, tint)
+
 
 def _rgba(rgb):
     return (rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, 1)
 
 
+_WHITE = (255, 255, 255)
+_textures: dict = {}
+
+
+def _sprite_texture(sprite):
+    """The sprite's texture (built once, scaled without smoothing), or None."""
+    if sprite not in _textures:
+        pixels = sprite_rgba(sprite)
+        texture = None
+        if pixels is not None:
+            texture = Texture.create(size=(SPRITE_WIDTH, SPRITE_HEIGHT), colorfmt="rgba")
+            texture.blit_buffer(pixels, colorfmt="rgba", bufferfmt="ubyte")
+            texture.mag_filter = texture.min_filter = "nearest"
+        _textures[sprite] = texture
+    return _textures[sprite]
+
+
 class GridView(Widget):
-    """Draws a GridRenderer: one background rectangle and one glyph per cell."""
+    """Draws a GridRenderer: per cell, a background rectangle (solid color or ground
+    sprite) and a foreground one (glyph or object sprite)."""
 
     def __init__(self, tap_handler, **kwargs):
         super().__init__(**kwargs)
@@ -111,6 +141,7 @@ class GridView(Widget):
                 self._fg.append((Color(1, 1, 1, 1), Rectangle()))
         self.bind(pos=self._layout, size=self._layout)
         self._renderer = None
+        self._shown_sprites: dict = {}
 
     def cell_size(self):
         return self.width / COLS, self.height / ROWS
@@ -126,6 +157,7 @@ class GridView(Widget):
                 self._fg[i][1].pos = pos
         if self._renderer is not None:
             self._renderer.dirty = {(x, y) for y in range(ROWS) for x in range(COLS)}
+        self._shown_sprites = {}
 
     def _glyph(self, char):
         texture = self._glyphs.get(char)
@@ -133,22 +165,42 @@ class GridView(Widget):
             cw, ch = self.cell_size()
             # RobotoMono glyphs are 0.6 em wide: fit both the cell height and width.
             size = max(min(ch * 0.85, cw / 0.6 * 0.95), 6)
-            label = CoreLabel(text=char, font_size=size, font_name="RobotoMono-Regular")
+            # RobotoMono lacks the terminal theme's symbols; the ASCII originals stand in.
+            text = ASCII_FALLBACK.get(char, char)
+            label = CoreLabel(text=text, font_size=size, font_name="RobotoMono-Regular")
             label.refresh()
             texture = self._glyphs[char] = label.texture
         return texture
 
     def flush(self, renderer: GridRenderer) -> None:
-        """Update only the cells that changed since the last flush."""
+        """Update only the cells whose character or sprites changed since the last flush."""
         self._renderer = renderer
+        sprites, renderer.sprites = renderer.sprites, {}
+        changed = renderer.dirty
+        for cell in sprites.keys() | self._shown_sprites.keys():
+            if sprites.get(cell) != self._shown_sprites.get(cell):
+                changed.add(cell)
+        self._shown_sprites = sprites
         cw, ch = self.cell_size()
-        for x, y in renderer.dirty:
+        for x, y in changed:
             char, colors = renderer.get_cell(x, y)
             fg, bg = colors if colors else (DEFAULT_FG, DEFAULT_BG)
             i = y * COLS + x
-            self._bg[i][0].rgba = _rgba(bg)
+            layers = sprites.get((x, y), {})
+            ground = self._sprite(layers.get("ground"))
+            bg_color, bg_rect = self._bg[i]
+            bg_color.rgba = _rgba(ground[1] if ground else bg)
+            bg_rect.texture = ground[0] if ground else None
             color, rect = self._fg[i]
-            if char.strip():
+            obj = self._sprite(layers.get("object"))
+            if obj:
+                color.rgba = _rgba(obj[1])
+                rect.texture = obj[0]
+                rect.size = (cw, ch)
+                rect.pos = (self.x + x * cw, self.top - (y + 1) * ch)
+            # The glyph shows where no sprite covers it (no ground sprite, or an object
+            # that has no image).
+            elif char.strip() and (not ground or "object" in layers):
                 texture = self._glyph(char)
                 color.rgba = _rgba(fg)
                 rect.texture = texture
@@ -161,6 +213,14 @@ class GridView(Widget):
             else:
                 rect.size = (0, 0)
         renderer.dirty = set()
+
+    @staticmethod
+    def _sprite(layer):
+        """(texture, tint) for a (sprite, tint) layer, or None if it has no sprite."""
+        if layer is None:
+            return None
+        texture = _sprite_texture(layer[0])
+        return (texture, layer[1] or _WHITE) if texture is not None else None
 
     def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos):

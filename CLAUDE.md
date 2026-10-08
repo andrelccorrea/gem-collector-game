@@ -21,7 +21,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
 Game code must stay Python 3.13-compatible (the Android toolchain stops at 3.13). See `docs/ROADMAP.md`.
 
-Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminals get the nearest basic colors). The world view sits above a 2-row HUD; its drawn size comes from the renderer at runtime, capped at the 79×21 simulation view (an 80×24 terminal shows all of it).
+Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminals get the nearest basic colors). The world view sits above a 3-row HUD; its drawn size comes from the renderer at runtime, capped at the 79×21 simulation view (an 80×24 terminal shows 79×20 of it). Tiles use single-width Unicode glyphs; terminals without UTF-8 get the ASCII ones from `theme.ASCII_FALLBACK`.
 
 ## Controls
 
@@ -55,17 +55,18 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 
 | Module | Role |
 |--------|------|
-| `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, HUD_ROWS=2, VIEW 79×21 (fixed simulation view), FPS=30, biome colors, tile properties, lapidary upgrades, difficulty tiers |
+| `constants.py` | All magic numbers: MAP_WIDTH=200, MAP_HEIGHT=80, HUD_ROWS=3, VIEW 79×21 (fixed simulation view), FPS=30, biome colors, tile properties, lapidary upgrades, difficulty tiers |
 | `data/catalogs.toml` + `objects/registry.py` | Gem (`min_tier`), tool (`tier`) and enemy definitions plus tool-upgrade, bag and lantern tables as data, loaded with stdlib `tomllib` into frozen `GemDef`/`ToolDef`/`EnemyDef` catalogs. File order is catalog order and world generation draws from it — reordering entries changes worlds (bump `WORLDGEN_VERSION`) |
 | `state.py` | `GameState` dataclass — single source of truth for player, world, enemies, inventory, scene |
 | `simulation.py` | `new_run(seed)` (fresh GameState: world, player, fog, camera) and `step_game(inp, state, dt)` (one fixed simulation step, no drawing) — same seed + same inputs = same run |
 | `loop.py` | `FixedTimestep`: turns frame time into fixed 1/FPS simulation steps (clamped at 0.25 s), buffering pressed input until a step consumes it; `reset()` freezes time outside the game scene |
 | `input.py` | `Action` enum, `InputState` (`pressed`/`held` actions), `DEFAULT_KEYMAP`, `map_keys()` — the frontend-agnostic input boundary |
 | `tilemap.py` | `TileMap`: the world as data — `meta[(x, y)] = {type, walkable, interactable, depleted, visibility}`, `start_pos`; no glyphs |
-| `theme.py` | Terminal theme: `TILE_APPEARANCE` (type → char, colors), depleted/unseen looks, `tile_appearance(meta)` with fog dimming |
+| `theme.py` | Terminal theme: `TILE_APPEARANCE` (type → char, colors), depleted/unseen looks, `tile_appearance(meta)` with fog dimming, `ASCII_FALLBACK` |
 | `world.py` | `generate_world(seed)` → 200×80 `TileMap` with biomes + town. `ensure_connectivity()` BFS flood-fill. |
-| `camera.py` | `update_camera(state)` centers the fixed simulation view on the player (clamped); `on_screen` tests it. `render_view(state, renderer)` → `View` the frontend draws (≤ simulation view); `render_viewport(renderer, state, view)` draws it through `theme.tile_appearance`, touching only changed cells. |
-| `hud.py` | `render_hud(renderer, state)` writes to the last two rows: HP (color-coded), Gold, Tool, Biome, key hints, HUD messages |
+| `camera.py` | `update_camera(state)` centers the fixed simulation view on the player (clamped); `on_screen` tests it. `render_view(state, renderer)` → `View` the frontend draws (≤ simulation view); `render_viewport(renderer, state, view)` draws it through `theme.tile_appearance`, touching only changed cells, and sets a sprite per drawn cell (`GROUND` tile type, `OBJECT` gem/bag; enemies and the player set theirs). |
+| `hud.py` | `render_hud(renderer, state)` writes to the last three rows: HP (color-coded), Gold, Tool, Biome; the player's tile (`tile_info.describe_here`); key hints or HUD messages |
+| `tile_info.py` | `describe_here(state)`: tile name, what Use does there (enter, dig/pan with which tools, worked out), gem and dropped bag on the tile |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
 | `gems.py` | `effective_tier(tool, level)`, `roll_gem_drop(biome, tier, rng)` (gems need `min_tier`), bag capacity/count, polished prices (one per gem, highest first), `roll_cut_value`, geodes (`GEODE`, `crack_geode`) |
@@ -87,7 +88,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 
 ### Mobile (`mobile/`)
 
-`main.py` is the Kivy frontend (Android; also runs on the desktop from `.venv-mobile`, Python 3.13 + Kivy 2.3.1): a `GridRenderer` (80x24 cells, redraws changed cells), action buttons + d-pad, `game/touch.py` for taps (walk-to, use on arrival, attack adjacent). It saves on pause and resets the game timestep on resume. `build_android.sh` assembles `build_src/` (main.py + `game/` + `clingine/renderer.py`, never the curses modules) and runs Buildozer with `buildozer.spec` (API 36, AAB). See `docs/ANDROID.md`.
+`main.py` is the Kivy frontend (Android; also runs on the desktop from `.venv-mobile`, Python 3.13 + Kivy 2.3.1): a `GridRenderer` (80x24 cells, redraws changed cells; draws the pixel-art from `sprites.py` where the game sets sprites, glyphs elsewhere), action buttons + d-pad, `game/touch.py` for taps (walk-to, use on arrival, attack adjacent). It saves on pause and resets the game timestep on resume. `build_android.sh` assembles `build_src/` (main.py + sprites.py + `game/` + `clingine/renderer.py`, never the curses modules) and runs Buildozer with `buildozer.spec` (API 36, AAB). See `docs/ANDROID.md`.
 
 ### Map Layout (200×80)
 
@@ -109,6 +110,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 - **`screen_array` cell:** always `[is_changed: bool, char: str, color_pair: tuple|None]`. Never change this structure.
 - **Screen size:** never hard-code it in drawing code: use `renderer.width/height` (the usable area; `CursesRenderer` hides the curses-unsafe last row/col itself) and the `camera.View` from `camera.render_view()`. Simulation code must never depend on the screen: it uses the fixed `VIEW_WIDTH×VIEW_HEIGHT` view (`state.camera_*`, `camera.on_screen`), and the drawn view always lies inside it.
 - **Tiles are types:** game code stores/changes tile `type`/`depleted`/`visibility` in `TileMap.meta`; never chars or colors (those come from `theme.py`). `game/` must not import `clingine`.
+- **Sprites:** `renderer.set_sprite(x, y, layer, sprite, tint)` is per frame (unset = gone) and a no-op on text renderers; sprite ids are game names (tile type, `depleted`, `player`, `gem`, `bag`, enemy name), never image paths. A new tile type or enemy needs pixel art in `mobile/sprites.py` (a test checks).
 - **Color pairs:** always `((r,g,b),(r,g,b))` tuples. Never call `curses.init_pair` directly.
 - **Input:** game code never reads raw keys. Update functions take an `InputState` (`game/input.py`) of `Action`s; raw key names appear only in `DEFAULT_KEYMAP`. `main.py` calls `window.keyboard.poll()` then `map_keys()` exactly once per frame.
 - **Movement:** one step per move action in `inp.pressed` (or while in `inp.held`, for frontends that report releases), rate-limited by `MOVE_COOLDOWN`; a direction change during the cooldown is queued. Use `inp.pressed` for single-fire actions.

@@ -11,12 +11,13 @@ from game.constants import FPS, WINDOW_HEIGHT, WINDOW_WIDTH  # noqa: E402
 from game.input import map_keys  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
 from game.state import GameState  # noqa: E402
+from game.theme import ASCII_FALLBACK  # noqa: E402
 
 
 def main() -> None:
     # Older versions wrote saves to the launch directory (usually next to main.py).
     persistence.import_legacy_files(os.getcwd(), os.path.dirname(os.path.abspath(__file__)))
-    window = Window(WINDOW_WIDTH, WINDOW_HEIGHT, " ", FPS)
+    window = Window(WINDOW_WIDTH, WINDOW_HEIGHT, " ", FPS, glyph_fallback=ASCII_FALLBACK)
 
     def game_loop() -> None:
         import curses

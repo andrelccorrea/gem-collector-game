@@ -4,6 +4,9 @@ from game.constants import HUD_ROWS, MAP_HEIGHT, MAP_WIDTH, VIEW_HEIGHT, VIEW_WI
 from game.objects.registry import GEM_CATALOG
 from game.theme import UNSEEN_APPEARANCE, dim, tile_appearance
 
+GROUND, OBJECT = "ground", "object"  # sprite layers (see Renderer.set_sprite)
+EXPLORED_TINT = (128, 128, 128)
+
 DROPPED_BAG_CHAR = "&"
 DROPPED_BAG_COLOR = ((255, 120, 0), (40, 20, 0))
 
@@ -58,12 +61,21 @@ def render_viewport(renderer, state, view: View) -> None:
         for sx in range(view.width):
             tile = meta.get((view.x + sx, view.y + sy))
             char, color_pair = tile_appearance(tile) if tile is not None else UNSEEN_APPEARANCE
+            _set_ground_sprite(renderer, sx, sy, tile)
             # Only touch cells that changed, so the frontend redraws as little as possible.
             if renderer.get_cell(sx, sy) != (char, color_pair):
                 renderer.set_cell(sx, sy, char, color_pair)
 
     _render_world_gems(renderer, state, view)
     _render_dropped_bag(renderer, state, view)
+
+
+def _set_ground_sprite(renderer, sx: int, sy: int, tile: dict | None) -> None:
+    visibility = "unseen" if tile is None else tile.get("visibility", "visible")
+    if visibility == "unseen":
+        return
+    sprite = "depleted" if tile.get("depleted") else tile["type"]
+    renderer.set_sprite(sx, sy, GROUND, sprite, None if visibility == "visible" else EXPLORED_TINT)
 
 
 def _render_dropped_bag(renderer, state, view: View) -> None:
@@ -75,6 +87,8 @@ def _render_dropped_bag(renderer, state, view: View) -> None:
         return
     color = DROPPED_BAG_COLOR if visibility == "visible" else dim(DROPPED_BAG_COLOR)
     renderer.set_cell(bag["x"] - view.x, bag["y"] - view.y, DROPPED_BAG_CHAR, color)
+    tint = None if visibility == "visible" else EXPLORED_TINT
+    renderer.set_sprite(bag["x"] - view.x, bag["y"] - view.y, OBJECT, "bag", tint)
 
 
 def _render_world_gems(renderer, state, view: View) -> None:
@@ -101,3 +115,7 @@ def _render_world_gems(renderer, state, view: View) -> None:
             color_pair = dim(color_pair)
 
         renderer.set_cell(sx, sy, char, color_pair)
+        # One gem image, colored like the gem's glyph.
+        renderer.set_sprite(sx, sy, OBJECT, "gem", color_pair[0])
+        # One gem image, colored like the gem's glyph.
+        renderer.set_sprite(sx, sy, OBJECT, "gem", color_pair[0])

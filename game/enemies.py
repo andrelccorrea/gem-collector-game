@@ -1,6 +1,6 @@
 from collections import deque
 
-from game.camera import on_screen
+from game.camera import OBJECT, on_screen
 from game.constants import (
     DIFFICULTY_TIERS,
     ENEMY_MAX_DISTANCE,
@@ -18,6 +18,7 @@ ENEMY_TOWN_MARGIN = 2
 # Spawns stay this far inside the despawn distance, so walking a few steps away from
 # a fresh spawn does not remove it at once.
 ENEMY_SPAWN_DISTANCE = ENEMY_MAX_DISTANCE - 10
+HIT_TINT = (255, 90, 90)  # sprite tint while an enemy flashes from a hit
 
 
 class Enemy:
@@ -284,3 +285,5 @@ def render_enemies(renderer, state, view) -> None:
             color = ((255, 255, 255), (200, 0, 0))
 
         renderer.set_cell(screen_x, screen_y, enemy.char, color)
+        tint = HIT_TINT if enemy.flash_timer > 0 else None
+        renderer.set_sprite(screen_x, screen_y, OBJECT, enemy.name, tint)

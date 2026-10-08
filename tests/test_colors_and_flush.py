@@ -108,6 +108,7 @@ def _window(width=80, height=24):
     fake = FakeCurses()
     window.color_pairs = ColorPairs(256, 256, fake.init_pair, fake.color_pair)
     window.screen = FakeScreen()
+    window._fallback = {}
     window.reset()
     return window
 
@@ -199,3 +200,12 @@ def test_pair_numbers_stay_within_what_an_attribute_can_hold():
 
 def test_direct_color_terminal_uses_basic_ansi_colors():
     assert set(terminal_palette(16_777_216)) == set(range(8))
+
+
+def test_non_utf8_terminals_get_ascii_glyphs():
+    window = _window()
+    window._fallback = {"♣": "T"}
+    window.screen_array[0][0] = [True, "♣", None]
+    window.screen_array[0][1] = [True, "x", None]
+    window.update()
+    assert (0, 0, "T") in window.screen.drawn and (1, 0, "x") in window.screen.drawn

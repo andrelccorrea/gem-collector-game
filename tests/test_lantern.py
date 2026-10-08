@@ -80,13 +80,13 @@ def test_better_lantern_can_be_bought_and_comes_full():
 def test_hud_shows_light_and_warns_when_low(stub_renderer):
     state = GameState()
     render_hud(stub_renderer, state)
-    row = "".join(stub_renderer.get_cell(x, 22)[0] for x in range(80))
+    row = "".join(stub_renderer.get_cell(x, 21)[0] for x in range(80))
     assert "Light:100%" in row
     state.lantern_fuel = lantern_capacity(state) * 0.1
     render_hud(stub_renderer, state)
-    row = "".join(stub_renderer.get_cell(x, 22)[0] for x in range(80))
+    row = "".join(stub_renderer.get_cell(x, 21)[0] for x in range(80))
     at = row.index("Light:")
-    assert stub_renderer.get_cell(at, 22)[1] == COLOR_HUD_HP_LOW
+    assert stub_renderer.get_cell(at, 21)[1] == COLOR_HUD_HP_LOW
 
 
 def test_lantern_is_saved_and_older_saves_get_a_full_basic_lantern():

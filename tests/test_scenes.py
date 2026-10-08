@@ -4,7 +4,7 @@ import re
 import pytest
 
 from game import camera
-from game.constants import MAP_HEIGHT, MAP_WIDTH, VIEW_HEIGHT, VIEW_WIDTH
+from game.constants import HUD_ROWS, MAP_HEIGHT, MAP_WIDTH, PLAYER_CHAR, VIEW_HEIGHT, VIEW_WIDTH
 from game.gems import add_polished_gem
 from game.input import EMPTY_INPUT, Action, InputState
 from game.loop import STEP
@@ -138,10 +138,13 @@ def test_game_view_fits_any_screen_size():
         renderer = StubRenderer(width, height)
         scene.render(renderer, state)
         view = camera.render_view(state, renderer)
-        assert (view.width, view.height) == (min(width, VIEW_WIDTH), min(height - 2, VIEW_HEIGHT))
+        assert (view.width, view.height) == (
+            min(width, VIEW_WIDTH),
+            min(height - HUD_ROWS, VIEW_HEIGHT),
+        )
         px, py = state.player_x - view.x, state.player_y - view.y
-        assert renderer.get_cell(px, py)[0] == "@"
-        hud_row = "".join(renderer.get_cell(x, height - 2)[0] for x in range(width))
+        assert renderer.get_cell(px, py)[0] == PLAYER_CHAR
+        hud_row = "".join(renderer.get_cell(x, height - HUD_ROWS)[0] for x in range(width))
         assert "HP:" in hud_row
 
 
