@@ -60,3 +60,4 @@ TOOL_UPGRADE_UNLOCK_AT: dict[int, int] = {
 BAG_CAPACITIES: list[int] = _DATA["bag"]["capacities"]
 BAG_COSTS: list[int] = _DATA["bag"]["costs"]
 BAG_UNLOCK_AT: list[int] = _DATA["bag"]["unlock_at"]
+LANTERN: dict = _DATA["lantern"]

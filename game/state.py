@@ -77,6 +77,10 @@ class GameState:
     # Shop saturation per item kind (sales recently made); see game/market.py
     market: dict = field(default_factory=dict)
 
+    # Lantern: fuel left (seconds of light at drain 1) and upgrade level
+    lantern_fuel: float = 240.0
+    lantern_level: int = 0
+
     # Bag upgrade level (index into the catalog's bag capacities)
     bag_level: int = 0
 

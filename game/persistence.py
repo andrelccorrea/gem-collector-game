@@ -1,9 +1,10 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 4, compact JSON):
+Save format (``schema_version`` 5, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
-    lapidary_level, bag_level, market {kind: saturation}, depleted_tiles [[x, y]...],
+    lapidary_level, bag_level, market {kind: saturation}, lantern {level, fuel},
+    depleted_tiles [[x, y]...],
     world_gems [[x, y, name]...], fog (run-length string, row-major),
     rng_state (gameplay RNG state, so a continued run keeps its roll sequence)
 
@@ -20,7 +21,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 APP_DIR_NAME = "GemCollector"
@@ -165,12 +166,21 @@ def _migrate_v3_to_v4(data: dict) -> dict:
     return data
 
 
+def _migrate_v4_to_v5(data: dict) -> dict:
+    """v5 adds the lantern; older saves get the basic lantern, full."""
+    from game.objects.registry import LANTERN
+
+    data["lantern"] = {"level": 0, "fuel": float(LANTERN["capacities"][0])}
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
     3: _migrate_v3_to_v4,
+    4: _migrate_v4_to_v5,
 }
 
 
@@ -218,6 +228,7 @@ def save_game(state) -> str | None:
         "lapidary_level": state.lapidary_level,
         "bag_level": state.bag_level,
         "market": state.market,
+        "lantern": {"level": state.lantern_level, "fuel": state.lantern_fuel},
         "depleted_tiles": [[x, y] for x, y in sorted(state.depleted_tiles)],
         "world_gems": [[x, y, name] for (x, y), name in sorted(state.world_gems.items())],
         "fog": _encode_fog(state.world_tiles.meta),
@@ -307,6 +318,8 @@ def _state_from_save(data: dict):
     state.lapidary_level = data.get("lapidary_level", 1)
     state.bag_level = data["bag_level"]
     state.market = data["market"]
+    state.lantern_level = data["lantern"]["level"]
+    state.lantern_fuel = data["lantern"]["fuel"]
 
     if data["worldgen_version"] == world_module.WORLDGEN_VERSION:
         _restore_map(state, data)

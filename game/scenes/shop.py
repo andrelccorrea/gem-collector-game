@@ -8,12 +8,14 @@ from game.constants import (
     COLOR_MENU_SELECTED,
     COLOR_MENU_TITLE,
 )
-from game.gems import bag_capacity, polished_prices
+from game.gems import polished_prices
 from game.input import Action, InputState
+from game.lantern import lantern_capacity
 from game.objects.registry import (
     BAG_CAPACITIES,
     BAG_COSTS,
     BAG_UNLOCK_AT,
+    LANTERN,
     TOOL_CATALOG,
     TOOL_MAX_LEVEL,
     TOOL_UPGRADE_COSTS,
@@ -90,7 +92,8 @@ def _build_shop_items(state) -> list:
                     "value": 0,
                 }
             )
-        items.append(_bag_upgrade_item(state))
+        items.append(_gear_upgrade_item(state, "bag"))
+        items.append(_gear_upgrade_item(state, "lantern"))
         if not items:
             items.append(
                 {
@@ -168,18 +171,33 @@ def _add_sell_all_row(items: list, state, keys: list, action: str, kind: str) ->
         )
 
 
-def _bag_upgrade_item(state) -> dict:
-    """Shop row for the next bag size (or a disabled row when none is available)."""
-    next_level = state.bag_level + 1
-    current = BAG_CAPACITIES[state.bag_level]
-    item = {"action": "upgrade_bag", "key": "bag", "cost": 0, "value": 0, "enabled": False}
-    if next_level >= len(BAG_CAPACITIES):
-        item["label"] = f"  {'Bag':16s}  {current} items  (Largest)"
-    elif state.lifetime_earnings < BAG_UNLOCK_AT[next_level]:
-        item["label"] = f"  {'Bag':16s}  bigger bag unlocks at ${BAG_UNLOCK_AT[next_level]} earned"
+# Gear bought in levels: (state attribute, capacities, costs, unlock_at, unit of capacity)
+_GEAR = {
+    "bag": ("bag_level", BAG_CAPACITIES, BAG_COSTS, BAG_UNLOCK_AT, "items"),
+    "lantern": (
+        "lantern_level",
+        LANTERN["capacities"],
+        LANTERN["costs"],
+        LANTERN["unlock_at"],
+        "s of light",
+    ),
+}
+
+
+def _gear_upgrade_item(state, gear: str) -> dict:
+    """Shop row for the next level of a piece of gear (disabled when unavailable)."""
+    attr, capacities, costs, unlock_at, unit = _GEAR[gear]
+    level = getattr(state, attr)
+    name = gear.title()
+    item = {"action": "upgrade_gear", "key": gear, "cost": 0, "value": 0, "enabled": False}
+    if level + 1 >= len(capacities):
+        item["label"] = f"  {name:16s}  {capacities[level]} {unit}  (Best)"
+    elif state.lifetime_earnings < unlock_at[level + 1]:
+        item["label"] = f"  {name:16s}  better {gear} unlocks at ${unlock_at[level + 1]} earned"
     else:
-        cost = BAG_COSTS[next_level]
-        item["label"] = f"  {'Bag':16s}  {current} -> {BAG_CAPACITIES[next_level]} items  ${cost}"
+        cost = costs[level + 1]
+        upgrade = f"{capacities[level]} -> {capacities[level + 1]} {unit}"
+        item["label"] = f"  {name:16s}  {upgrade}  ${cost}"
         item["cost"] = cost
         item["enabled"] = state.player_gold >= cost
     return item
@@ -291,13 +309,17 @@ def update_shop(inp: InputState, state) -> None:
             new_level = tools[tool_name]["level"]
             set_hud_message(state, f"{tool_name.title()} upgraded to Lv{new_level}!", 2.0)
 
-    elif action == "upgrade_bag":
+    elif action == "upgrade_gear":
+        gear = item["key"]
         if not item["enabled"]:
-            set_hud_message(state, "Can't buy that bag yet!", 1.5)
+            set_hud_message(state, f"Can't buy a better {gear} yet!", 1.5)
         else:
+            attr = _GEAR[gear][0]
             state.player_gold -= item["cost"]
-            state.bag_level += 1
-            set_hud_message(state, f"New bag: carries {bag_capacity(state)} items!", 2.0)
+            setattr(state, attr, getattr(state, attr) + 1)
+            if gear == "lantern":
+                state.lantern_fuel = lantern_capacity(state)
+            set_hud_message(state, f"Bought a better {gear}!", 2.0)
 
     elif action in ("sell_gem", "sell_loot"):
         price = market.sell_one(state, item["key"])

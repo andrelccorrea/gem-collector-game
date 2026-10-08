@@ -81,7 +81,7 @@ def _row(state, action):
 
 def test_bigger_bag_can_be_bought_and_raises_capacity():
     state = make_state(active_scene="shop", shop_tab=1, player_gold=1000)
-    state.shop_cursor, _ = _row(state, "upgrade_bag")
+    state.shop_cursor, _ = _row(state, "upgrade_gear")
     update_shop(CONFIRM, state)
     assert state.bag_level == 1
     assert bag_capacity(state) == BAG_CAPACITIES[1]
@@ -92,7 +92,7 @@ def test_bag_sizes_unlock_with_lifetime_earnings():
     locked_level = next(i for i, need in enumerate(BAG_UNLOCK_AT) if need > 0)
     state = make_state(active_scene="shop", shop_tab=1, player_gold=10_000)
     state.bag_level = locked_level - 1
-    state.shop_cursor, items = _row(state, "upgrade_bag")
+    state.shop_cursor, items = _row(state, "upgrade_gear")
     assert not items[state.shop_cursor]["enabled"]
     assert f"${BAG_UNLOCK_AT[locked_level]}" in items[state.shop_cursor]["label"]
     update_shop(CONFIRM, state)

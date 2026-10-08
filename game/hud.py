@@ -6,6 +6,7 @@ from game.constants import (
 )
 from game.gems import bag_capacity, bag_count
 from game.geography import region_name
+from game.lantern import LOW_FUEL_SHARE, fuel_share
 
 
 def render_hud(renderer, state) -> None:
@@ -35,6 +36,7 @@ def render_hud(renderer, state) -> None:
         f"  Gold:${state.player_gold}"
         f"  Tool:[{tool}]"
         f"  Biome:{biome}"
+        f"  Light:{round(fuel_share(state) * 100)}%"
     )
     carried, capacity = bag_count(state), bag_capacity(state)
     row2 = (
@@ -50,6 +52,10 @@ def render_hud(renderer, state) -> None:
 
     hp_text = f"HP:{state.player_hp}/{state.player_max_hp}"
     _write_hud_str(renderer, row_1, 1, hp_text, hp_color)
+
+    if fuel_share(state) < LOW_FUEL_SHARE:
+        light_at = row1.find("Light:")
+        _write_hud_str(renderer, row_1, light_at, row1[light_at:], COLOR_HUD_HP_LOW)
 
 
 def _write_hud_str(renderer, y: int, x: int, text: str, color_pair: tuple) -> None:

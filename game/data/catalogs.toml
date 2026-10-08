@@ -269,3 +269,13 @@ unlock_at = { "4" = 2500, "5" = 5000 }
 capacities = [15, 25, 40, 60]
 costs = [0, 120, 300, 600]
 unlock_at = [0, 0, 2500, 5000]
+
+[lantern]
+# Seconds of light at a drain rate of 1/s, per lantern level
+capacities = [240, 420, 660]
+costs = [0, 150, 400]
+unlock_at = [0, 0, 2500]
+# Fuel burned per second of game time in each biome (refills for free in town)
+drain = { meadow = 0.5, hillside = 1.0, river = 1.5, cave = 2.5 }
+# Light radius in tiles goes from min_radius (empty) to the full fog radius
+min_radius = 2

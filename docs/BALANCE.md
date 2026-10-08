@@ -63,3 +63,9 @@ median gold/min: 477
 
 The biggest single pacing lever so far (15.3 -> 21.8 min): dumping a bag of one gem kind
 now pays noticeably less, rewarding variety and spreading sales out.
+
+## After the lantern
+
+Unchanged for the bot (median 21.8 min): it heads home to sell often enough that its
+lantern rarely runs low. The lantern mainly limits how far into the caves a human can
+push before the view shrinks (2.5 fuel/s there vs 0.5 in the meadow).

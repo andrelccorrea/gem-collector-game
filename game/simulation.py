@@ -4,7 +4,7 @@ Nothing here draws or reads the wall clock, so the same seed and the same inputs
 always reproduce the same run (replays, balance simulations, daily seeded runs).
 """
 
-from game import buildings, camera, combat, enemies, fog, market, player, tools, world
+from game import buildings, camera, combat, enemies, fog, lantern, market, player, tools, world
 from game.input import Action, InputState
 from game.state import GameState, gameplay_rng
 
@@ -14,6 +14,7 @@ def new_run(seed: int) -> GameState:
     state = GameState(seed=seed, rng=gameplay_rng(seed))
     state.world_tiles, state.world_gems = world.generate_world(seed)
     player.init_player(state)
+    state.lantern_fuel = lantern.lantern_capacity(state)
     camera.update_camera(state)
     fog.update_fog(state)
     state.active_scene = "game"
@@ -43,6 +44,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     tools.update_tools(inp, state)
     tools.use_tool(inp, state)
 
+    lantern.update_lantern(state, dt)
     if state.world_tiles is not None:
         fog.update_fog(state)
         # Spawning reads the viewport, so keep it in sync with the simulation rather

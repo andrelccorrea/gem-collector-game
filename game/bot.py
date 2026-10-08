@@ -23,6 +23,7 @@ from game.enemies import find_path_bfs
 from game.gems import bag_capacity, bag_count, get_gem_raw_value
 from game.geography import biome_at
 from game.input import Action, InputState
+from game.lantern import fuel_share
 from game.loop import STEP
 from game.objects.registry import TOOL_CATALOG
 from game.simulation import new_run, step_game
@@ -34,7 +35,7 @@ _MOVES = {
     (0, 1): Action.MOVE_DOWN,
 }
 _WORKABLE_EXTRA = {TYPE_STREAM, TYPE_LAKE}
-_PURCHASES = {"buy_tool", "upgrade_tool", "upgrade_bag"}
+_PURCHASES = {"buy_tool", "upgrade_tool", "upgrade_gear"}
 
 
 @dataclass
@@ -52,10 +53,13 @@ class RunReport:
 
 
 class Bot:
-    def __init__(self, state, bag_limit: int = 12, retreat_hp: float = 0.4):
+    def __init__(
+        self, state, bag_limit: int = 12, retreat_hp: float = 0.4, retreat_light: float = 0.15
+    ):
         self.state = state
         self.bag_limit = bag_limit
         self.retreat_hp = retreat_hp
+        self.retreat_light = retreat_light
         self.path: list = []
         self.goal = None
         self.unreachable: set = set()
@@ -100,8 +104,9 @@ class Bot:
         s = self.state
         full = bag_count(s) >= min(self.bag_limit, bag_capacity(s))
         low_hp = s.player_hp < s.player_max_hp * self.retreat_hp
+        low_light = fuel_share(s) < self.retreat_light
         healing = low_hp and (s.player_x, s.player_y) == (SHOP_X, SHOP_Y)
-        return full or low_hp or healing
+        return full or low_hp or healing or low_light
 
     # ── World queries ─────────────────────────────────────────────────────────
 

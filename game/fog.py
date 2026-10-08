@@ -1,4 +1,5 @@
-from game.constants import FOG_RADIUS, MAP_HEIGHT, MAP_WIDTH
+from game.constants import MAP_HEIGHT, MAP_WIDTH
+from game.lantern import light_radius
 
 
 def update_fog(state) -> None:
@@ -11,10 +12,11 @@ def update_fog(state) -> None:
     state.visible_tiles = set()
 
     px, py = state.player_x, state.player_y
-    x_min = max(0, px - FOG_RADIUS)
-    x_max = min(MAP_WIDTH - 1, px + FOG_RADIUS)
-    y_min = max(0, py - FOG_RADIUS)
-    y_max = min(MAP_HEIGHT - 1, py + FOG_RADIUS)
+    radius = light_radius(state)
+    x_min = max(0, px - radius)
+    x_max = min(MAP_WIDTH - 1, px + radius)
+    y_min = max(0, py - radius)
+    y_max = min(MAP_HEIGHT - 1, py + radius)
 
     for ty in range(y_min, y_max + 1):
         for tx in range(x_min, x_max + 1):
