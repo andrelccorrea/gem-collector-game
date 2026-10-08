@@ -3,7 +3,7 @@ import math
 import os
 import sys
 
-from . import clock, keyboard, util
+from . import clock, colors, keyboard
 
 
 class Window:
@@ -34,9 +34,10 @@ class Window:
             self.running = True
             self.clock = clock.Clock()
             self.keyboard = keyboard.Keyboard(self.screen)
-            self.color_pairs = util.ColorPairs(self)
+            self.color_pairs = colors.ColorPairs(
+                curses.COLORS, curses.COLOR_PAIRS, curses.init_pair, curses.color_pair
+            )
             self.color_pair = ((255, 255, 255), (0, 0, 0))
-            self.color_pairs.add(self.color_pair)
             self.fill(self.color_pair)
             self.reset()
             func()  # the main game loop
@@ -59,6 +60,17 @@ class Window:
             self.screen_array.append(
                 [[True, self.char, self.color_pair] for _ in range(math.floor(self.width))]
             )
+        self._forget_drawn()
+
+    def _forget_drawn(self):
+        """Assume the terminal shows nothing we drew (first frame, or after a resize
+        wiped it), so every cell is drawn again on the next update."""
+        # What the terminal currently shows per cell; None means unknown.
+        self._drawn = [[None] * math.floor(self.width) for _ in range(math.floor(self.height))]
+        for row in self.screen_array:
+            for cell in row:
+                cell[0] = True
+        self._terminal_size = None
 
     def exit(self):
         self.running = False
@@ -68,34 +80,33 @@ class Window:
         curses.endwin()
 
     def update(self):
-        for y in range(math.floor(self.height)):
-            for x in range(math.floor(self.width)):
-                if y != math.floor(self.height) - 1 and x != math.floor(self.width) - 1:
-                    try:
-                        if self.screen_array[y][x][0]:  # if that particular point is changed...
-                            if curses.can_change_color():
-                                color_pair = self.screen_array[y][x][2]
-                                if color_pair:
-                                    self.screen.addstr(
-                                        y,
-                                        x,
-                                        self.screen_array[y][x][1],
-                                        self.color_pairs.get_color_pair(color_pair),
-                                    )
-                                else:
-                                    self.screen_array[y][x][2] = self.color_pair
-                                    self.screen.addstr(
-                                        y,
-                                        x,
-                                        self.screen_array[y][x][1],
-                                        self.color_pairs.get_color_pair(self.color_pair),
-                                    )
-                            else:
-                                self.screen.addstr(
-                                    y, x, self.screen_array[y][x][1], curses.color_pair(0)
-                                )
-                        self.screen_array[y][x][0] = False
-                    except curses.error:
-                        # Raised when the terminal is smaller than screen_array.
-                        self.screen.resize(math.floor(self.height), math.floor(self.width))
+        """Draw the cells whose content changed since they were last drawn."""
+        size = self.screen.getmaxyx()
+        if size != self._terminal_size:
+            if self._terminal_size is not None:
+                self._forget_drawn()
+            self._terminal_size = size
+        rows, cols = math.floor(self.height) - 1, math.floor(self.width) - 1
+        for y in range(rows):
+            row, drawn = self.screen_array[y], self._drawn[y]
+            for x in range(cols):
+                cell = row[x]
+                if not cell[0]:
+                    continue
+                cell[0] = False
+                # A cell may be rewritten several times per frame (e.g. cleared and then
+                # redrawn with the same text); only an actual change reaches the terminal.
+                content = (cell[1], cell[2] or self.color_pair)
+                if drawn[x] == content:
+                    continue
+                try:
+                    self.screen.addstr(
+                        y, x, content[0], self.color_pairs.get_color_pair(content[1])
+                    )
+                    drawn[x] = content
+                except curses.error:
+                    # Raised when the terminal is smaller than screen_array; retry the cell
+                    # next frame.
+                    cell[0] = True
+                    self.screen.resize(math.floor(self.height), math.floor(self.width))
         self.screen.refresh()

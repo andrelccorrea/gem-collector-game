@@ -21,7 +21,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pytest -q
 
 Game code must stay Python 3.13-compatible (the Android toolchain stops at 3.13). See `docs/ROADMAP.md`.
 
-Requires a 256-color terminal at ≥80×24. The world view sits above a 2-row HUD; its drawn size comes from the renderer at runtime, capped at the 79×21 simulation view (an 80×24 terminal shows all of it).
+Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminals get the nearest basic colors). The world view sits above a 2-row HUD; its drawn size comes from the renderer at runtime, capped at the 79×21 simulation view (an 80×24 terminal shows all of it).
 
 ## Controls
 
@@ -38,13 +38,15 @@ Requires a 256-color terminal at ≥80×24. The world view sits above a 2-row HU
 
 ### Engine (`clingine/`)
 
-**`window.py`** — Central coordinator. Calls `curses.initscr()`, manages `screen_array[y][x] = [is_changed, char, color_pair]`, flushes only dirty cells via `window.update()`. Color pairs are lazy-allocated via `window.color_pairs.get_color_pair(((r,g,b),(r,g,b)))`.
+**`window.py`** — Central coordinator. Calls `curses.initscr()`, manages `screen_array[y][x] = [is_changed, char, color_pair]`, `window.update()` draws only cells whose content differs from what the terminal already shows (a cell rewritten with the same content costs nothing). Color pairs are lazy-allocated via `window.color_pairs.get_color_pair(((r,g,b),(r,g,b)))`.
 
 **`surface.py`** — Generic off-screen char/color buffer with `blit()` (engine utility; the game world no longer uses it).
 
 **`keyboard.py`** — reads keys via curses `getch()` (no OS hooks or permissions). `poll()` drains pending events once per frame into `pressed` (lowercase key names that fired this frame: new press or OS auto-repeat). Terminals never report releases, so holding a key is a stream of presses; there is no held set.
 
-**`util.py`** — `ColorPairs`, `Colors`, `Image`, `load_image`, `load_images`, plus module-level `draw_line(window, x1, x2, y, char, cp)` and `draw_endpoints(...)`.
+**`colors.py`** — `ColorPairs`: maps each RGB to the nearest color of the terminal's own palette (xterm 256, or 16/8 ANSI) and caches curses pairs; never redefines terminal colors.
+
+**`util.py`** — `draw_line(renderer, x1, x2, y, char, cp)` and `draw_endpoints(...)`.
 
 **`clock.py`** — `Clock.tick(fps)` sleeps until the next fixed frame deadline (overshoot does not accumulate) and returns the full frame duration.
 
