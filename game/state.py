@@ -105,6 +105,8 @@ class GameState:
     # HUD message (temporary notification)
     hud_message: str = ""
     hud_message_timer: float = 0.0
+    # World events not yet shown by the frontend (game/events.py); never saved
+    events: list = field(default_factory=list)
 
     # Shop/Lapidary sub-scene state
     shop_cursor: int = 0

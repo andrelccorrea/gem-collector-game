@@ -10,10 +10,52 @@ from game.input import Action, hint_label
 from game.lantern import LOW_FUEL_SHARE, fuel_share
 from game.tile_info import describe_here
 
+# A changed counter blinks for PULSE_FRAMES drawn frames (~0.5 s at 30 FPS), in the
+# color of its change: key -> (color when it went up, color when it went down).
+PULSE_FRAMES = 15
+_PULSE_COLORS = {
+    "HP:": (((0, 0, 0), (60, 220, 60)), ((255, 255, 255), (200, 0, 0))),
+    "Gold:": (((0, 0, 0), (255, 200, 0)), ((0, 0, 0), (230, 120, 0))),
+    "Bag:": (((0, 0, 0), (100, 220, 255)), ((0, 0, 0), (170, 170, 170))),
+}
 
-def render_hud(renderer, state) -> None:
+
+class HudPulse:
+    """Remembers the HUD counters between drawn frames and blinks the ones that changed.
+
+    It belongs to whoever draws the HUD (rendering only): the simulation never sees it.
+    """
+
+    def __init__(self) -> None:
+        self._run_id = None
+        self._last: dict = {}
+        self._active: dict = {}  # key -> [frames left, went up]
+
+    def update(self, state, values: dict) -> None:
+        if state.run_id != self._run_id:  # another run started: nothing "changed"
+            self._run_id, self._last, self._active = state.run_id, {}, {}
+        for pulse in self._active.values():
+            pulse[0] -= 1
+        self._active = {k: p for k, p in self._active.items() if p[0] > 0}
+        for key, value in values.items():
+            old = self._last.get(key)
+            if old is not None and value != old:
+                self._active[key] = [PULSE_FRAMES, value > old]
+            self._last[key] = value
+
+    def color(self, key: str) -> tuple | None:
+        """The counter's highlight this frame, or None (also during the blink's off beat)."""
+        pulse = self._active.get(key)
+        if pulse is None or ((PULSE_FRAMES - pulse[0]) // 4) % 2 == 1:
+            return None
+        up, down = _PULSE_COLORS[key]
+        return up if pulse[1] else down
+
+
+def render_hud(renderer, state, pulse: HudPulse | None = None) -> None:
     """Draw the three status rows at the bottom of the screen: status, the player's
-    tile, then key hints (or the latest message)."""
+    tile, then key hints (or the latest message, with the bag fill kept at the end).
+    With a ``pulse``, counters that changed since the last frame blink."""
     width = renderer.width
     row_1, row_here, row_2 = renderer.height - 3, renderer.height - 2, renderer.height - 1
     if row_1 < 0:
@@ -59,6 +101,9 @@ def render_hud(renderer, state) -> None:
 
     if state.hud_message and state.hud_message_timer > 0:
         row2 = f" >>> {state.hud_message} <<<"
+        bag = f"Bag:{carried}/{capacity} "
+        if len(row2) + len(bag) + 2 <= width:
+            row2 += bag.rjust(width - len(row2))
 
     _write_hud_str(renderer, row_1, 0, row1[:width], COLOR_HUD_BG)
     _write_hud_str(renderer, row_here, 0, f" {describe_here(state)}"[:width], COLOR_HUD_BG)
@@ -70,6 +115,16 @@ def render_hud(renderer, state) -> None:
     if fuel_share(state) < LOW_FUEL_SHARE:
         light_at = row1.find("Light:")
         _write_hud_str(renderer, row_1, light_at, row1[light_at:], COLOR_HUD_HP_LOW)
+
+    if pulse is not None:
+        pulse.update(state, {"HP:": state.player_hp, "Gold:": state.player_gold, "Bag:": carried})
+        for row, text in ((row_1, row1[:width]), (row_2, row2[:width])):
+            for key in _PULSE_COLORS:
+                color = pulse.color(key)
+                at = text.find(key)
+                if color is not None and at >= 0:
+                    end = text.find(" ", at)
+                    _write_hud_str(renderer, row, at, text[at : end if end > 0 else None], color)
 
 
 def _write_hud_str(renderer, y: int, x: int, text: str, color_pair: tuple) -> None:

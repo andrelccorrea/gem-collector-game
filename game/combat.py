@@ -1,7 +1,10 @@
 from game.constants import PLAYER_ATTACK_COOLDOWN
+from game.events import GAIN_COLOR, LOSS_COLOR, emit
 from game.input import Action, InputState
 from game.objects.registry import TOOL_CATALOG
 from game.player import set_hud_message
+
+HIT_COLOR = (255, 255, 255)  # damage dealt to an enemy
 
 
 def player_attack(inp: InputState, state) -> None:
@@ -27,6 +30,7 @@ def player_attack(inp: InputState, state) -> None:
     damage = _player_damage(state)
     target.hp -= damage
     target.flash_timer = 0.2  # brief flash feedback
+    emit(state, f"-{damage}", HIT_COLOR, at=(target.x, target.y))
 
     state.last_combat_time = state.game_time
 
@@ -65,8 +69,10 @@ def _kill_enemy(state, enemy) -> None:
     elif gems_module.bag_has_room(state):
         gems_module.add_loot_to_inventory(state, enemy.loot)
         message = f"Defeated {enemy.name}! Got {loot_name}."
+        emit(state, f"+{loot_name.title()}", GAIN_COLOR, "bag")
     else:
         message = f"Defeated {enemy.name}! Bag full, the {loot_name} is lost."
+        emit(state, "Bag full", LOSS_COLOR, "bag")
     set_hud_message(state, message, 3.0)
 
 
@@ -91,6 +97,7 @@ def enemy_attacks(state, dt: float) -> None:
         enemy.attack_cooldown = enemy.attack_cooldown_max
         state.player_hp -= enemy.attack
         state.last_combat_time = state.game_time
+        emit(state, f"-{enemy.attack}", LOSS_COLOR, "heart")
 
         if state.player_hp <= 0:
             state.player_hp = 0

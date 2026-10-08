@@ -11,6 +11,7 @@ Android:  see docs/ANDROID.md
 
 import os
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # In the Android package the game sources are copied next to this file; during
@@ -40,6 +41,7 @@ from sprites import sprite_rgba  # noqa: E402
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
 from game.constants import FPS, HUD_ROWS  # noqa: E402
+from game.events import take_events  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
 from game.state import GameState  # noqa: E402
@@ -232,6 +234,71 @@ class GridView(Widget):
         return True
 
 
+FLOAT_SECONDS = 1.2  # how long an event's text stays up
+FLOAT_RISE = 1.5  # cells it rises in that time
+FLOAT_STACK_SECONDS = 0.3  # events this close on one tile stack instead of overlapping
+
+
+class FloatingTexts:
+    """World events (game/events.py) as text with an icon that rises from its tile and
+    fades out, drawn over the grid. Only shown while the world is on screen."""
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        self.items: list = []  # (event, born, stack slot)
+        self._labels: dict = {}
+        self._font_size = None
+
+    def add(self, events, now: float) -> None:
+        for event in events:
+            slot = sum(
+                1
+                for other, born, _ in self.items
+                if (other.x, other.y) == (event.x, event.y) and now - born < FLOAT_STACK_SECONDS
+            )
+            self.items.append((event, now, slot))
+
+    def _label(self, text: str, size: float):
+        if size != self._font_size:
+            self._labels.clear()
+            self._font_size = size
+        texture = self._labels.get(text)
+        if texture is None:
+            label = CoreLabel(text=text, font_size=size, font_name="RobotoMono-Regular",
+                              bold=True, outline_width=2, outline_color=(0, 0, 0))  # fmt: skip
+            label.refresh()
+            texture = self._labels[text] = label.texture
+        return texture
+
+    def draw(self, view, now: float) -> None:
+        canvas = self.grid.canvas.after
+        canvas.clear()
+        self.items = [item for item in self.items if now - item[1] < FLOAT_SECONDS]
+        if view is None:
+            return
+        grid = self.grid
+        cw, ch = grid.cell_size()
+        with canvas:
+            for event, born, slot in self.items:
+                if not view.contains(event.x, event.y):
+                    continue
+                age = (now - born) / FLOAT_SECONDS
+                alpha = 1.0 if age < 0.6 else (1.0 - age) / 0.4
+                label = self._label(event.text, max(ch * 0.8, 8))
+                icon = _sprite_texture(event.icon) if event.icon else None
+                icon_w = cw * 1.4 if icon else 0
+                width = icon_w + label.width
+                center_x = grid.x + (event.x - view.x + 0.5) * cw
+                left = min(max(center_x - width / 2, grid.x), grid.right - width)
+                bottom = grid.top - (event.y - view.y) * ch + (slot + age * FLOAT_RISE) * ch
+                if icon:
+                    Color(*_rgba(event.color or _WHITE)[:3], alpha)
+                    Rectangle(texture=icon, pos=(left, bottom), size=(icon_w, ch * 1.4))
+                Color(*_rgba(event.text_color)[:3], alpha)
+                text_y = bottom + (ch * 1.4 - label.height) / 2
+                Rectangle(texture=label, pos=(left + icon_w, text_y), size=label.size)
+
+
 class GemCollectorApp(App):
     title = "Gem Collector"
 
@@ -248,6 +315,7 @@ class GemCollectorApp(App):
         root = BoxLayout(orientation="horizontal")
         self.grid = GridView(tap_handler=self._tap_cell, size_hint=(0.74, 1))
         root.add_widget(self.grid)
+        self.floats = FloatingTexts(self.grid)
         root.add_widget(self._controls())
         Window.bind(on_key_down=self._key_down)
         Clock.schedule_interval(self._frame, 1 / FPS)
@@ -312,6 +380,10 @@ class GemCollectorApp(App):
         inp = InputState(pressed=touch_inp.pressed | key_inp.pressed, held=touch_inp.held)
         self.scenes.frame(inp, self.state, dt, self.renderer)
         self.grid.flush(self.renderer)
+        now = time.perf_counter()
+        self.floats.add(take_events(self.state), now)
+        in_world = self.state.active_scene == "game"
+        self.floats.draw(camera.render_view(self.state, self.renderer) if in_world else None, now)
         if self.state.quit_requested:
             self.stop()
 

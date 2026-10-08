@@ -12,6 +12,7 @@ from game.constants import (
     TOWN_CENTER_X,
     TOWN_CENTER_Y,
 )
+from game.events import HEAL_COLOR, emit
 from game.geography import in_town
 from game.input import Action, InputState
 
@@ -115,6 +116,7 @@ def _handle_hp_regen(state, dt: float) -> None:
     if state.regen_timer >= HP_REGEN_INTERVAL:
         state.regen_timer = 0.0
         state.player_hp = min(state.player_max_hp, state.player_hp + HP_REGEN_RATE)
+        emit(state, f"+{HP_REGEN_RATE}", HEAL_COLOR, "heart")
 
 
 def _handle_hud_message(state, dt: float) -> None:

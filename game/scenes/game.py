@@ -10,6 +10,7 @@ from game.simulation import step_game
 class GameScene(Scene):
     def __init__(self):
         self.timestep = FixedTimestep()
+        self.hud_pulse = hud.HudPulse()
 
     def enter(self, state) -> None:
         # Game time is frozen while other scenes are shown; drop the time spent there.
@@ -24,4 +25,4 @@ class GameScene(Scene):
         camera.render_viewport(renderer, state, view)
         enemies.render_enemies(renderer, state, view)
         player.render_player(renderer, state, view)
-        hud.render_hud(renderer, state)
+        hud.render_hud(renderer, state, self.hud_pulse)
