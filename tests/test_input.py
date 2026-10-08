@@ -195,3 +195,34 @@ def test_shop_move_left_goes_to_previous_tab():
     state.shop_tab = 0
     update_shop(InputState(pressed=frozenset({Action.MOVE_LEFT})), state)
     assert state.shop_tab == len(SHOP_TABS) - 1
+
+
+# ── On-screen hints ───────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def restore_hints():
+    from game.input import KEYBOARD_HINTS, set_hints
+
+    yield
+    set_hints(KEYBOARD_HINTS)
+
+
+def test_hints_name_keyboard_keys_by_default():
+    from game.input import hint, hint_label
+
+    assert hint(Action.CONFIRM) == "Enter"
+    assert hint_label(Action.USE, "Use") == "[Space]Use"
+
+
+def test_frontends_can_rename_controls_and_screens_follow(restore_hints, stub_renderer):
+    from game.input import hint_label, set_hints
+    from game.menu import render_menu
+
+    set_hints({Action.CONFIRM: "OK", Action.USE: "Use"})
+    assert hint_label(Action.USE, "Use") == "[Use]"
+    render_menu(stub_renderer, GameState())
+    screen = "\n".join(
+        "".join(stub_renderer.get_cell(x, y)[0] for x in range(80)) for y in range(24)
+    )
+    assert "OK: Select" in screen and "Enter" not in screen

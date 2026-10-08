@@ -7,6 +7,7 @@ from game.constants import (
     COLOR_MENU_TITLE,
 )
 from game.input import Action, InputState
+from game.input import hint as hint_of
 from game.player import set_hud_message
 from game.ui import clear_screen, write_str
 
@@ -20,7 +21,7 @@ def render_save_point(renderer, state) -> None:
         renderer,
         mid_y,
         mid_x - 16,
-        "Save your progress? [Enter] Yes  [Esc] Cancel",
+        f"Save your progress? [{hint_of(Action.CONFIRM)}] Yes  [{hint_of(Action.CANCEL)}] Cancel",
         COLOR_MENU_NORMAL,
     )
 

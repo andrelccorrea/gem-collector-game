@@ -6,6 +6,7 @@ from game.constants import (
 )
 from game.gems import bag_capacity, bag_count
 from game.geography import region_name
+from game.input import Action, hint_label
 from game.lantern import LOW_FUEL_SHARE, fuel_share
 
 
@@ -40,8 +41,18 @@ def render_hud(renderer, state) -> None:
     )
     carried, capacity = bag_count(state), bag_capacity(state)
     row2 = (
-        f" [Space]Use [F]Attack [E]Tool [R]Recall [Esc]Menu"
-        f"  |  Bag:{carried}/{capacity}  Earned:${state.lifetime_earnings}"
+        " "
+        + " ".join(
+            hint_label(action, verb)
+            for action, verb in (
+                (Action.USE, "Use"),
+                (Action.ATTACK, "Attack"),
+                (Action.CYCLE_TOOL, "Tool"),
+                (Action.RECALL, "Recall"),
+                (Action.CANCEL, "Menu"),
+            )
+        )
+        + f"  |  Bag:{carried}/{capacity}  Earned:${state.lifetime_earnings}"
     )
 
     if state.hud_message and state.hud_message_timer > 0:

@@ -58,3 +58,38 @@ def map_keys(pressed_keys, held_keys=(), keymap=DEFAULT_KEYMAP) -> InputState:
         pressed=frozenset(keymap[k] for k in pressed_keys if k in keymap),
         held=frozenset(keymap[k] for k in held_keys if k in keymap),
     )
+
+
+# How on-screen hints name each action. Keyboard by default; a frontend with other
+# controls (touch buttons) installs its own names with set_hints().
+KEYBOARD_HINTS = {
+    Action.MOVE_UP: "Up",
+    Action.MOVE_DOWN: "Down",
+    Action.MOVE_LEFT: "Left",
+    Action.MOVE_RIGHT: "Right",
+    Action.USE: "Space",
+    Action.ATTACK: "F",
+    Action.CYCLE_TOOL: "E",
+    Action.NEXT_TAB: "Tab",
+    Action.CONFIRM: "Enter",
+    Action.CANCEL: "Esc",
+    Action.RECALL: "R",
+}
+_hints = dict(KEYBOARD_HINTS)
+
+
+def set_hints(hints: dict) -> None:
+    _hints.clear()
+    _hints.update(KEYBOARD_HINTS)
+    _hints.update(hints)
+
+
+def hint(action: Action) -> str:
+    """Name of the control that triggers ``action`` (e.g. "Enter", or "OK" on touch)."""
+    return _hints[action]
+
+
+def hint_label(action: Action, verb: str) -> str:
+    """ "[Space]Use" style hint; just "[Use]" when the control is already named so."""
+    key = hint(action)
+    return f"[{key}]" if key.lower() == verb.lower() else f"[{key}]{verb}"

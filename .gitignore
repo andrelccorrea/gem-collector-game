@@ -13,3 +13,9 @@ __pycache__/
 # OS / tooling
 .DS_Store
 .claude/
+
+# Mobile build
+.venv-mobile/
+mobile/.buildozer/
+mobile/bin/
+mobile/build_src/

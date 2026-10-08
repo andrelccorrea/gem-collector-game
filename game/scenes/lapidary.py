@@ -21,6 +21,7 @@ from game.gems import (
     roll_cut_value,
 )
 from game.input import Action, InputState
+from game.input import hint as hint_of
 from game.player import set_hud_message
 from game.scenes import Scene
 from game.ui import clear_screen, render_list, write_str
@@ -161,7 +162,10 @@ def render_lapidary(renderer, state) -> None:
     if state.hud_message:
         write_str(renderer, 18, 2, state.hud_message, COLOR_MENU_TITLE)
 
-    hint = "[Up/Down] Navigate  [Enter] Cut/Upgrade  [Esc] Close"
+    hint = (
+        f"[{hint_of(Action.MOVE_UP)}/{hint_of(Action.MOVE_DOWN)}] Navigate  "
+        f"[{hint_of(Action.CONFIRM)}] Cut/Upgrade  [{hint_of(Action.CANCEL)}] Close"
+    )
     write_str(
         renderer,
         renderer.height - 1,
@@ -293,7 +297,7 @@ def _render_cutting(renderer, state) -> None:
         write_str(renderer, 9, left + x, char, color)
     marker = marker_position(cut["elapsed"])
     write_str(renderer, 10, left + marker, "^", COLOR_MENU_SELECTED)
-    hint = "[Enter/Space/tap] Cut   [Esc] Cancel (no fee)"
+    hint = f"[{hint_of(Action.CONFIRM)}] Cut   [{hint_of(Action.CANCEL)}] Cancel (no fee)"
     write_str(renderer, 12, (width - len(hint)) // 2, hint, COLOR_MENU_DIMMED)
 
 

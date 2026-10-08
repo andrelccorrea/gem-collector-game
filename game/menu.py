@@ -8,6 +8,7 @@ from game.constants import (
     COLOR_MENU_TITLE,
 )
 from game.input import Action, InputState
+from game.input import hint as hint_of
 from game.ui import clear_screen, write_str
 
 # (id, label); "continue" is only selectable when a save exists
@@ -60,7 +61,10 @@ def render_menu(renderer, state) -> None:
         notice = state.menu_notice[: math.floor(renderer.width) - 2]
         write_str(renderer, mid_y + 5, mid_x - len(notice) // 2, notice, COLOR_MENU_TITLE)
 
-    hint = "Arrow Keys: Navigate  |  Enter: Select  |  Esc: Quit"
+    hint = (
+        f"{hint_of(Action.MOVE_UP)}/{hint_of(Action.MOVE_DOWN)}: Navigate  |  "
+        f"{hint_of(Action.CONFIRM)}: Select  |  {hint_of(Action.CANCEL)}: Quit"
+    )
     write_str(renderer, mid_y + 7, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
@@ -141,12 +145,12 @@ def render_death_screen(renderer, state) -> None:
         lines = [
             "Hardcore run over: its save is gone.",
             f"+{_reputation_for(state, 'hardcore_death')} reputation",
-            "Press Enter to return to menu",
+            f"Press {hint_of(Action.CONFIRM)} to return to menu",
         ]
     else:
         lines = [
             "Your bag stays where you fell (marked & on the map).",
-            f"Press Enter to revive in town for ${death.revive_fee(state)}",
+            f"Press {hint_of(Action.CONFIRM)} to revive in town for ${death.revive_fee(state)}",
         ]
     for i, line in enumerate(lines):
         write_str(renderer, mid_y + 1 + i, mid_x - len(line) // 2, line, COLOR_MENU_DIMMED)
@@ -174,7 +178,7 @@ def render_win_screen(renderer, state) -> None:
     write_str(renderer, mid_y - 1, mid_x - len(msg) // 2, msg, COLOR_MENU_NORMAL)
     rep = f"+{_reputation_for(state, 'win')} reputation for your next runs"
     write_str(renderer, mid_y, mid_x - len(rep) // 2, rep, COLOR_MENU_TITLE)
-    hint = "Press Enter to continue playing"
+    hint = f"Press {hint_of(Action.CONFIRM)} to continue playing"
     write_str(renderer, mid_y + 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
@@ -208,7 +212,7 @@ def render_daily_end(renderer, state) -> None:
         mark = "  <- you" if score == state.lifetime_earnings else ""
         line = f"  #{i + 1}  ${score}{mark}"
         write_str(renderer, 8 + i, mid_x - 10, line, COLOR_MENU_NORMAL)
-    hint = "Enter: Back to Menu"
+    hint = f"{hint_of(Action.CONFIRM)}: Back to Menu"
     write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
@@ -247,7 +251,7 @@ def render_leaderboard(renderer, state) -> None:
         line = f"Today's daily best: ${daily[0]}  ({len(daily)} runs)"
         write_str(renderer, 18, mid_x - len(line) // 2, line, COLOR_MENU_TITLE)
 
-    hint = "Esc: Back to Menu"
+    hint = f"{hint_of(Action.CANCEL)}: Back to Menu"
     write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
@@ -277,7 +281,10 @@ def render_perks(renderer, state) -> None:
         write_str(
             renderer, 16, mid_x - len(state.menu_notice) // 2, state.menu_notice, COLOR_MENU_TITLE
         )
-    hint = "[Up/Down] Choose  [Enter] Buy  [Esc] Back"
+    hint = (
+        f"[{hint_of(Action.MOVE_UP)}/{hint_of(Action.MOVE_DOWN)}] Choose  "
+        f"[{hint_of(Action.CONFIRM)}] Buy  [{hint_of(Action.CANCEL)}] Back"
+    )
     write_str(renderer, renderer.height - 1, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 

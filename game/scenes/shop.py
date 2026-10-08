@@ -11,6 +11,7 @@ from game.constants import (
 )
 from game.gems import polished_prices
 from game.input import Action, InputState
+from game.input import hint as hint_of
 from game.lantern import lantern_capacity
 from game.objects.registry import (
     BAG_CAPACITIES,
@@ -263,7 +264,11 @@ def render_shop(renderer, state) -> None:
 
     render_list(renderer, items, cursor, top=6, bottom=18)
 
-    hint = "[Up/Down] Navigate  [Left/Right] Switch Tab  [Enter] Confirm  [Esc] Close"
+    hint = (
+        f"[{hint_of(Action.MOVE_UP)}/{hint_of(Action.MOVE_DOWN)}] Navigate  "
+        f"[{hint_of(Action.MOVE_LEFT)}/{hint_of(Action.MOVE_RIGHT)}] Tab  "
+        f"[{hint_of(Action.CONFIRM)}] Confirm  [{hint_of(Action.CANCEL)}] Close"
+    )
     write_str(
         renderer,
         renderer.height - 1,
