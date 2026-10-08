@@ -9,6 +9,7 @@ Desktop:  .venv-mobile/bin/python mobile/main.py
 Android:  see docs/ANDROID.md
 """
 
+import math
 import os
 import random
 import sys
@@ -54,7 +55,7 @@ from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
 from game.constants import FPS, HUD_ROWS, MOVE_COOLDOWN  # noqa: E402
-from game.events import COIN, DENIED, FIND, HURT, take_events  # noqa: E402
+from game.events import COIN, DENIED, FIND, HIT, HURT, take_events  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
 from game.state import GameState  # noqa: E402
@@ -413,6 +414,8 @@ def _android_vibrator():
 
 
 TWEEN_MAX = 0.15  # longest glide between two cells (one player step)
+LUNGE = 0.35  # cells the player steps toward what it hits
+RECOIL = 0.3  # cells a hit enemy is pushed back (then it settles)
 TWEEN_MIN = 0.06
 
 
@@ -428,6 +431,33 @@ class EntityLayer:
         self.grid = grid
         # entity -> [from_x, from_y, to_x, to_y, start, duration, facing (1 right, -1 left)]
         self.tracks: dict = {}
+        self.nudges: dict = {}  # entity -> (dx, dy, start, duration): out-and-back offset
+
+    def react(self, events, now: float) -> None:
+        """Melee feedback: the player lunges at what it hits, and the target recoils."""
+        player = self.tracks.get("player")
+        for event in events:
+            if event.kind != HIT or player is None:
+                continue
+            dx = (event.x > player[2]) - (event.x < player[2])
+            dy = (event.y > player[3]) - (event.y < player[3])
+            self.nudges["player"] = (dx * LUNGE, dy * LUNGE, now, 0.14)
+            for entity, track in self.tracks.items():
+                if entity != "player" and (track[2], track[3]) == (event.x, event.y):
+                    self.nudges[entity] = (dx * RECOIL, dy * RECOIL, now, 0.18)
+
+    def _nudge(self, entity, now: float) -> tuple:
+        nudge = self.nudges.get(entity)
+        if nudge is None:
+            return 0.0, 0.0
+        dx, dy, start, duration = nudge
+        t = (now - start) / duration
+        if t >= 1:
+            del self.nudges[entity]
+            return 0.0, 0.0
+        push = math.sin(math.pi * t)  # out and back
+        jitter = 0.06 * math.sin(t * 40) if entity != "player" else 0.0
+        return dx * push + jitter, dy * push
 
     def draw(self, entities: dict, view, now: float) -> None:
         if view is None:
@@ -448,6 +478,8 @@ class EntityLayer:
                 track = [x, y, wx, wy, now, gap, facing]
             tracks[entity] = track
             x, y = _glide(track, now)
+            nx, ny = self._nudge(entity, now)
+            x, y = x + nx, y + ny
             phase = hash(entity) % 7
             # Moving (still gliding, or stepped a moment ago): walk cycle; else idle.
             walking = now - track[4] < track[5] + 0.1
@@ -650,6 +682,7 @@ class GemCollectorApp(App):
         events = take_events(self.state)
         self.floats.add(events, now)
         self.particles.add(events)
+        self.entity_layer.react(events, now)
         self.sfx.play(events)
         self.shake.update(events, now)
         in_world = self.state.active_scene == "game"
