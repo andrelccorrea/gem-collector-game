@@ -36,7 +36,7 @@ def render_hud(renderer, state) -> None:
         f"  Gold:${state.player_gold}"
         f"  Tool:[{tool}]"
         f"  Biome:{biome}"
-        f"  Light:{round(fuel_share(state) * 100)}%"
+        f"  Light:{round(fuel_share(state) * 100)}%" + (_daily_clock(state) if state.daily else "")
     )
     carried, capacity = bag_count(state), bag_capacity(state)
     row2 = (
@@ -68,3 +68,10 @@ def _write_hud_str(renderer, y: int, x: int, text: str, color_pair: tuple) -> No
         existing_char, existing_cp = renderer.get_cell(cx, y)
         if existing_char != ch or existing_cp != color_pair:
             renderer.set_cell(cx, y, ch, color_pair)
+
+
+def _daily_clock(state) -> str:
+    from game.daily import time_left
+
+    minutes, seconds = divmod(int(time_left(state)), 60)
+    return f"  Time:{minutes}:{seconds:02d}"

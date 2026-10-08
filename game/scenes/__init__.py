@@ -64,4 +64,5 @@ def build_scenes() -> dict:
         "death": FunctionScene(menu.update_death_screen, menu.render_death_screen),
         "win": FunctionScene(menu.update_win_screen, menu.render_win_screen),
         "leaderboard": FunctionScene(menu.update_leaderboard, menu.render_leaderboard),
+        "daily_end": FunctionScene(menu.update_daily_end, menu.render_daily_end),
     }

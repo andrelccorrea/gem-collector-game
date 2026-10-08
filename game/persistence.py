@@ -25,6 +25,7 @@ from game.constants import MAP_HEIGHT, MAP_WIDTH
 SCHEMA_VERSION = 6
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
+DAILY_NAME = "daily.json"
 APP_DIR_NAME = "GemCollector"
 # Frontends without a desktop home directory (e.g. Android) point this at app storage.
 DATA_DIR_ENV = "GEM_COLLECTOR_DATA_DIR"
@@ -419,5 +420,35 @@ def save_leaderboard_entry(earnings: int) -> None:
         os.makedirs(data_dir(), exist_ok=True)
         with open(leaderboard_path(), "w") as f:
             json.dump({"runs": entries}, f, indent=2)
+    except OSError:
+        pass
+
+
+def _daily_path() -> str:
+    return os.path.join(data_dir(), DAILY_NAME)
+
+
+def _load_daily_file() -> dict:
+    try:
+        with open(_daily_path()) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def load_daily(day: str) -> list:
+    """Best earnings of the daily runs played on ``day`` (ISO date), highest first."""
+    scores = _load_daily_file().get(day, [])
+    return sorted((s for s in scores if isinstance(s, int)), reverse=True)
+
+
+def save_daily_entry(day: str, earnings: int) -> None:
+    data = _load_daily_file()
+    data[day] = sorted(load_daily(day) + [earnings], reverse=True)[:10]
+    try:
+        os.makedirs(data_dir(), exist_ok=True)
+        with open(_daily_path(), "w") as f:
+            json.dump(data, f, indent=2)
     except OSError:
         pass

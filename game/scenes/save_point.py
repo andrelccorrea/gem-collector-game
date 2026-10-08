@@ -32,6 +32,9 @@ def update_save_point(inp: InputState, state) -> None:
     elif Action.CONFIRM in inp.pressed:
         from game import persistence
 
-        error = persistence.save_game(state)
+        if state.daily:
+            error = "Daily runs can't be saved."
+        else:
+            error = persistence.save_game(state)
         set_hud_message(state, error or "Game Saved!", 3.0)
         state.active_scene = "game"

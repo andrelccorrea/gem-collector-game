@@ -54,4 +54,9 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     if Action.CANCEL in inp.pressed:
         state.active_scene = "menu"
 
+    if state.daily:
+        from game.daily import check_daily_end
+
+        check_daily_end(state)
+
     return state.active_scene == "game"

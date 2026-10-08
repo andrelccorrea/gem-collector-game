@@ -14,6 +14,7 @@ from game.ui import clear_screen, write_str
 MENU_ITEMS = [
     ("new", "New Game"),
     ("new_hardcore", "New Game (Hardcore)"),
+    ("daily", "Daily Run"),
     ("continue", "Continue"),
     ("leaderboard", "Leaderboard"),
 ]
@@ -100,6 +101,13 @@ def _select_menu_item(state, save_exists: bool) -> None:
         run.hardcore = choice == "new_hardcore"
         _replace_state(state, run)
 
+    elif choice == "daily":
+        from datetime import date
+
+        from game.daily import start_daily
+
+        _replace_state(state, start_daily(date.today()))
+
     elif choice == "continue" and save_exists:
         try:
             loaded = persistence.load_game()
@@ -163,6 +171,32 @@ def update_win_screen(inp: InputState, state) -> None:
         state.active_scene = "game"
 
 
+def render_daily_end(renderer, state) -> None:
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    mid_x = math.floor(renderer.width) // 2
+    title = f"  DAILY RUN {state.daily} - TIME'S UP  "
+    write_str(renderer, 3, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
+    result = f"You earned ${state.lifetime_earnings}"
+    write_str(renderer, 5, mid_x - len(result) // 2, result, COLOR_MENU_NORMAL)
+    scores = persistence.load_daily(state.daily)
+    if state.lifetime_earnings not in scores:
+        scores = sorted(scores + [state.lifetime_earnings], reverse=True)
+    write_str(renderer, 7, mid_x - 10, "Today's best:", COLOR_MENU_NORMAL)
+    for i, score in enumerate(scores[:5]):
+        mark = "  <- you" if score == state.lifetime_earnings else ""
+        line = f"  #{i + 1}  ${score}{mark}"
+        write_str(renderer, 8 + i, mid_x - 10, line, COLOR_MENU_NORMAL)
+    hint = "Enter: Back to Menu"
+    write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+
+
+def update_daily_end(inp: InputState, state) -> None:
+    if Action.CONFIRM in inp.pressed:
+        persistence.save_daily_entry(state.daily, state.lifetime_earnings)
+        state.active_scene = "menu"
+        state.menu_cursor = 0
+
+
 def render_leaderboard(renderer, state) -> None:
     clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     mid_x = math.floor(renderer.width) // 2
@@ -181,6 +215,14 @@ def render_leaderboard(renderer, state) -> None:
             row = 7 + i
             line = f"  #{i + 1:<4}${entry.get('earnings', 0):>10}   {entry.get('date', 'N/A'):>12}"
             write_str(renderer, row, mid_x - 20, line, COLOR_MENU_NORMAL)
+
+    from datetime import date
+
+    today = date.today().isoformat()
+    daily = persistence.load_daily(today)
+    if daily:
+        line = f"Today's daily best: ${daily[0]}  ({len(daily)} runs)"
+        write_str(renderer, 18, mid_x - len(line) // 2, line, COLOR_MENU_TITLE)
 
     hint = "Esc: Back to Menu"
     write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
