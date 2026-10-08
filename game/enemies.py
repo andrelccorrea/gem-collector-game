@@ -290,4 +290,6 @@ def render_enemies(renderer, state, view) -> None:
         light = tint_at(state, now, enemy.x, enemy.y)
         renderer.set_cell(screen_x, screen_y, enemy.char, shade(color, light))
         tint = HIT_TINT if enemy.flash_timer > 0 else None
-        renderer.set_sprite(screen_x, screen_y, OBJECT, enemy.name, mix(tint, light))
+        renderer.set_sprite(
+            screen_x, screen_y, OBJECT, enemy.name, mix(tint, light), entity=id(enemy)
+        )

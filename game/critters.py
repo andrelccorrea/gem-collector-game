@@ -170,4 +170,4 @@ def render_critters(renderer, state, view) -> None:
         light = None if critter.name == "firefly" else tint_at(state, now, critter.x, critter.y)
         color = (tuple(kind["color"][0]), tuple(kind["color"][1]))
         renderer.set_cell(sx, sy, kind["char"], shade(color, light))
-        renderer.set_sprite(sx, sy, OBJECT, critter.name, mix(None, light))
+        renderer.set_sprite(sx, sy, OBJECT, critter.name, mix(None, light), entity=id(critter))

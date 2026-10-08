@@ -21,9 +21,12 @@ class SpriteRecorder(StubRenderer):
     def __init__(self, width, height):
         super().__init__(width, height)
         self.sprites = {}
+        self.entities = {}
 
-    def set_sprite(self, x, y, layer, sprite, tint):
+    def set_sprite(self, x, y, layer, sprite, tint, entity=None):
         self.sprites[(x, y, layer)] = (sprite, tint)
+        if entity is not None:
+            self.entities[entity] = (x, y, sprite)
 
 
 def test_every_sprite_the_game_draws_has_pixel_art():
@@ -89,3 +92,6 @@ def test_explored_ground_is_dimmed_and_hit_enemies_tinted():
     assert renderer.sprites[(0, 0, camera.GROUND)][1] == camera.EXPLORED_TINT
     ex, ey = enemy.x - view.x, enemy.y - view.y
     assert renderer.sprites[(ex, ey, camera.OBJECT)] == ("snake", HIT_TINT)
+    # Moving things carry a stable key so a frontend can glide them between cells.
+    assert renderer.entities[id(enemy)] == (ex, ey, "snake")
+    assert renderer.entities["player"][2] == "player"

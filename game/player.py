@@ -143,7 +143,7 @@ def render_player(renderer, state, view) -> None:
         sx, sy = state.player_x - view.x, state.player_y - view.y
         light = tint_at(state, daylight.phase(state), state.player_x, state.player_y)
         renderer.set_cell(sx, sy, PLAYER_CHAR, shade(COLOR_PLAYER, light))
-        renderer.set_sprite(sx, sy, OBJECT, "player", light)
+        renderer.set_sprite(sx, sy, OBJECT, "player", light, entity="player")
 
 
 def set_hud_message(state, msg: str, duration: float = 2.0) -> None:

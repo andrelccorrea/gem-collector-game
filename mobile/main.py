@@ -95,6 +95,8 @@ class GridRenderer(Renderer):
         self.dirty = {(x, y) for y in range(ROWS) for x in range(COLS)}
         # Sprites set this frame: (x, y) -> {layer: (sprite, tint)}; emptied by each flush.
         self.sprites: dict = {}
+        # Moving things set this frame: entity -> (x, y, sprite, tint), drawn by EntityLayer.
+        self.entities: dict = {}
 
     @property
     def width(self) -> int:
@@ -117,8 +119,12 @@ class GridRenderer(Renderer):
             for x in range(COLS):
                 self.set_cell(x, y, " ", color_pair)
 
-    def set_sprite(self, x, y, layer, sprite, tint):
-        if 0 <= x < COLS and 0 <= y < ROWS:
+    def set_sprite(self, x, y, layer, sprite, tint, entity=None):
+        if not (0 <= x < COLS and 0 <= y < ROWS):
+            return
+        if entity is not None:
+            self.entities[entity] = (x, y, sprite, tint)
+        else:
             self.sprites.setdefault((x, y), {})[layer] = (sprite, tint)
 
 
@@ -406,6 +412,58 @@ def _android_vibrator():
         return None
 
 
+TWEEN_MAX = 0.15  # longest glide between two cells (one player step)
+TWEEN_MIN = 0.06
+
+
+class EntityLayer:
+    """Draws moving things (player, enemies, animals) gliding between cells.
+
+    The game's position stays the truth; the drawn position starts where the thing was
+    and eases to the new cell over about the time between its steps (at most one player
+    step), so steady walking looks continuous. Jumps of more than one cell snap.
+    """
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        self.tracks: dict = {}  # entity -> [from_x, from_y, to_x, to_y, start, duration]
+
+    def draw(self, entities: dict, view, now: float) -> None:
+        if view is None:
+            self.tracks.clear()
+            return
+        grid, overlay = self.grid, self.grid.overlay
+        cw, ch = grid.cell_size()
+        tracks = {}
+        for entity, (sx, sy, sprite, tint) in entities.items():
+            wx, wy = view.x + sx, view.y + sy
+            track = self.tracks.get(entity)
+            if track is None or max(abs(wx - track[2]), abs(wy - track[3])) > 1:
+                track = [wx, wy, wx, wy, now, TWEEN_MAX]
+            elif (wx, wy) != (track[2], track[3]):
+                x, y = _glide(track, now)
+                gap = min(max(now - track[4], TWEEN_MIN), TWEEN_MAX)
+                track = [x, y, wx, wy, now, gap]
+            tracks[entity] = track
+            x, y = _glide(track, now)
+            frame = frame_at(sprite, now, hash(entity) % 7)
+            texture = _sprite_texture(sprite, frame)
+            if texture is None:
+                continue
+            overlay.add(Color(*_rgba(tint or _WHITE)[:3], 1))
+            pos = (grid.x + (x - view.x) * cw + grid.scroll.x,
+                   grid.top - (y - view.y + 1) * ch + grid.scroll.y)  # fmt: skip
+            overlay.add(Rectangle(texture=texture, pos=pos, size=(cw, ch)))
+        self.tracks = tracks
+
+
+def _glide(track, now: float) -> tuple:
+    """Where a track's thing is drawn now (world tiles, fractional)."""
+    from_x, from_y, to_x, to_y, start, duration = track
+    t = min(1.0, (now - start) / duration)
+    return from_x + (to_x - from_x) * t, from_y + (to_y - from_y) * t
+
+
 class ParticleLayer:
     """Draws mobile/particles.py bursts as small square pixels over the world."""
 
@@ -495,6 +553,7 @@ class GemCollectorApp(App):
         root.add_widget(self.grid)
         self.floats = FloatingTexts(self.grid)
         self.particles = ParticleLayer(self.grid)
+        self.entity_layer = EntityLayer(self.grid)
         self.shake = ScreenShake(self.grid)
         self.slide = WorldSlide(self.grid)
         root.add_widget(self._controls())
@@ -584,6 +643,8 @@ class GemCollectorApp(App):
         view = camera.render_view(self.state, self.renderer) if in_world else None
         self.slide.update(view, now)
         self.grid.overlay.clear()
+        entities, self.renderer.entities = self.renderer.entities, {}
+        self.entity_layer.draw(entities, view, now)
         self.particles.draw(view, now)  # under the texts
         self.floats.draw(view, now)
         if self.state.quit_requested:
