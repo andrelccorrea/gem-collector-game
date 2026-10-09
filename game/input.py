@@ -21,6 +21,7 @@ class Action(Enum):
     CANCEL = auto()
     RECALL = auto()
     USE_ITEM = auto()
+    MAP = auto()
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,7 @@ DEFAULT_KEYMAP = {
     "esc": Action.CANCEL,
     "r": Action.RECALL,
     "q": Action.USE_ITEM,
+    "m": Action.MAP,
 }
 
 
@@ -77,6 +79,7 @@ KEYBOARD_HINTS = {
     Action.CANCEL: "Esc",
     Action.RECALL: "R",
     Action.USE_ITEM: "Q",
+    Action.MAP: "M",
 }
 _hints = dict(KEYBOARD_HINTS)
 

@@ -79,6 +79,7 @@ TOUCH_HINTS = {
     Action.CANCEL: "Back",
     Action.RECALL: "Recall",
     Action.USE_ITEM: "Item",
+    Action.MAP: "Map",
 }
 DEFAULT_BG = (0, 0, 0)
 DEFAULT_FG = (255, 255, 255)
@@ -701,7 +702,8 @@ class GemCollectorApp(App):
         for label, action in [("Use", Action.USE), ("Attack", Action.ATTACK),
                               ("Tool", Action.CYCLE_TOOL), ("Recall", Action.RECALL),
                               ("OK", Action.CONFIRM), ("Back", Action.CANCEL),
-                              ("Tab", Action.NEXT_TAB), ("Item", Action.USE_ITEM)]:  # fmt: skip
+                              ("Tab", Action.NEXT_TAB), ("Item", Action.USE_ITEM),
+                              ("Map", Action.MAP)]:  # fmt: skip
             button = Button(text=label)
             button.bind(on_press=lambda _b, a=action: self.touch.press(a))
             button.bind(on_press=lambda _b: self.sfx.tap())

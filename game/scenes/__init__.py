@@ -52,7 +52,7 @@ class SceneManager:
 
 def build_scenes() -> dict:
     from game import menu
-    from game.scenes import lapidary, save_point, shop
+    from game.scenes import lapidary, save_point, shop, world_map
     from game.scenes.game import GameScene
 
     return {
@@ -67,6 +67,7 @@ def build_scenes() -> dict:
         # Shares the leaderboard's update: Back returns to the menu.
         "achievements": FunctionScene(menu.update_leaderboard, menu.render_achievements),
         "bestiary": FunctionScene(menu.update_leaderboard, menu.render_bestiary),
+        "map": FunctionScene(world_map.update_map, world_map.render_map),
         "daily_end": FunctionScene(menu.update_daily_end, menu.render_daily_end),
         "perks": FunctionScene(menu.update_perks, menu.render_perks),
     }

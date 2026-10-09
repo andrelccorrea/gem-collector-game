@@ -80,6 +80,8 @@ def step_game(inp: InputState, state, dt: float) -> bool:
 
     if Action.CANCEL in inp.pressed:
         state.active_scene = "menu"
+    elif Action.MAP in inp.pressed:
+        state.active_scene = "map"
 
     if state.daily:
         from game.daily import check_daily_end

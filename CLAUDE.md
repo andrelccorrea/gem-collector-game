@@ -33,6 +33,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | F | Attack nearest enemy |
 | R | Use a Recall Charm (teleport to town) |
 | Q | Use the most needed supply (Bandage or Lamp Oil) |
+| M | World map (explored areas) |
 | Esc | Open menu / close sub-screen |
 | Enter | Confirm selection |
 
@@ -95,7 +96,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `critters.py` | Peaceful animals (`catalogs.toml [[critters]]`: rabbit, deer, bird, frog, fish, firefly, beetle, butterfly, duck, owl, fox, goat, crab, glowworm; optional rain preference, rarity weight, glow): spawn out of sight by biome and time of day, wander, bolt faster than the player when it comes near (herds together); own RNG (`state.critter_rng`), never saved, so gameplay rolls are unchanged |
 | `combat.py` | F attack (Chebyshev-1 adjacency, `PLAYER_ATTACK_COOLDOWN`); kills give loot only; enemy auto-attacks on per-enemy cooldown |
 | `buildings.py` | `check_building_interaction` (USE on S/L/P tile switches scene) and `check_win` |
-| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy tools/charms, upgrade tools and gear (bag, lantern, armor, boots — `_GEAR`), a description line for the selected row, sell via `market`, Museum donations, Outfits tab: cosmetic palette swaps kept in the profile), `lapidary.py` (LapidaryScene: cutting minigame, geode cracking), `save_point.py` (daily runs can't save) |
+| `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy tools/charms, upgrade tools and gear (bag, lantern, armor, boots — `_GEAR`), a description line for the selected row, sell via `market`, Museum donations, Outfits tab: cosmetic palette swaps kept in the profile), `lapidary.py` (LapidaryScene: cutting minigame, geode cracking), `save_point.py` (daily runs can't save), `world_map.py` (M: explored world shrunk to the screen, markers, cached by fog key) |
 | `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
 | `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Achievements, Bestiary, Leaderboard), death, win, daily-end, perks and leaderboard screens |
@@ -117,7 +118,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 ### Scene Graph
 
 `state.active_scene` names the current screen; `main.py` hands each frame to `SceneManager.frame()`, which calls `enter()` on a switch, then `update()`, then `render()` (skipped if the update switched away). New screens must be registered in `game/scenes/__init__.py::build_scenes()` (a test checks every name assigned in `game/`).
-`menu` → `game` → `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `bestiary` / `leaderboard`
+`menu` → `game` → `map` / `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `bestiary` / `leaderboard`
 
 ### Key Invariants
 
