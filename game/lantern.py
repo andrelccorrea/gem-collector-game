@@ -1,5 +1,6 @@
 """The lantern: light that burns down outside town and sets the fog-of-war radius."""
 
+from game import daylight
 from game.constants import FOG_RADIUS
 from game.geography import biome_at, in_town
 from game.objects.registry import LANTERN
@@ -26,6 +27,8 @@ def update_lantern(state, dt: float) -> None:
     """Refill in town; elsewhere burn fuel at the rate of the biome the player is in."""
     if in_town(state.player_x, state.player_y):
         state.lantern_fuel = lantern_capacity(state)
+        return
+    if state.trinket == "night_pin" and daylight.phase(state)[0] == "night":
         return
     drain = LANTERN["drain"][biome_at(state.player_x, state.player_y)]
     state.lantern_fuel = max(0.0, state.lantern_fuel - drain * dt)

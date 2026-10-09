@@ -33,6 +33,7 @@ from game.objects.registry import (
     TOOL_MAX_LEVEL,
     TOOL_UPGRADE_COSTS,
     TOOL_UPGRADE_UNLOCK_AT,
+    TRINKETS,
 )
 from game.player import set_hud_message
 from game.ui import clear_screen, render_list, write_str
@@ -105,6 +106,26 @@ def _build_shop_items(state) -> list:
                 "value": 0,
             }
         )
+        for key, trinket in TRINKETS.items():
+            if key == state.trinket:
+                tag = "(Worn)"
+            elif key in state.trinkets:
+                tag = "Wear"
+            else:
+                tag = _price_tag(deals.price(state, key, trinket["cost"]), trinket["cost"])
+            items.append(
+                {
+                    "label": f"  {trinket['name']:16s}  {tag}",
+                    "enabled": key != state.trinket
+                    and (key in state.trinkets or state.player_gold >= trinket["cost"]),
+                    "action": "trinket",
+                    "key": key,
+                    "cost": 0
+                    if key in state.trinkets
+                    else deals.price(state, key, trinket["cost"]),
+                    "value": 0,
+                }
+            )
         for key, supply in SUPPLIES.items():
             have = state.supplies.get(key, 0)
             cost = deals.price(state, key, supply["cost"])
@@ -270,6 +291,8 @@ def _icon(state, item: dict):
         return {"bandage": "icon_bandage", "lamp_oil": "icon_oil"}.get(key), None
     if action == "buy_dog":
         return "dog", None
+    if action == "trinket":
+        return f"icon_{key}", None
     if action == "outfit":
         return ("player" if key == DEFAULT_OUTFIT else f"player~{key}"), None
     if action in ("sell_gem", "donate"):
@@ -386,6 +409,8 @@ def _describe(item: dict) -> str:
         return f"One use: {hint_of(Action.RECALL)} takes you back to town from anywhere"
     if action == "buy_supply":
         return f"{SUPPLIES[key]['desc']}. [{hint_of(Action.USE_ITEM)}] uses the most needed supply"
+    if action == "trinket":
+        return f"{TRINKETS[key]['desc']} (one trinket worn at a time)"
     if action == "buy_dog":
         return "A loyal dog: follows you and barks when an enemy comes near (for this run)"
     if action == "contract":
@@ -515,6 +540,20 @@ def update_shop(inp: InputState, state) -> None:
             state.player_gold -= item["cost"]
             state.recall_charms += 1
             set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
+            chime(state)
+
+    elif action == "trinket":
+        key = item["key"]
+        if key == state.trinket:
+            refuse(state, "You are already wearing it!")
+        elif state.player_gold < item["cost"]:
+            refuse(state, "Not enough gold!")
+        else:
+            state.player_gold -= item["cost"]
+            if key not in state.trinkets:
+                state.trinkets.append(key)
+            state.trinket = key
+            set_hud_message(state, f"You put on the {TRINKETS[key]['name']}.", 2.0)
             chime(state)
 
     elif action == "buy_dog":

@@ -6,6 +6,7 @@ market recovers with game time, so spreading sales out (or selling a variety of
 items) pays better than dumping one kind at once.
 """
 
+from game import trinkets
 from game.gems import get_gem_raw_value, polished_prices, take_polished_gem
 from game.objects.registry import ENEMY_CATALOG
 
@@ -81,7 +82,7 @@ def sell_one(state, key: str) -> int:
         held[key] -= 1
         if held[key] == 0:
             del held[key]
-    state.market[key] = state.market.get(key, 0.0) + 1.0
+    state.market[key] = state.market.get(key, 0.0) + trinkets.sale_saturation(state)
     state.player_gold += price
     state.lifetime_earnings += price
     return price
@@ -100,6 +101,7 @@ def sell_all(state, loot: bool) -> int:
 def preview_sell_all(state, keys: list) -> int:
     """Total that ``sell_all`` would pay for these kinds, without selling anything."""
     total = 0
+    step = trinkets.sale_saturation(state)
     for key in keys:
         count = _held(state, key).get(key, 0)
         if key.endswith("_polished"):
@@ -107,9 +109,9 @@ def preview_sell_all(state, keys: list) -> int:
             saturation = state.market.get(key, 0.0)
             bonus = museum_bonus(state)
             total += sum(
-                max(1, int(p * price_multiplier(saturation + i) * bonus))
+                max(1, int(p * price_multiplier(saturation + i * step) * bonus))
                 for i, p in enumerate(prices)
             )
         else:
-            total += sum(unit_price(state, key, extra_saturation=i) for i in range(count))
+            total += sum(unit_price(state, key, extra_saturation=i * step) for i in range(count))
     return total

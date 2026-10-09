@@ -104,6 +104,9 @@ class GameState:
     boots_level: int = 0
     dowsing_level: int = 0
     has_dog: bool = False
+    trinkets: list = field(default_factory=list)  # owned this run
+    trinket: Any = None  # the one worn (key) or None
+    feather_day: int = -1  # last game day the Homing Feather was used
     visited_landmarks: set = field(default_factory=set)  # (x, y) of landmarks seen this run
     contracts_done: set = field(default_factory=set)  # (game day, board slot) delivered
     stats: dict = field(default_factory=dict)  # this run's counters (game/stats.py); not saved

@@ -157,13 +157,25 @@ def set_hud_message(state, msg: str, duration: float = 2.0) -> None:
     state.hud_message_timer = duration
 
 
+def _day(state) -> int:
+    return int(state.game_time // daylight.DAY_SECONDS)
+
+
 def _use_recall_charm(state) -> bool:
     """Teleport to town if possible; returns whether the player was recalled."""
     if in_town(state.player_x, state.player_y):
         set_hud_message(state, "You are already in town.", 1.5)
+    elif state.world_tiles is None or state.world_tiles.start_pos is None:
+        pass
+    elif state.trinket == "feather" and state.feather_day != _day(state):
+        state.feather_day = _day(state)
+        state.player_x, state.player_y = state.world_tiles.start_pos
+        state.queued_move = None
+        set_hud_message(state, "The Homing Feather carries you to town (once a day).", 2.0)
+        return True
     elif state.recall_charms <= 0:
         set_hud_message(state, "No Recall Charm. Buy one at the shop.", 1.5)
-    elif state.world_tiles is not None and state.world_tiles.start_pos is not None:
+    else:
         state.recall_charms -= 1
         state.player_x, state.player_y = state.world_tiles.start_pos
         state.queued_move = None

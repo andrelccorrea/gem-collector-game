@@ -7,7 +7,7 @@ a countdown to the next one.
 
 from game.daylight import DAY_SECONDS
 from game.decor import stable_random
-from game.objects.registry import SUPPLIES, TOOL_CATALOG
+from game.objects.registry import SUPPLIES, TOOL_CATALOG, TRINKETS
 
 DISCOUNT = 0.25
 GEAR = ("bag", "lantern", "armor", "dowsing rod", "boots")
@@ -15,7 +15,7 @@ GEAR = ("bag", "lantern", "armor", "dowsing rod", "boots")
 
 def _candidates() -> list:
     tools = [name for name, tool in TOOL_CATALOG.items() if tool.cost > 0]
-    return tools + list(GEAR) + list(SUPPLIES) + ["recall_charm", "dog"]
+    return tools + list(GEAR) + list(SUPPLIES) + list(TRINKETS) + ["recall_charm", "dog"]
 
 
 def deal_key(state) -> str:

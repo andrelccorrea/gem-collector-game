@@ -307,6 +307,29 @@ radii = [0, 6, 10]
 costs = [0, 180, 420]
 unlock_at = [0, 0, 2500]
 
+# Trinkets: one worn at a time, each changing how a run plays (game/trinkets.py)
+[trinkets.clover]
+name = "Lucky Clover"
+cost = 300
+chance = 0.2
+desc = "A dig that finds nothing has a 20% chance to dig again"
+
+[trinkets.night_pin]
+name = "Night Pin"
+cost = 250
+desc = "Your lantern burns no fuel at night"
+
+[trinkets.scale]
+name = "Merchant's Scale"
+cost = 350
+saturation = 0.5
+desc = "Each sale lowers that gem's price half as much"
+
+[trinkets.feather]
+name = "Homing Feather"
+cost = 400
+desc = "Once per game day, Recall to town without a charm"
+
 # Supplies: consumables used with the Item action (the most needed one is used)
 [supplies.bandage]
 name = "Bandage"

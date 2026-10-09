@@ -1,10 +1,11 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 17, compact JSON):
+Save format (``schema_version`` 18, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
     lapidary_level, bag_level, armor_level, boots_level, dowsing_level, has_dog,
     visited_landmarks [[x, y]...], contracts_done [[day, slot]...],
+    trinkets [key...], trinket, feather_day,
     market {kind: saturation},
     lantern {level, fuel}, hardcore, dropped_bag {x, y, gems, loot, polished} or null,
     recall_charms, supplies {key: count}, museum,
@@ -26,7 +27,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 DAILY_NAME = "daily.json"
@@ -285,6 +286,12 @@ def _migrate_v16_to_v17(data: dict) -> dict:
     return data
 
 
+def _migrate_v17_to_v18(data: dict) -> dict:
+    """v18 adds trinkets; older saves own none."""
+    data.update(trinkets=[], trinket=None, feather_day=-1)
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -304,6 +311,7 @@ MIGRATIONS = {
     14: _migrate_v14_to_v15,
     15: _migrate_v15_to_v16,
     16: _migrate_v16_to_v17,
+    17: _migrate_v17_to_v18,
 }
 
 
@@ -354,6 +362,9 @@ def save_game(state) -> str | None:
         "boots_level": state.boots_level,
         "dowsing_level": state.dowsing_level,
         "has_dog": state.has_dog,
+        "trinkets": state.trinkets,
+        "trinket": state.trinket,
+        "feather_day": state.feather_day,
         "visited_landmarks": sorted(list(p) for p in state.visited_landmarks),
         "contracts_done": sorted(list(c) for c in state.contracts_done),
         "market": state.market,
@@ -459,6 +470,11 @@ def _state_from_save(data: dict):
     state.boots_level = data["boots_level"]
     state.dowsing_level = data["dowsing_level"]
     state.has_dog = bool(data["has_dog"])
+    from game.objects.registry import TRINKETS
+
+    state.trinkets = [str(t) for t in data["trinkets"] if t in TRINKETS]
+    state.trinket = data["trinket"] if data["trinket"] in state.trinkets else None
+    state.feather_day = int(data["feather_day"])
     state.visited_landmarks = {(int(x), int(y)) for x, y in data["visited_landmarks"]}
     state.contracts_done = {(int(d), int(i)) for d, i in data["contracts_done"]}
     state.market = data["market"]

@@ -1,4 +1,4 @@
-from game import stats
+from game import stats, trinkets
 from game.constants import (
     TYPE_LAKE,
     TYPE_LAPIDARY,
@@ -129,6 +129,8 @@ def _dig_mineable_tile(state, x: int, y: int, tile_type: str) -> None:
 
     biome = biome_at(x, y)
     gem_name = gems_module.roll_gem_drop(biome, _equipped_tier(state), state.rng)
+    if gem_name is None and trinkets.lucky_retry(state):
+        gem_name = gems_module.roll_gem_drop(biome, _equipped_tier(state), state.rng)
 
     if gem_name:
         gems_module.add_gem_to_inventory(state, gem_name)
@@ -146,6 +148,8 @@ def _pan_water(state, x: int, y: int, tile_type: str) -> None:
     from game import gems as gems_module
 
     gem_name = gems_module.roll_gem_drop("river", _equipped_tier(state), state.rng)
+    if gem_name is None and trinkets.lucky_retry(state):
+        gem_name = gems_module.roll_gem_drop("river", _equipped_tier(state), state.rng)
     if gem_name:
         gems_module.add_gem_to_inventory(state, gem_name)
         set_hud_message(state, f"Panned up a {gem_name.title()}!", 3.0)
