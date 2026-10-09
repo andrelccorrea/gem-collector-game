@@ -50,3 +50,8 @@ def test_zoom_uses_whole_steps_and_defaults_to_2x():
     assert settings.DEFAULTS["zoom"] == 2
     assert [settings.next_value("zoom", v) for v in (2, 3, 1)] == [3, 1, 2]
     assert settings.label("zoom", 3) == "Zoom: 3x"
+
+
+def test_battery_saver_is_on_by_default():
+    assert settings.DEFAULTS["battery_saver"] is True
+    assert settings.label("battery_saver", False) == "Battery saver: off"

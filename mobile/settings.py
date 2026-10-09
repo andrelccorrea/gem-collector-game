@@ -17,6 +17,7 @@ DEFAULTS = {
     "shake": 100,  # percent
     "reduce_motion": False,
     "zoom": 2,  # world magnification on screen (whole numbers keep pixels even)
+    "battery_saver": True,  # fewer frames in menus and when idle (mobile/power.py)
 }
 SHAKE_STEPS = [100, 50, 0]
 ZOOM_STEPS = [2, 3, 1]
@@ -28,6 +29,7 @@ LABELS = {
     "shake": "Screen shake",
     "reduce_motion": "Reduce motion",
     "zoom": "Zoom",
+    "battery_saver": "Battery saver",
 }
 
 

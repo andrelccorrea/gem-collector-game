@@ -25,6 +25,7 @@ from kivy.config import Config  # noqa: E402
 # Esc / the Android back button closes screens in the game instead of the app.
 Config.set("kivy", "exit_on_escape", "0")
 
+import power  # noqa: E402
 import settings  # noqa: E402
 from kivy.app import App  # noqa: E402
 from kivy.clock import Clock  # noqa: E402
@@ -906,7 +907,8 @@ class GemCollectorApp(App):
         self.slide = WorldSlide(self.grid)
         root.add_widget(self._controls())
         Window.bind(on_key_down=self._key_down)
-        Clock.schedule_interval(self._frame, 1 / FPS)
+        self.fps, self.last_input = FPS, 0.0
+        Clock.schedule_once(self._frame, 1 / FPS)
         return root
 
     # ── Controls ──────────────────────────────────────────────────────────────
@@ -994,12 +996,26 @@ class GemCollectorApp(App):
     # ── Frame loop and lifecycle ──────────────────────────────────────────────
 
     def _frame(self, dt):
+        """One frame, then the next one is scheduled at the battery saver's rate."""
+        try:
+            self._run_frame(dt)
+        finally:
+            target = power.target_fps(
+                self.state.active_scene, time.perf_counter() - self.last_input,
+                PREFS["battery_saver"],
+            )  # fmt: skip
+            self.fps = power.next_fps(self.fps, target)
+            Clock.schedule_once(self._frame, 1 / self.fps)
+
+    def _run_frame(self, dt):
         if self.paused:
             return
         touch_inp = self.touch.poll(self.state)
         key_inp = map_keys(self.keys)
         self.keys.clear()
         inp = InputState(pressed=touch_inp.pressed | key_inp.pressed, held=touch_inp.held)
+        if inp.pressed or inp.held:
+            self.last_input = time.perf_counter()
         self.scenes.frame(inp, self.state, dt, self.renderer)
         self.grid.flush(self.renderer)
         now = time.perf_counter()
