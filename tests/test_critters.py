@@ -76,3 +76,31 @@ def test_far_animals_despawn():
     finally:
         critters.DESPAWN_DISTANCE = old
     assert state.critters == []
+
+
+def test_rain_keeps_some_animals_in_and_brings_others_out():
+    from game import weather
+
+    state = new_run(12)
+    for stretch in range(500):
+        state.game_time = stretch * weather.SHOWER_SECONDS + 1
+        if weather.is_raining(state) and daylight.phase(state)[0] == "day":
+            break
+    rng = critters.random.Random(3)
+    meadow = [critters._species_for(state, 25, 30, rng) for _ in range(300)]
+    river = [critters._species_for(state, 80, 60, rng) for _ in range(300)]
+    assert "butterfly" not in meadow and "bird" not in meadow
+    assert river.count("frog") + river.count("duck") > river.count("crab")
+
+
+def test_rare_animals_are_rarer():
+    from game import weather
+
+    state = new_run(12)
+    for stretch in range(500):
+        state.game_time = stretch * weather.SHOWER_SECONDS + 1
+        if not weather.is_raining(state) and daylight.phase(state)[0] == "day":
+            break
+    rng = critters.random.Random(4)
+    picks = [critters._species_for(state, 25, 30, rng) for _ in range(2000)]
+    assert 0 < picks.count("fox") < picks.count("deer")

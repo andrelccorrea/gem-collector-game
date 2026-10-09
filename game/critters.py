@@ -12,7 +12,7 @@ same with or without them, and they are not saved: a loaded game spawns new ones
 import random
 from dataclasses import dataclass
 
-from game import daylight
+from game import daylight, weather
 from game.camera import OBJECT
 from game.constants import (
     MAP_HEIGHT,
@@ -77,12 +77,17 @@ def _occupied(state, x: int, y: int) -> bool:
 def _species_for(state, x: int, y: int, rng: random.Random) -> str | None:
     time_of_day = daylight.phase(state)[0]
     awake = "night" if time_of_day == "night" else "day"
-    names = [
-        name
-        for name, kind in CRITTERS.items()
-        if biome_at(x, y) in kind["biomes"] and kind["active"] in (awake, "any")
-    ]
-    return rng.choice(names) if names else None
+    raining = weather.is_raining(state)
+    names, weights = [], []
+    for name, kind in CRITTERS.items():
+        if biome_at(x, y) not in kind["biomes"] or kind["active"] not in (awake, "any"):
+            continue
+        if raining and kind.get("rain") == "avoids":
+            continue
+        names.append(name)
+        likes_rain = raining and kind.get("rain") == "likes"
+        weights.append(kind.get("weight", 1.0) * (2 if likes_rain else 1))
+    return rng.choices(names, weights)[0] if names else None
 
 
 def _spawn(state, rng: random.Random) -> None:
@@ -166,8 +171,8 @@ def render_critters(renderer, state, view) -> None:
             continue
         kind = critter.kind
         sx, sy = critter.x - view.x, critter.y - view.y
-        # Fireflies glow: the dark does not dim them.
-        light = None if critter.name == "firefly" else tint_at(state, now, critter.x, critter.y)
+        # Glowing animals (fireflies, glowworms): the dark does not dim them.
+        light = None if kind.get("glow") else tint_at(state, now, critter.x, critter.y)
         color = (tuple(kind["color"][0]), tuple(kind["color"][1]))
         renderer.set_cell(sx, sy, kind["char"], shade(color, light))
         renderer.set_sprite(sx, sy, OBJECT, critter.name, mix(None, light), entity=id(critter))

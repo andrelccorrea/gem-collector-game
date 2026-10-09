@@ -356,6 +356,9 @@ daily_divisor = 1000
 # comes within flee_range (whole herds bolt together). habitat is "land" or "water";
 # active is "day", "night" or "any"; herd = [min, max] animals spawned together;
 # wander_seconds / flee_seconds = time between steps (the player steps every 0.15 s).
+# Optional: rain = "avoids" or "likes" (likes doubles its odds while it rains),
+# weight = how common it is among the species that fit (default 1), glow = true to
+# stay bright at night.
 [[critters]]
 name = "rabbit"
 char = "r"
@@ -382,6 +385,7 @@ flee_seconds = 0.12
 
 [[critters]]
 name = "bird"
+rain = "avoids"
 char = "w"
 color = [[240, 240, 230], [0, 30, 0]]
 biomes = ["meadow", "hillside"]
@@ -394,6 +398,7 @@ flee_seconds = 0.08
 
 [[critters]]
 name = "frog"
+rain = "likes"
 char = "f"
 color = [[90, 200, 80], [0, 0, 80]]
 biomes = ["river"]
@@ -418,6 +423,7 @@ flee_seconds = 0.12
 
 [[critters]]
 name = "firefly"
+glow = true
 char = "•"
 color = [[220, 255, 120], [0, 30, 0]]
 biomes = ["meadow", "river"]
@@ -477,3 +483,92 @@ label = "Royal"
 cost = 1200
 color = [220, 130, 255]
 desc = "Purple robe and a golden crown"
+
+[[critters]]
+name = "butterfly"
+rain = "avoids"
+char = "%"
+color = [[255, 170, 220], [0, 30, 0]]
+biomes = ["meadow"]
+habitat = "land"
+active = "day"
+herd = [1, 3]
+flee_range = 1
+wander_seconds = 0.4
+flee_seconds = 0.2
+
+[[critters]]
+name = "duck"
+rain = "likes"
+char = "e"
+color = [[240, 230, 120], [0, 0, 80]]
+biomes = ["river"]
+habitat = "water"
+active = "day"
+herd = [2, 3]
+flee_range = 3
+wander_seconds = 1.0
+flee_seconds = 0.12
+
+[[critters]]
+name = "owl"
+weight = 0.5
+char = "o"
+color = [[200, 170, 120], [0, 30, 0]]
+biomes = ["meadow", "hillside"]
+habitat = "land"
+active = "night"
+herd = [1, 1]
+flee_range = 3
+wander_seconds = 3.0
+flee_seconds = 0.08
+
+[[critters]]
+name = "fox"
+weight = 0.5
+char = "x"
+color = [[230, 120, 40], [0, 30, 0]]
+biomes = ["meadow", "hillside"]
+habitat = "land"
+active = "any"
+herd = [1, 1]
+flee_range = 6
+wander_seconds = 1.0
+flee_seconds = 0.09
+
+[[critters]]
+name = "goat"
+char = "g"
+color = [[225, 220, 205], [40, 40, 40]]
+biomes = ["hillside"]
+habitat = "land"
+active = "day"
+herd = [2, 3]
+flee_range = 4
+wander_seconds = 1.6
+flee_seconds = 0.12
+
+[[critters]]
+name = "crab"
+char = "c"
+color = [[230, 90, 60], [0, 0, 80]]
+biomes = ["river"]
+habitat = "land"
+active = "any"
+herd = [1, 2]
+flee_range = 2
+wander_seconds = 1.2
+flee_seconds = 0.15
+
+[[critters]]
+name = "glowworm"
+glow = true
+char = "•"
+color = [[150, 255, 200], [10, 10, 10]]
+biomes = ["cave"]
+habitat = "land"
+active = "any"
+herd = [2, 4]
+flee_range = 0
+wander_seconds = 2.5
+flee_seconds = 2.5
