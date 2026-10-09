@@ -16,8 +16,10 @@ DEFAULTS = {
     "vibration": True,
     "shake": 100,  # percent
     "reduce_motion": False,
+    "zoom": 2,  # world magnification on screen (whole numbers keep pixels even)
 }
 SHAKE_STEPS = [100, 50, 0]
+ZOOM_STEPS = [2, 3, 1]
 LABELS = {
     "sound": "Sound effects",
     "ambience": "Ambience",
@@ -25,6 +27,7 @@ LABELS = {
     "vibration": "Vibration",
     "shake": "Screen shake",
     "reduce_motion": "Reduce motion",
+    "zoom": "Zoom",
 }
 
 
@@ -58,15 +61,17 @@ def save(path: str, values: dict) -> None:
 
 def next_value(key: str, value):
     """The value a tap on the setting switches to."""
-    if key == "shake":
-        return (
-            SHAKE_STEPS[(SHAKE_STEPS.index(value) + 1) % len(SHAKE_STEPS)]
-            if value in SHAKE_STEPS
-            else 100
-        )
+    steps = {"shake": SHAKE_STEPS, "zoom": ZOOM_STEPS}.get(key)
+    if steps:
+        return steps[(steps.index(value) + 1) % len(steps)] if value in steps else steps[0]
     return not value
 
 
 def label(key: str, value) -> str:
-    shown = f"{value}%" if key == "shake" else ("on" if value else "off")
+    if key == "shake":
+        shown = f"{value}%"
+    elif key == "zoom":
+        shown = f"{value}x"
+    else:
+        shown = "on" if value else "off"
     return f"{LABELS[key]}: {shown}"

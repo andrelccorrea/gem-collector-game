@@ -44,3 +44,9 @@ def test_shake_cycles_through_levels_and_switches_toggle():
 
 def test_hud_blinks_at_most_three_times_a_second():
     assert FPS / (2 * BLINK_FRAMES) <= 3
+
+
+def test_zoom_uses_whole_steps_and_defaults_to_2x():
+    assert settings.DEFAULTS["zoom"] == 2
+    assert [settings.next_value("zoom", v) for v in (2, 3, 1)] == [3, 1, 2]
+    assert settings.label("zoom", 3) == "Zoom: 3x"

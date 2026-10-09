@@ -37,6 +37,7 @@ from kivy.graphics import (  # noqa: E402
     PopMatrix,
     PushMatrix,
     Rectangle,
+    Scale,
     Translate,
 )
 from kivy.graphics.scissor_instructions import ScissorPop, ScissorPush  # noqa: E402
@@ -173,6 +174,8 @@ class GridView(Widget):
             # The world rows slide (smooth scrolling), clipped so they never cover the HUD.
             self._clip = ScissorPush()
             PushMatrix()
+            # Zoom (world only): screen = cell position * scale + offset, around the player.
+            self._zoom = [(Translate(0, 0), Scale(1, 1, 1))]
             self.scroll = Translate(0, 0)
             for i in range(ROWS * COLS):
                 if i == WORLD_ROWS * COLS:
@@ -180,9 +183,19 @@ class GridView(Widget):
                     ScissorPop()
                 self._bg.append((Color(0, 0, 0, 1), Rectangle()))
                 self._fg.append((Color(1, 1, 1, 1), Rectangle()))
-        self.overlay = InstructionGroup()  # floating texts, redrawn every frame
+        # Creatures, particles and texts over the world: same zoom, same clip.
+        self._overlay_clip = ScissorPush()
+        self.canvas.after.add(self._overlay_clip)
+        self.canvas.after.add(PushMatrix())
+        self._zoom.append((Translate(0, 0), Scale(1, 1, 1)))
+        for instruction in self._zoom[1]:
+            self.canvas.after.add(instruction)
+        self.overlay = InstructionGroup()  # redrawn every frame
         self.canvas.after.add(self.overlay)
         self.canvas.after.add(PopMatrix())
+        self.canvas.after.add(ScissorPop())
+        self.canvas.after.add(PopMatrix())
+        self.zoom, self.zoom_offset = 1.0, (0.0, 0.0)
         self.bind(pos=self._layout, size=self._layout)
         self._renderer = None
         self._shown_sprites: dict = {}
@@ -200,9 +213,9 @@ class GridView(Widget):
                 self._bg[i][1].pos, self._bg[i][1].size = pos, (cw, ch)
                 self._fg[i][1].pos = pos
         world_h = WORLD_ROWS * ch
-        clip = self._clip
-        clip.x, clip.y = int(self.x), int(self.top - world_h)
-        clip.width, clip.height = int(self.width), int(world_h)
+        for clip in (self._clip, self._overlay_clip):
+            clip.x, clip.y = int(self.x), int(self.top - world_h)
+            clip.width, clip.height = int(self.width), int(world_h)
         if self._renderer is not None:
             self._renderer.dirty = {(x, y) for y in range(ROWS) for x in range(COLS)}
         self._shown_sprites = {}
@@ -277,12 +290,35 @@ class GridView(Widget):
         texture = _sprite_texture(layer[0], layer[2])
         return (texture, layer[1] or _WHITE) if texture is not None else None
 
+    def set_zoom(self, zoom: float, anchor) -> None:
+        """Magnify the world around ``anchor`` (unzoomed screen point, e.g. the player),
+        keeping the magnified world covering its whole area (no empty margins)."""
+        cw, ch = self.cell_size()
+        left, right = self.x, self.x + COLS * cw
+        bottom, top = self.top - WORLD_ROWS * ch, self.top
+        if zoom == 1 or anchor is None:
+            zoom, offset = 1.0, (0.0, 0.0)
+        else:
+            ox = (left + right) / 2 - anchor[0] * zoom
+            oy = (bottom + top) / 2 - anchor[1] * zoom
+            ox = min(max(ox, right * (1 - zoom)), left * (1 - zoom))
+            oy = min(max(oy, top * (1 - zoom)), bottom * (1 - zoom))
+            offset = (ox, oy)
+        self.zoom, self.zoom_offset = zoom, offset
+        for translate, scale in self._zoom:
+            translate.xy = offset
+            scale.x = scale.y = zoom
+
     def on_touch_down(self, touch):
         if not self.collide_point(*touch.pos):
             return False
         cw, ch = self.cell_size()
-        x = int((touch.x - self.x) / cw)
-        y = int((self.top - touch.y) / ch)
+        tx, ty = touch.pos
+        if ty > self.top - WORLD_ROWS * ch:  # a tap on the (possibly zoomed) world
+            tx = (tx - self.zoom_offset[0]) / self.zoom
+            ty = (ty - self.zoom_offset[1]) / self.zoom
+        x = int((tx - self.x) / cw)
+        y = int((self.top - ty) / ch)
         self.tap_handler(x, y)
         return True
 
@@ -804,6 +840,7 @@ class GemCollectorApp(App):
         in_world = self.state.active_scene == "game"
         view = camera.render_view(self.state, self.renderer) if in_world else None
         self.slide.update(view, now)
+        self.grid.set_zoom(PREFS["zoom"], self._player_anchor(view, now))
         self.grid.overlay.clear()
         entities, self.renderer.entities = self.renderer.entities, {}
         self.entity_layer.draw(entities, view, now)
@@ -813,6 +850,17 @@ class GemCollectorApp(App):
         self.floats.draw(view, now)
         if self.state.quit_requested:
             self.stop()
+
+    def _player_anchor(self, view, now: float):
+        """Where the player is drawn (gliding included), unzoomed, or None off the world."""
+        track = self.entity_layer.tracks.get("player")
+        if view is None or track is None:
+            return None
+        x, y = _glide(track, now)
+        grid = self.grid
+        cw, ch = grid.cell_size()
+        return (grid.x + (x - view.x + 0.5) * cw + grid.scroll.x,
+                grid.top - (y - view.y + 0.5) * ch + grid.scroll.y)  # fmt: skip
 
     def on_pause(self):
         self.ambience.update(self.state, False, 0.0)
