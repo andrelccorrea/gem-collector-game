@@ -53,9 +53,17 @@ from kivy.uix.popup import Popup  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
 from particles import burst, step  # noqa: E402
 from sfx import write_sounds  # noqa: E402
+from sprites import (  # noqa: E402
+    BLINK_SECONDS,
+    depth,
+    facing,
+    frame_at,
+    idle_frame,
+    sprite_rgba,
+    walk_frame,
+)
 from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
 from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
-from sprites import depth, facing, frame_at, sprite_rgba, walk_frame  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, daylight, persistence, weather  # noqa: E402
@@ -487,6 +495,8 @@ class EntityLayer:
         # entity -> [from_x, from_y, to_x, to_y, start, duration, facing (1 right, -1 left)]
         self.tracks: dict = {}
         self.nudges: dict = {}  # entity -> (dx, dy, start, duration): out-and-back offset
+        self.idle: dict = {}  # entity -> [standing still since, next blink at]
+        self._rng = random.Random()  # visual only: never the game's RNG
 
     def react(self, events, now: float) -> None:
         """Melee feedback: the player lunges at what it hits, and the target recoils."""
@@ -539,7 +549,14 @@ class EntityLayer:
             # Moving (still gliding, or stepped a moment ago): walk cycle; else idle.
             walking = now - track[4] < track[5] + 0.1
             step = walk_frame(sprite, now, phase) if walking else None
-            frame, mirrored = step if step else (frame_at(sprite, now, phase), False)
+            idle = self.idle.setdefault(entity, [now, now + self._rng.uniform(2, 6)])
+            if walking:
+                idle[0] = now
+            if now > idle[1] + BLINK_SECONDS:  # blinks come at irregular times
+                idle[1] = now + self._rng.uniform(2, 6)
+            blinking = idle[1] <= now <= idle[1] + BLINK_SECONDS
+            frame = idle_frame(sprite, now, now - idle[0], blinking, phase)
+            frame, mirrored = step if step else (frame, False)
             if facing(sprite) * track[6] < 0:
                 mirrored = not mirrored
             texture = _sprite_texture(sprite, frame)
@@ -563,6 +580,7 @@ class EntityLayer:
             coords = _MIRRORED if mirrored else _UPRIGHT
             overlay.add(Rectangle(texture=texture, pos=pos, size=(cw, ch), tex_coords=coords))
         self.tracks = tracks
+        self.idle = {entity: self.idle[entity] for entity in tracks if entity in self.idle}
 
 
 _UPRIGHT = (0, 0, 1, 0, 1, 1, 0, 1)

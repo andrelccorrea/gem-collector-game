@@ -143,3 +143,15 @@ def test_depth_marks_fliers_hoppers_and_shadowless_things():
     assert sprites.depth("fish")[2] is False and sprites.depth("deer")[2] is True
     assert sprites.depth("player~royal") == sprites.depth("player")
     assert set(sprites.ALTITUDE) | set(sprites.HOP) | sprites.NO_SHADOW <= set(sprites.SPRITES)
+
+
+def test_idle_variety_blinks_and_special_idles():
+    assert sprites.idle_frame("player", 0.0, 0.0, blinking=True) == sprites.BLINK["player"]
+    assert sprites.idle_frame("player", 0.0, 1.0, blinking=False) in sprites.IDLE["player"]
+    later = sprites.SPECIAL_AFTER
+    assert sprites.idle_frame("deer", 0.0, later, blinking=False) == sprites.SPECIAL["deer"][0]
+    shown = {sprites.idle_frame("dog", 0.0, later + i / 10, False) for i in range(200)}
+    assert set(sprites.SPECIAL["dog"]) <= shown and shown & set(sprites.IDLE["dog"])
+    for sprite_id, frames in sprites.SPECIAL.items():
+        assert max(frames) < sprites.frame_count(sprite_id)
+    assert sprites.idle_frame("player~miner", 0.0, 0.0, True) == sprites.BLINK["player"]

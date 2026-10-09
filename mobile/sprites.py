@@ -1071,6 +1071,9 @@ FRAMES = {
             {9: "s.uuuu..", 10: "..uuuus.", 13: ".j...j..", 14: "j.....j.", 15: "ZZ....ZZ"},
         ),
         _swap(SPRITES["player"], {13: "...jj...", 14: "...jj...", 15: "..ZZZZ.."}),
+        # idle fidgets: blink (frame 4), glance aside (frame 5)
+        _swap(SPRITES["player"], {5: "..ssss.."}),
+        _swap(SPRITES["player"], {5: "..ZsZs.."}),
     ],
     "bear": [["........"] + SPRITES["bear"][:15]],
     "cave_bat": [  # wings up
@@ -1080,8 +1083,27 @@ FRAMES = {
         ),
     ],
     "snake": [_swap(SPRITES["snake"], {8: "...ffff.", 7: "...fZffS"})],  # tongue
-    "rabbit": [["........"] * 2 + SPRITES["rabbit"][:14]],  # hop
-    "deer": [_swap(SPRITES["deer"], {11: ".8..8.8.", 12: ".8..8.8.", 13: ".O..O.O."})],
+    "rabbit": [
+        ["........"] * 2 + SPRITES["rabbit"][:14],  # hop
+        _swap(SPRITES["rabbit"], {9: ".77+777."}),  # sniffing (frame 2)
+    ],
+    "deer": [
+        _swap(SPRITES["deer"], {11: ".8..8.8.", 12: ".8..8.8.", 13: ".O..O.O."}),
+        # grazing: head down (frame 2)
+        _swap(
+            SPRITES["deer"],
+            {
+                4: "........",
+                5: "........",
+                6: "........",
+                7: "........",
+                10: "8Z888888",
+                11: "88.8..8.",
+                12: "O..8..8.",
+                13: "...O..O.",
+            },
+        ),
+    ],
     "bird": [_swap(SPRITES["bird"], {7: "........", 8: "99....99", 9: ".999999."})],
     "frog": [_swap(SPRITES["frog"], {13: ".3....3.", 12: ".333333."})],
     "fish": [_shifted(SPRITES["fish"], 1)],
@@ -1107,7 +1129,10 @@ FRAMES = {
     "goat": [_swap(SPRITES["goat"], {12: "..7.7.7.", 13: "..Z.Z.Z."})],
     "crab": [_swap(SPRITES["crab"], {8: "........", 9: "^^...^^."})],
     "glowworm": [_swap(SPRITES["glowworm"], {7: "........", 8: "...*....", 9: "..***..."})],
-    "dog": [_swap(SPRITES["dog"], {12: "..8.8..8", 13: "..8.8..8", 14: "..O.O..O", 8: "O....888"})],
+    "dog": [
+        _swap(SPRITES["dog"], {12: "..8.8..8", 13: "..8.8..8", 14: "..O.O..O", 8: "O....888"}),
+        _swap(SPRITES["dog"], {7: "O....8Z8", 8: ".....888"}),  # tail wag (frame 2)
+    ],
 }
 FPS = {"stream": 4, "shallow": 4, "lake": 2, "deep": 2, "tree": 1, "rich_ore": 2,
        "gem": 3, "player": 2, "bear": 2, "cave_bat": 6, "snake": 2, "rabbit": 2,
@@ -1134,7 +1159,11 @@ for _name in (
 ):
     WALK[_name] = [(0, False), (1, False)]
 # Frames of the idle cycle, where they are not all of the sprite's frames.
-IDLE = {"player": [0, 1]}
+IDLE = {"player": [0, 1], "deer": [0, 1], "rabbit": [0, 1], "dog": [0, 1]}
+# Idle variety: a blink now and then (BLINK) and, after standing still a while, a
+# special idle (SPECIAL, shown in a slow cycle with pauses).
+BLINK = {"player": 4}
+SPECIAL = {"player": [5, 0, 5], "deer": [2, 2, 2, 0], "rabbit": [2, 0, 2], "dog": [2, 0, 2, 0]}
 # Which way a sprite looks as drawn (1 = right, -1 = left, 0 = symmetric): it is
 # mirrored to face the way it moves.
 FACING = {"deer": -1, "fish": -1, "snake": 1, "dog": 1, "duck": -1, "fox": 1, "goat": -1}
@@ -1153,6 +1182,25 @@ def depth(sprite_id: str) -> tuple:
     """(altitude, hop height, casts a shadow) for a sprite."""
     base = _base(sprite_id)
     return ALTITUDE.get(base, 0.0), HOP.get(base, 0.0), base not in NO_SHADOW
+
+
+SPECIAL_AFTER = 8.0  # seconds standing still before special idles start
+SPECIAL_FPS = 1.5
+SPECIAL_PAUSE = 6  # cycle steps of plain idle between two special idles
+BLINK_SECONDS = 0.15
+
+
+def idle_frame(sprite_id: str, seconds: float, still_for: float, blinking: bool, phase=0):
+    """Frame of a standing sprite: a blink, a special idle after a while, or its idle."""
+    base = _base(sprite_id)
+    if blinking and base in BLINK:
+        return BLINK[base]
+    special = SPECIAL.get(base)
+    if special and still_for >= SPECIAL_AFTER:
+        step = int((still_for - SPECIAL_AFTER) * SPECIAL_FPS) % (len(special) + SPECIAL_PAUSE)
+        if step < len(special):
+            return special[step]
+    return frame_at(sprite_id, seconds, phase)
 
 
 def walk_frame(sprite_id: str, seconds: float, phase: int = 0):
