@@ -8,6 +8,7 @@ from game import (
     dog,
     enemies,
     hud,
+    merchant,
     player,
     profile,
     weather,
@@ -80,6 +81,7 @@ class GameScene(Scene):
         camera.render_viewport(renderer, state, view)
         critters.render_critters(renderer, state, view)
         dog.render_dog(renderer, state, view)
+        merchant.render_cart(renderer, state, view)
         enemies.render_enemies(renderer, state, view)
         player.render_player(renderer, state, view)
         weather.render_rain(renderer, state, view)

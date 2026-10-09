@@ -86,6 +86,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
 | `gems.py` | `effective_tier(tool, level)`, `roll_gem_drop(biome, tier, rng)` (gems need `min_tier`), bag capacity/count, polished prices (one per gem, highest first), `roll_cut_value`, geodes (`GEODE`, `crack_geode`) |
 | `regrow.py` | Worked-out tiles regrow one game day after they were dug/panned (`state.depleted_at`, oldest first), so the world can't run dry before the goal |
+| `merchant.py` | Traveling merchant: ~40% of game days a cart sets up beside a landmark (stable hash); 2 of 5 offers, one each, and buys a wanted gem at 2x (5/day); Use on the cart opens `scenes/merchant_cart.py`; `merchant_log` saved |
 | `market.py` | All selling: per-kind saturation lowers prices (recovers over game time), `sell_one`/`sell_all`/`preview_sell_all` |
 | `fog.py` | `update_fog`: tiles within the lantern's radius and in line of sight (trees, rock and cave walls block it) are visible; recomputed only when the player moves or the light changes (`state.fog_key`) |
 | `lantern.py` | Fuel drains per biome, refills in town; `light_radius` sets the fog radius |
@@ -122,7 +123,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 ### Scene Graph
 
 `state.active_scene` names the current screen; `main.py` hands each frame to `SceneManager.frame()`, which calls `enter()` on a switch, then `update()`, then `render()` (skipped if the update switched away). New screens must be registered in `game/scenes/__init__.py::build_scenes()` (a test checks every name assigned in `game/`).
-`menu` → `game` → `map` / `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `bestiary` / `stats` / `leaderboard`
+`menu` → `game` → `map` / `merchant` / `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `bestiary` / `stats` / `leaderboard`
 
 ### Key Invariants
 

@@ -6,7 +6,6 @@ the seed (never the gameplay RNG), so a seed's world always has the same ones; t
 on walkable ground and never change where anyone can walk.
 """
 
-from game.constants import MAP_HEIGHT, MAP_WIDTH
 from game.decor import stable_random
 from game.events import GAIN_COLOR, LOOT, emit
 from game.geography import biome_at, in_town
@@ -40,20 +39,22 @@ def landmarks(state) -> dict:
 
 
 def _place(state) -> dict:
+    """Pick each kind's spots among the tiles that fit it (its ground, its biome, out of
+    town, no gem on it), by stable hash, keeping them SPACING apart."""
     meta = state.world_tiles.meta
+    fitting: dict = {}
+    for (x, y), tile in meta.items():
+        if in_town(x, y, 3) or (x, y) in state.world_gems:
+            continue
+        fitting.setdefault((tile["type"], biome_at(x, y)), []).append((x, y))
     placed: dict = {}
     for k, (kind, (_, ground, biome, count, _, _)) in enumerate(LANDMARKS.items()):
+        candidates = sorted(fitting.get((ground, biome), []))
         wanted = count
-        for i in range(600):
-            if not wanted:
+        for i in range(60):
+            if not wanted or not candidates:
                 break
-            x = int(stable_random(state.seed, k, i, 1) * MAP_WIDTH)
-            y = int(stable_random(state.seed, k, i, 2) * MAP_HEIGHT)
-            tile = meta.get((x, y))
-            if tile is None or tile["type"] != ground or biome_at(x, y) != biome:
-                continue
-            if in_town(x, y, 3) or (x, y) in state.world_gems:
-                continue
+            x, y = candidates[int(stable_random(state.seed, k, i, 1) * len(candidates))]
             if any(max(abs(x - px), abs(y - py)) < SPACING for px, py in placed):
                 continue
             placed[(x, y)] = kind

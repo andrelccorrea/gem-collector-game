@@ -52,7 +52,7 @@ class SceneManager:
 
 def build_scenes() -> dict:
     from game import menu
-    from game.scenes import lapidary, save_point, shop, world_map
+    from game.scenes import lapidary, merchant_cart, save_point, shop, world_map
     from game.scenes.game import GameScene
 
     return {
@@ -69,6 +69,7 @@ def build_scenes() -> dict:
         "bestiary": FunctionScene(menu.update_leaderboard, menu.render_bestiary),
         "stats": FunctionScene(menu.update_leaderboard, menu.render_stats),
         "map": FunctionScene(world_map.update_map, world_map.render_map),
+        "merchant": FunctionScene(merchant_cart.update_merchant, merchant_cart.render_merchant),
         "daily_end": FunctionScene(menu.update_daily_end, menu.render_daily_end),
         "perks": FunctionScene(menu.update_perks, menu.render_perks),
     }

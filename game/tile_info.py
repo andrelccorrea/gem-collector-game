@@ -1,6 +1,6 @@
 """One-line description of the tile the player stands on, for the HUD."""
 
-from game import dowsing
+from game import dowsing, merchant
 from game.constants import (
     TYPE_BANK,
     TYPE_CAVE_FLOOR,
@@ -93,6 +93,8 @@ def describe_here(state) -> str:
     gem = state.world_gems.get((state.player_x, state.player_y))
     if gem is not None:
         parts.append(f"Gem: {gem.title()} - pick up with {_tools_for(tile_type)}")
+    if merchant.here(state):
+        parts.append(f"A traveling merchant - {hint_label(Action.USE, 'Trade')}")
     if bag_here(state):
         parts.append(f"Your dropped bag - {hint_label(Action.USE, 'Recover')}")
     rod = dowsing.hint(state)

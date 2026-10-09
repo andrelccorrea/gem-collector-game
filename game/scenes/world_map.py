@@ -5,6 +5,7 @@ telling explored tile; unexplored blocks stay blank. Markers show the player, th
 landmarks already visited and a dropped bag. Game time is frozen while it is open.
 """
 
+from game import merchant
 from game.constants import (
     COLOR_MENU_DIMMED,
     COLOR_MENU_TITLE,
@@ -83,12 +84,15 @@ def render_map(renderer, state) -> None:
     for (lx, ly), _kind in landmarks(state).items():
         if (lx, ly) in state.visited_landmarks:
             renderer.set_cell(*cell(lx, ly), "*", _MARK)
+    visit = merchant.today(state)
+    if visit and meta.get(visit["pos"], {}).get("visibility", "unseen") != "unseen":
+        renderer.set_cell(*cell(*visit["pos"]), "M", _MARK)
     if state.dropped_bag is not None:
         renderer.set_cell(*cell(state.dropped_bag["x"], state.dropped_bag["y"]), "&", _MARK)
     renderer.set_cell(*cell(TOWN_CENTER_X, TOWN_CENTER_Y), "T", _MARK)
     renderer.set_cell(*cell(state.player_x, state.player_y), PLAYER_CHAR, _MARK_PLAYER)
 
-    legend = (f"{PLAYER_CHAR} you   T town   * landmark visited   & your bag   "
+    legend = (f"{PLAYER_CHAR} you  T town  * landmark  M merchant  & your bag  "
               f"[{hint_of(Action.MAP)}/{hint_of(Action.CANCEL)}] Close")  # fmt: skip
     write_str(renderer, renderer.height - 1, max(0, (width - len(legend)) // 2), legend[:width],
               COLOR_MENU_DIMMED)  # fmt: skip

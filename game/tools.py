@@ -1,4 +1,4 @@
-from game import stats, trinkets
+from game import merchant, stats, trinkets
 from game.constants import (
     TYPE_LAKE,
     TYPE_LAPIDARY,
@@ -59,6 +59,11 @@ def use_tool(inp: InputState, state) -> None:
     compatible_types = tool_def.compatible_types if tool_def is not None else ()
 
     pos = (state.player_x, state.player_y)
+
+    if merchant.here(state):
+        state.shop_cursor = 0
+        state.active_scene = "merchant"
+        return
 
     if bag_here(state):
         taken = recover_bag(state)
