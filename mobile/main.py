@@ -53,9 +53,10 @@ from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
 from sprites import facing, frame_at, sprite_rgba, walk_frame  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
-from game import camera, persistence, weather  # noqa: E402
+from game import camera, daylight, persistence, weather  # noqa: E402
 from game.constants import FPS, HUD_ROWS, MOVE_COOLDOWN  # noqa: E402
 from game.events import COIN, DENIED, FIND, HIT, HURT, take_events  # noqa: E402
+from game.geography import biome_at  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
 from game.state import GameState  # noqa: E402
@@ -612,6 +613,52 @@ class SoundEffects:
             self.vibrator.vibrate(buzz)
 
 
+AMBIENCE_VOLUME = 0.35
+
+
+class Ambience:
+    """Background sound: a looping bed for the place (rain, breeze or the cave's hum)
+    with one-shots scattered over it at irregular times and distances (volumes):
+    birdsong by day, crickets at night, drips underground. Silent outside the world."""
+
+    def __init__(self, sfx: "SoundEffects"):
+        self.sfx = sfx
+        self.bed = None
+        self.next_call = 0.0
+        self._rng = random.Random()
+
+    def _set_bed(self, name) -> None:
+        if name == self.bed:
+            return
+        for sound_name in (self.bed, name):
+            sound = self.sfx.sounds.get(sound_name) if sound_name else None
+            if sound is not None and sound_name == self.bed:
+                sound.stop()
+            elif sound is not None:
+                sound.loop = True
+                sound.volume = AMBIENCE_VOLUME
+                sound.play()
+        self.bed = name
+
+    def update(self, state, in_world: bool, now: float) -> None:
+        if not (in_world and self.sfx.enabled):
+            self._set_bed(None)
+            return
+        underground = biome_at(state.player_x, state.player_y) == "cave"
+        raining = weather.rain_here(state)
+        self._set_bed("cave" if underground else "rain" if raining else "breeze")
+        if now < self.next_call:
+            return
+        self.next_call = now + self._rng.uniform(1.5, 6.0)
+        night = daylight.phase(state)[0] == "night"
+        call = "drip" if underground else None if raining else "cricket" if night else "chirp"
+        sound = self.sfx.sounds.get(call) if call else None
+        if sound is not None:
+            sound.volume = self._rng.uniform(0.15, 0.5)  # near or far
+            sound.stop()
+            sound.play()
+
+
 class GemCollectorApp(App):
     title = "Gem Collector"
 
@@ -628,6 +675,7 @@ class GemCollectorApp(App):
         self.settings = JsonStore(os.path.join(self.user_data_dir, "settings.json"))
         sound_on = self.settings.get("sound")["on"] if self.settings.exists("sound") else True
         self.sfx = SoundEffects(os.path.join(self.user_data_dir, "sfx"), sound_on)
+        self.ambience = Ambience(self.sfx)
 
         root = BoxLayout(orientation="horizontal")
         self.grid = GridView(tap_handler=self._tap_cell, size_hint=(0.74, 1))
@@ -730,11 +778,13 @@ class GemCollectorApp(App):
         self.entity_layer.draw(entities, view, now)
         self.particles.draw(view, now)  # under the texts
         self.rain.draw(view is not None and weather.rain_here(self.state), now)
+        self.ambience.update(self.state, view is not None, now)
         self.floats.draw(view, now)
         if self.state.quit_requested:
             self.stop()
 
     def on_pause(self):
+        self.ambience.update(self.state, False, 0.0)
         # Android may kill a paused app: keep a run that is being played.
         if persistence.autosave_allowed(self.state):
             persistence.save_game(self.state)

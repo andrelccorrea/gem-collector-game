@@ -14,7 +14,7 @@ import wave
 
 RATE = 22050
 VOLUME = 0.45
-VERSION = 4  # bump when a sound changes, so cached WAV files are rendered again
+VERSION = 5  # bump when a sound changes, so cached WAV files are rendered again
 
 # Each sound is a list of segments: (wave, start Hz, end Hz, seconds, loudness).
 # The pitch slides from start to end; every segment fades out (a "pluck").
@@ -45,6 +45,23 @@ SOUNDS = {
         ("square", 330, 220, 0.07, 0.4),
     ],
     "detect": [("sine", 1050, 1050, 0.05, 0.3), ("sine", 1400, 1400, 0.08, 0.3)],
+    # Ambience: looping beds and one-shots scattered over them (played by the frontend).
+    "rain": [("hiss", 0, 0, 2.0, 0.5)],
+    "breeze": [("hiss", 0, 0, 2.0, 0.15)],
+    "cave": [("hum", 70, 70, 2.0, 0.25)],
+    "chirp": [
+        ("sine", 2600, 3400, 0.06, 0.3),
+        ("silence", 0, 0, 0.04, 0),
+        ("sine", 2800, 3600, 0.08, 0.3),
+    ],
+    "cricket": [
+        ("square", 4400, 4400, 0.02, 0.12),
+        ("silence", 0, 0, 0.03, 0),
+        ("square", 4400, 4400, 0.02, 0.12),
+        ("silence", 0, 0, 0.03, 0),
+        ("square", 4400, 4400, 0.02, 0.12),
+    ],
+    "drip": [("sine", 1300, 650, 0.07, 0.35)],
     "achievement": [  # little fanfare: C E G C'
         ("square", 523, 523, 0.07, 0.35),
         ("square", 659, 659, 0.07, 0.35),
@@ -54,9 +71,15 @@ SOUNDS = {
 }
 
 
+# Loops for ambience beds: a steady level with short fades at both ends, so the loop
+# point is not heard (one-shots fade out like a pluck instead).
+_STEADY = {"hiss", "hum"}
+
+
 def _segment(shape: str, start: float, end: float, seconds: float, loud: float, rng) -> list:
     count = int(RATE * seconds)
-    samples, phase = [], 0.0
+    samples, phase, smooth = [], 0.0, 0.0
+    edge = RATE * 0.03
     for i in range(count):
         t = i / max(count - 1, 1)
         phase += 2 * math.pi * (start + (end - start) * t) / RATE
@@ -66,10 +89,19 @@ def _segment(shape: str, start: float, end: float, seconds: float, loud: float, 
             value = 1.0 if math.sin(phase) >= 0 else -1.0
         elif shape == "noise":
             value = rng.uniform(-1, 1)
+        elif shape == "hiss":  # soft (low-passed) noise: rain, wind
+            smooth = smooth * 0.85 + rng.uniform(-1, 1) * 0.15
+            value = smooth * 3
+        elif shape == "hum":
+            value = math.sin(phase) * 0.7 + math.sin(phase * 1.5) * 0.3
         else:
             value = 0.0
-        attack = min(1.0, i / (RATE * 0.004))  # 4 ms fade-in avoids a click
-        samples.append(value * loud * attack * (1 - t) ** 2)
+        if shape in _STEADY:
+            envelope = min(1.0, i / edge, (count - i) / edge)
+        else:
+            attack = min(1.0, i / (RATE * 0.004))  # 4 ms fade-in avoids a click
+            envelope = attack * (1 - t) ** 2
+        samples.append(value * loud * envelope)
     return samples
 
 
