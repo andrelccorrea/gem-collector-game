@@ -32,7 +32,7 @@ class SpriteRecorder(StubRenderer):
 def test_every_sprite_the_game_draws_has_pixel_art():
     needed = set(TILE_PROPS) | {"depleted", "player", "gem", "bag"} | set(ENEMY_CATALOG)
     needed |= set(DECOR_NAMES)
-    needed |= set(CRITTERS)
+    needed |= set(CRITTERS) | {"dog"}
     assert needed <= set(sprites.SPRITES)
 
 

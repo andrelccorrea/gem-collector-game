@@ -101,6 +101,8 @@ class GameState:
     armor_level: int = 0
     boots_level: int = 0
     dowsing_level: int = 0
+    has_dog: bool = False
+    dog: Any = None  # {"x", "y", "timer", "bark"} while it follows (game/dog.py); not saved
     dowse_tier: Any = None  # last hot/cold tier of the rod (game/dowsing.py); not saved
     # Run-long bonuses from perks bought between runs (game/profile.py)
     bag_bonus: int = 0

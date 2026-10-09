@@ -629,6 +629,24 @@ SPRITES = {
         "........",
         "........",
     ],
+    "dog": [  # companion (game/dog.py)
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "......O.",
+        ".....88O",
+        ".....8Z8",
+        "O....888",
+        ".8888888",
+        ".888888.",
+        ".88888..",
+        ".8..8.8.",
+        ".8..8.8.",
+        ".O..O.O.",
+        "........",
+    ],
     "bear": [
         "........",
         "........",
@@ -739,23 +757,35 @@ FRAMES = {
     "fish": [_shifted(SPRITES["fish"], 1)],
     "firefly": [_swap(SPRITES["firefly"], {5: "........", 6: "...0....", 7: "........"})],
     "beetle": [_swap(SPRITES["beetle"], {12: ".i.ii.i."})],
+    "dog": [_swap(SPRITES["dog"], {12: "..8.8..8", 13: "..8.8..8", 14: "..O.O..O", 8: "O....888"})],
 }
 FPS = {"stream": 4, "shallow": 4, "lake": 2, "deep": 2, "tree": 1, "rich_ore": 2,
        "gem": 3, "player": 2, "bear": 2, "cave_bat": 6, "snake": 2, "rabbit": 2,
-       "deer": 1, "bird": 6, "frog": 1, "fish": 3, "firefly": 3, "beetle": 4}  # fmt: skip
+       "deer": 1, "bird": 6, "frog": 1, "fish": 3, "firefly": 3, "beetle": 4, "dog": 2}  # fmt: skip
 
 
 # Frames shown while a thing moves, as (frame, mirrored) at WALK_FPS. The player's
 # walk is "draw two, mirror two": both poses, then both mirrored for the other leg.
 WALK_FPS = 8
 WALK = {"player": [(2, False), (3, False), (2, True), (3, True)]}
-for _name in ("rabbit", "deer", "bear", "snake", "frog", "fish", "beetle", "bird", "cave_bat"):
+for _name in (
+    "rabbit",
+    "deer",
+    "bear",
+    "snake",
+    "frog",
+    "fish",
+    "beetle",
+    "bird",
+    "cave_bat",
+    "dog",
+):
     WALK[_name] = [(0, False), (1, False)]
 # Frames of the idle cycle, where they are not all of the sprite's frames.
 IDLE = {"player": [0, 1]}
 # Which way a sprite looks as drawn (1 = right, -1 = left, 0 = symmetric): it is
 # mirrored to face the way it moves.
-FACING = {"deer": -1, "fish": -1, "snake": 1}
+FACING = {"deer": -1, "fish": -1, "snake": 1, "dog": 1}
 
 
 def walk_frame(sprite_id: str, seconds: float, phase: int = 0):

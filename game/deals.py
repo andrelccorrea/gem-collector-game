@@ -15,7 +15,7 @@ GEAR = ("bag", "lantern", "armor", "dowsing rod", "boots")
 
 def _candidates() -> list:
     tools = [name for name, tool in TOOL_CATALOG.items() if tool.cost > 0]
-    return tools + list(GEAR) + list(SUPPLIES) + ["recall_charm"]
+    return tools + list(GEAR) + list(SUPPLIES) + ["recall_charm", "dog"]
 
 
 def deal_key(state) -> str:

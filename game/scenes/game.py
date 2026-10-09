@@ -1,6 +1,6 @@
 """The playable world: fixed-step simulation plus once-per-frame drawing."""
 
-from game import achievements, camera, critters, enemies, hud, player, profile
+from game import achievements, camera, critters, dog, enemies, hud, player, profile
 from game.input import InputState
 from game.loop import FixedTimestep
 from game.scenes import Scene
@@ -42,6 +42,7 @@ class GameScene(Scene):
         view = camera.render_view(state, renderer)
         camera.render_viewport(renderer, state, view)
         critters.render_critters(renderer, state, view)
+        dog.render_dog(renderer, state, view)
         enemies.render_enemies(renderer, state, view)
         player.render_player(renderer, state, view)
         hud.render_hud(renderer, state, self.hud_pulse)

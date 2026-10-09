@@ -10,6 +10,7 @@ from game.constants import (
     MOVE_COOLDOWN,
     RECALL_CHARM_COST,
 )
+from game.dog import DOG_COST
 from game.events import COIN, DENIED, DULL_COLOR, GAIN_COLOR, emit
 from game.gems import polished_prices
 from game.input import Action, InputState
@@ -87,6 +88,18 @@ def _build_shop_items(state) -> list:
                 "action": "buy_charm",
                 "key": "recall_charm",
                 "cost": charm_cost,
+                "value": 0,
+            }
+        )
+        dog_cost = deals.price(state, "dog", DOG_COST)
+        items.append(
+            {
+                "label": f"  {'Dog':16s}  "
+                + ("(Owned)" if state.has_dog else _price_tag(dog_cost, DOG_COST)),
+                "enabled": not state.has_dog and state.player_gold >= dog_cost,
+                "action": "buy_dog",
+                "key": "dog",
+                "cost": dog_cost,
                 "value": 0,
             }
         )
@@ -324,6 +337,8 @@ def _describe(item: dict) -> str:
         return f"One use: {hint_of(Action.RECALL)} takes you back to town from anywhere"
     if action == "buy_supply":
         return f"{SUPPLIES[key]['desc']}. [{hint_of(Action.USE_ITEM)}] uses the most needed supply"
+    if action == "buy_dog":
+        return "A loyal dog: follows you and barks when an enemy comes near (for this run)"
     if action == "outfit":
         return f"{OUTFITS[key]['desc']} (cosmetic only, kept for every run)"
     return ""
@@ -449,6 +464,17 @@ def update_shop(inp: InputState, state) -> None:
             state.player_gold -= item["cost"]
             state.recall_charms += 1
             set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
+            _chime(state)
+
+    elif action == "buy_dog":
+        if state.has_dog:
+            _refuse(state, "Already owned!")
+        elif state.player_gold < item["cost"]:
+            _refuse(state, "Not enough gold!")
+        else:
+            state.player_gold -= item["cost"]
+            state.has_dog = True
+            set_hud_message(state, "A dog joins you! It will warn you of danger.", 2.5)
             _chime(state)
 
     elif action == "outfit":
