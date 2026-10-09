@@ -297,8 +297,8 @@ unlock_at = [0, 0, 1500, 4000]
 
 [boots]
 # Time between steps per boots level, as a share of MOVE_COOLDOWN (lower is faster)
-step_multipliers = [1.0, 0.85, 0.7]
-costs = [0, 130, 340]
+step_multipliers = [1.0, 0.9, 0.8]
+costs = [0, 200, 500]
 unlock_at = [0, 0, 2000]
 
 [dowsing]

@@ -172,4 +172,5 @@ def _deplete_tile(state, x: int, y: int) -> None:
     meta["depleted"] = True
     meta["interactable"] = False
     state.depleted_tiles.add((x, y))
+    state.depleted_at[(x, y)] = state.game_time
     state.world_tiles.meta[(x, y)] = meta

@@ -19,6 +19,7 @@ from game import (
     lantern,
     market,
     player,
+    regrow,
     supplies,
     tips,
     tools,
@@ -45,6 +46,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     """Advance the game by one fixed step. Returns False once the scene changed."""
     state.game_time += dt
     market.update_market(state, dt)
+    regrow.update_regrowth(state)
 
     # Enemy spawning and movement
     enemies.spawn_enemies(state, dt)

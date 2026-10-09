@@ -1,6 +1,6 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 16, compact JSON):
+Save format (``schema_version`` 17, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
     lapidary_level, bag_level, armor_level, boots_level, dowsing_level, has_dog,
@@ -9,7 +9,7 @@ Save format (``schema_version`` 16, compact JSON):
     lantern {level, fuel}, hardcore, dropped_bag {x, y, gems, loot, polished} or null,
     recall_charms, supplies {key: count}, museum,
     perk_bonuses {bag, lantern}, run_id,
-    depleted_tiles [[x, y]...],
+    depleted_tiles [[x, y]...], depleted_at [[x, y, game time]...], game_time,
     world_gems [[x, y, name]...], fog (run-length string, row-major),
     rng_state (gameplay RNG state, so a continued run keeps its roll sequence)
 
@@ -26,7 +26,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 DAILY_NAME = "daily.json"
@@ -276,6 +276,15 @@ def _migrate_v15_to_v16(data: dict) -> dict:
     return data
 
 
+def _migrate_v16_to_v17(data: dict) -> dict:
+    """v17 keeps the game clock (days, deals, contracts and weather go on after a load)
+    and when each tile was worked out, so ground regrows; older saves start the clock
+    at zero with every worked tile fresh from that moment."""
+    data["game_time"] = 0.0
+    data["depleted_at"] = [[x, y, 0.0] for x, y in data.get("depleted_tiles", [])]
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -294,6 +303,7 @@ MIGRATIONS = {
     13: _migrate_v13_to_v14,
     14: _migrate_v14_to_v15,
     15: _migrate_v15_to_v16,
+    16: _migrate_v16_to_v17,
 }
 
 
@@ -356,6 +366,8 @@ def save_game(state) -> str | None:
         "museum": state.museum,
         "perk_bonuses": {"bag": state.bag_bonus, "lantern": state.lantern_bonus},
         "depleted_tiles": [[x, y] for x, y in sorted(state.depleted_tiles)],
+        "depleted_at": [[x, y, t] for (x, y), t in state.depleted_at.items()],
+        "game_time": state.game_time,
         "world_gems": [[x, y, name] for (x, y), name in sorted(state.world_gems.items())],
         "fog": _encode_fog(state.world_tiles.meta),
         "rng_state": [version, list(internal), gauss_next],
@@ -481,6 +493,8 @@ def _state_from_save(data: dict):
 def _restore_map(state, data: dict) -> None:
     """Re-apply depleted tiles, picked-up gems and fog to the regenerated world."""
     state.depleted_tiles = set()
+    state.game_time = float(data["game_time"])
+    state.depleted_at = {(int(x), int(y)): float(t) for x, y, t in data["depleted_at"]}
     for x, y in data.get("depleted_tiles", []):
         state.depleted_tiles.add((x, y))
         _deplete_tile_on_surface(state, x, y)

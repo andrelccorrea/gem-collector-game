@@ -94,3 +94,35 @@ won 10/10, died 0
 median minutes to win: 16.1
 median gold/min: 685
 ```
+
+## New gear, regrowth and a soft-lock (2026-10-09)
+
+The bot buys the cheapest affordable tool or upgrade, so it now also buys armor, boots,
+the dowsing rod and the drill (it ignores supplies, the dog, outfits and contracts).
+
+**Soft-lock found:** with the drill, 2 of 10 seeds dug out every spot the bot could reach
+in ~16 min and stalled at $9,417 earned (157 gold/min over the hour): nothing left to
+dig, and a bag not full enough to send it home. A slow human could hit the same wall.
+Fixes: worked-out ground regrows one game day (6 min) after it was dug or panned
+(`game/regrow.py`), the bot sells when it finds nothing to work, and saves now keep the
+game clock (so days, deals, contracts, weather and regrowth carry over a load).
+
+Pacing levers measured (10 seeds, median minutes to win; previous baseline 16.1):
+
+| change | median min | gold/min |
+|---|---|---|
+| all new gear, boots x0.85/x0.7 | 14.0 | 733 |
+| drill at 1000 / 1500 gold (instead of 600) | 13.9 / 13.8 | 742 / 765 |
+| boots disabled | 15.7 | 646 |
+| boots x0.9/x0.8 | 14.7 | 708 |
+| **chosen: boots x0.9/x0.8 at 200/500 gold** | 13.8 | 738 |
+
+The boots, not the drill, explain most of the speed-up; differences under about a minute
+are within seed noise. The bot remains a lower bound for humans, and still never dies:
+enemies stay a light threat for a player who fights back.
+
+```
+won 10/10, died 0
+median minutes to win: 13.8
+median gold/min: 738
+```

@@ -68,6 +68,7 @@ class Bot:
         self.goal = None
         self.unreachable: set = set()
         self._idle_steps = 0  # wait before searching again after finding nothing
+        self._nothing_left = False  # found nothing to work: sell what it carries
         self.earnings_by_biome: dict = {}
         self._known_gems = dict(state.inventory["gems"])
 
@@ -85,6 +86,7 @@ class Bot:
             if (s.player_x, s.player_y) == (SHOP_X, SHOP_Y):
                 self._trade()
                 self.goal = None
+                self._nothing_left = False
                 return InputState()
             return self._walk_to((SHOP_X, SHOP_Y))
 
@@ -96,6 +98,8 @@ class Bot:
             self.goal = self._nearest_workable() or self._nearest_workable(limit=None)
             self.path = []
             if self.goal is None:
+                # Nothing left to work nearby: sell what it carries while ground regrows.
+                self._nothing_left = True
                 self._idle_steps = 300
                 return InputState()
         if (s.player_x, s.player_y) == self.goal:
@@ -111,7 +115,8 @@ class Bot:
         low_hp = s.player_hp < s.player_max_hp * self.retreat_hp
         low_light = fuel_share(s) < self.retreat_light
         healing = low_hp and (s.player_x, s.player_y) == (SHOP_X, SHOP_Y)
-        return full or low_hp or healing or low_light
+        idle = self._nothing_left and bag_count(s) > 0
+        return full or low_hp or healing or low_light or idle
 
     # ── World queries ─────────────────────────────────────────────────────────
 

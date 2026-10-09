@@ -84,6 +84,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
 | `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
 | `gems.py` | `effective_tier(tool, level)`, `roll_gem_drop(biome, tier, rng)` (gems need `min_tier`), bag capacity/count, polished prices (one per gem, highest first), `roll_cut_value`, geodes (`GEODE`, `crack_geode`) |
+| `regrow.py` | Worked-out tiles regrow one game day after they were dug/panned (`state.depleted_at`, oldest first), so the world can't run dry before the goal |
 | `market.py` | All selling: per-kind saturation lowers prices (recovers over game time), `sell_one`/`sell_all`/`preview_sell_all` |
 | `fog.py` | `update_fog`: tiles within the lantern's radius and in line of sight (trees, rock and cave walls block it) are visible; recomputed only when the player moves or the light changes (`state.fog_key`) |
 | `lantern.py` | Fuel drains per biome, refills in town; `light_radius` sets the fog radius |
