@@ -204,6 +204,12 @@ class GridView(Widget):
         self.canvas.after.add(self.overlay)
         self.canvas.after.add(PopMatrix())
         self.canvas.after.add(ScissorPop())
+        # Screen-wide weather and air (rain, leaves, mist): over the world, not zoomed.
+        self._air_clip = ScissorPush()
+        self.canvas.after.add(self._air_clip)
+        self.air = InstructionGroup()
+        self.canvas.after.add(self.air)
+        self.canvas.after.add(ScissorPop())
         self.canvas.after.add(PopMatrix())
         self.zoom, self.zoom_offset = 1.0, (0.0, 0.0)
         self.bind(pos=self._layout, size=self._layout)
@@ -223,7 +229,7 @@ class GridView(Widget):
                 self._bg[i][1].pos, self._bg[i][1].size = pos, (cw, ch)
                 self._fg[i][1].pos = pos
         world_h = WORLD_ROWS * ch
-        for clip in (self._clip, self._overlay_clip):
+        for clip in (self._clip, self._overlay_clip, self._air_clip):
             clip.x, clip.y = int(self.x), int(self.top - world_h)
             clip.width, clip.height = int(self.width), int(world_h)
         if self._renderer is not None:
@@ -594,6 +600,65 @@ def _glide(track, now: float) -> tuple:
     return from_x + (to_x - from_x) * t, from_y + (to_y - from_y) * t
 
 
+class AirLayer:
+    """The air over the world, drawn screen-wide: leaves carried by a gusting wind
+    outdoors by day (two depths: near ones larger and faster), dust motes drifting in
+    the caves, and mist rolling slowly at dawn. Each particle has its own speed, size
+    and phase; gusts come at random intervals so the rhythm never repeats."""
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        rng = random.Random(11)
+        self._rng = random.Random()
+        self._leaves = [(rng.random(), rng.random(), rng.uniform(0.6, 1.4), rng.random() < 0.35,
+                         rng.choice(((0.45, 0.65, 0.2), (0.75, 0.6, 0.2), (0.6, 0.5, 0.15))))
+                        for _ in range(16)]  # fmt: skip
+        self._motes = [(rng.random(), rng.random(), rng.uniform(0.5, 1.5)) for _ in range(22)]
+        self._mist = [(rng.random(), rng.random(), rng.uniform(0.7, 1.3)) for _ in range(6)]
+        self.gust, self._gust_at, self._last = 0.0, 0.0, None
+
+    def _wind(self, now: float) -> float:
+        """0.25 (breeze) to about 1 (gust), surging and easing at random intervals."""
+        if now >= self._gust_at:
+            self._gust_at = now + self._rng.uniform(4, 12)
+            self._gust_start = now
+        since = now - getattr(self, "_gust_start", -99)
+        return 0.25 + 0.75 * max(0.0, math.sin(min(since / 1.5, 1.0) * math.pi))
+
+    def draw(self, state, view, now: float) -> None:
+        if view is None or PREFS["reduce_motion"]:
+            return
+        grid, air = self.grid, self.grid.air
+        cw, ch = grid.cell_size()
+        left, width = grid.x, COLS * cw
+        height = WORLD_ROWS * ch
+        bottom = grid.top - height
+        place = biome_at(state.player_x, state.player_y)
+        time_of_day = daylight.phase(state)[0]
+        wind = self._wind(now)
+        if place == "cave":
+            air.add(Color(0.9, 0.85, 0.7, 0.35))
+            for x0, y0, speed in self._motes:
+                x = left + ((x0 + now * 0.01 * speed) % 1.0) * width
+                y = bottom + ((y0 + math.sin(now * 0.3 * speed + x0 * 9) * 0.02) % 1.0) * height
+                air.add(Rectangle(pos=(round(x), round(y)), size=(max(1, round(cw / 6)),) * 2))
+            return
+        if time_of_day == "dawn":
+            for x0, y0, speed in self._mist:
+                x = left + ((x0 + now * 0.004 * speed * (1 + wind)) % 1.3 - 0.15) * width
+                y = bottom + y0 * height
+                air.add(Color(0.92, 0.95, 1.0, 0.12))
+                air.add(Ellipse(pos=(x, y), size=(width * 0.35, height * 0.18)))
+        if time_of_day in ("day", "dusk") and not weather.rain_here(state):
+            for x0, y0, speed, near, color in self._leaves:
+                pace = speed * (1.6 if near else 0.8)
+                x = left + ((x0 + now * 0.05 * pace * wind) % 1.0) * width
+                y = bottom + ((y0 - now * 0.02 * pace) % 1.0) * height
+                size = cw * (0.35 if near else 0.2)
+                air.add(Color(*color, 0.9 if near else 0.6))
+                air.add(Rectangle(pos=(round(x), round(y)), size=(round(size), round(size * 0.6))))
+
+
 class RainLayer:
     """Rain over the world: thin streaks falling with a little wind, and small splashes
     flickering on the ground. Screen-space and stateless: positions come from time."""
@@ -612,7 +677,7 @@ class RainLayer:
     def draw(self, raining: bool, now: float) -> None:
         if not raining:
             return
-        grid, overlay = self.grid, self.grid.overlay
+        grid, overlay = self.grid, self.grid.air
         cw, ch = grid.cell_size()
         left, width = grid.x, grid.width
         height = WORLD_ROWS * ch
@@ -836,6 +901,7 @@ class GemCollectorApp(App):
         self.entity_layer = EntityLayer(self.grid)
         self.tool_swing = ToolSwing(self.grid)
         self.rain = RainLayer(self.grid)
+        self.air = AirLayer(self.grid)
         self.shake = ScreenShake(self.grid)
         self.slide = WorldSlide(self.grid)
         root.add_widget(self._controls())
@@ -953,6 +1019,8 @@ class GemCollectorApp(App):
         self.entity_layer.draw(entities, view, now)
         self.tool_swing.draw(self._player_anchor(view, now), now)
         self.particles.draw(view, now)  # under the texts
+        self.grid.air.clear()
+        self.air.draw(self.state, view, now)
         self.rain.draw(view is not None and weather.rain_here(self.state), now)
         self.ambience.update(self.state, view is not None, now)
         self.floats.draw(view, now)
