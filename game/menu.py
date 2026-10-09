@@ -287,12 +287,14 @@ def render_bestiary(renderer, state) -> None:
 
     clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     mid_x = math.floor(renderer.width) // 2
-    seen = profile.load_profile()["bestiary"]
+    saved = profile.load_profile()
+    seen, current_friends = saved["bestiary"], set(saved["friends"])
     title = f"  BESTIARY  {len(seen.keys() & ENTRIES.keys())}/{len(ENTRIES)}  "
     write_str(renderer, 1, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
     for i, (name, (label, desc)) in enumerate(ENTRIES.items()):
         if name in seen:
-            line, color = f"{label:12s} {desc}  ({seen[name]})", COLOR_MENU_NORMAL
+            friend = " *friend*" if name in current_friends else ""
+            line, color = f"{label:12s} {desc}  ({seen[name]}){friend}", COLOR_MENU_NORMAL
         else:
             line, color = f"{'???':12s} not seen yet", COLOR_MENU_DIMMED
         write_str(renderer, 3 + i, 2, line[: renderer.width - 3], color)

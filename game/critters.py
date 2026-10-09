@@ -26,6 +26,7 @@ from game.daylight import mix, shade, tint_at
 from game.events import emit
 from game.geography import biome_at, in_town
 from game.objects.registry import CRITTERS
+from game.player import set_hud_message
 
 MAX_CRITTERS = 10
 SPAWN_INTERVAL = 2.0  # game seconds between spawn attempts
@@ -37,6 +38,9 @@ HERD_SPREAD = 3  # a herd member farther than this from its mates walks back to 
 FLOWN_OFF = 10  # a startled flier this far from the player has left for good
 JUMP_CHANCE = 0.04  # per wander step of a jumping fish
 SPLASH = "splash"
+SPOOK, PET = "spook", "pet"
+STILL_CALM = 1.5  # seconds standing still before animals let the player near
+FRIEND_TRUST = 3  # pets that befriend a species
 WATER = {TYPE_STREAM, TYPE_LAKE, TYPE_SHALLOW, TYPE_DEEP}
 _STEPS = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, -1), (-1, 1), (1, 1)]
 
@@ -48,6 +52,7 @@ class Critter:
     y: int
     move_timer: float = 0.0
     scared: float = 0.0  # seconds of fleeing left
+    trust: int = 0  # times petted; a petted animal no longer runs from the player
 
     @property
     def kind(self) -> dict:
@@ -146,6 +151,29 @@ def _step(state, critter: Critter, rng: random.Random) -> None:
         emit(state, SPLASH, "", (150, 200, 255), at=(critter.x, critter.y))
 
 
+def _near(critter: Critter, x: int, y: int, reach: int) -> bool:
+    return max(abs(critter.x - x), abs(critter.y - y)) <= reach
+
+
+def pet(state) -> bool:
+    """Use beside a calm animal: pet it. Returns whether an animal was petted."""
+    px, py = state.player_x, state.player_y
+    calm = [c for c in state.critters if c.scared <= 0 and _near(c, px, py, 1)]
+    if not calm:
+        return False
+    critter = calm[0]
+    critter.trust += 1
+    name = critter.name.replace("_", " ")
+    if critter.trust >= FRIEND_TRUST and critter.name not in state.friends:
+        state.friends.add(critter.name)
+        set_hud_message(state, f"The {name} trusts you now! (friends: {len(state.friends)})", 3.0)
+        emit(state, PET, "Friend!", (255, 150, 190), "heart", at=(critter.x, critter.y))
+    else:
+        set_hud_message(state, f"You pet the {name}.", 1.5)
+        emit(state, PET, "", (255, 150, 190), at=(critter.x, critter.y))
+    return True
+
+
 def _in_map(x: int, y: int) -> bool:
     return 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT
 
@@ -177,10 +205,13 @@ def update_critters(state, dt: float) -> None:
     px, py = state.player_x, state.player_y
     for critter in state.critters:
         reach = critter.kind["flee_range"]
-        if reach and max(abs(critter.x - px), abs(critter.y - py)) <= reach:
+        patient = state.still_for >= STILL_CALM  # a player standing still spooks nothing
+        if reach and not patient and not critter.trust and _near(critter, px, py, reach):
+            if critter.scared <= 0:
+                emit(state, SPOOK, "!", (255, 230, 120), at=(critter.x, critter.y))
             for mate in state.critters:  # the herd bolts together
                 near = max(abs(mate.x - critter.x), abs(mate.y - critter.y)) <= HERD_RADIUS
-                if mate.name == critter.name and near:
+                if mate.name == critter.name and near and not mate.trust:
                     mate.scared = FLEE_SECONDS
     for critter in state.critters:
         critter.scared = max(0.0, critter.scared - dt)

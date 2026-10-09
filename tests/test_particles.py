@@ -13,7 +13,7 @@ _SPEC.loader.exec_module(particles)
 
 def test_each_event_kind_with_a_burst_has_a_preset():
     kinds = {events.FIND, events.MISS, events.HIT, events.HURT, events.LOOT, events.HEAL}
-    kinds |= {events.ACHIEVE, "splash"}
+    kinds |= {events.ACHIEVE, "splash", "pet"}
     assert kinds == set(particles.PRESETS)
     # Cues without a burst: full bag, shop, rod ping, bark.
     for quiet in (events.FULL, events.COIN, events.DENIED, "detect", "bark"):

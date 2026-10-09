@@ -40,6 +40,8 @@ ACHIEVEMENTS = [
      2, lambda s: len(s.seen_species) >= 10),
     ("naturalist", "Naturalist", "See every peaceful animal",
      3, lambda s: set(CRITTERS) <= s.seen_species),
+    ("animal_friend", "Animal Friend", "Befriend 5 kinds of animals",
+     2, lambda s: len(s.friends) >= 5),
     ("tycoon", "Tycoon", "Earn $5,000 in one run",
      3, lambda s: s.lifetime_earnings >= 5000),
     ("fully_geared", "Fully Geared", "Own every tool, the best armor and the best boots",

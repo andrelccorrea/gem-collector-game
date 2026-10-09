@@ -68,6 +68,7 @@ def _requested_move(actions):
 def _handle_movement(inp: InputState, state, dt: float) -> None:
     """Discrete tile movement, one step per move press (or while held), rate-limited."""
     state.move_cooldown = max(0.0, state.move_cooldown - dt)
+    state.still_for += dt
     requested = _requested_move(inp.pressed) or _requested_move(inp.held)
 
     if state.move_cooldown > 0:
@@ -99,6 +100,7 @@ def _handle_movement(inp: InputState, state, dt: float) -> None:
     state.player_x = new_x
     state.player_y = new_y
     state.stats["steps"] = state.stats.get("steps", 0) + 1
+    state.still_for = 0.0
     state.last_move = action
     state.move_cooldown = MOVE_COOLDOWN * BOOTS["step_multipliers"][state.boots_level]
 

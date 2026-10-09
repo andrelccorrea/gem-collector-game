@@ -156,3 +156,39 @@ def test_fish_jump_now_and_then():
     for _ in range(300):
         critters._step(state, fish, rng)
     assert any(e.kind == critters.SPLASH for e in state.events)
+
+
+def _calm_deer(state, still):
+    state.enemies = []
+    state.player_x, state.player_y = 25, 30
+    spot = next(p for p in _meadow_spots(state, range(26, 30)))
+    deer = Critter("deer", *spot, move_timer=99)
+    state.critters, state.still_for = [deer], still
+    return deer
+
+
+def test_standing_still_lets_animals_near_and_moving_spooks_them():
+    state = new_run(12)
+    deer = _calm_deer(state, still=2.0)
+    update_critters(state, STEP)
+    assert deer.scared == 0
+    state.still_for = 0.0
+    update_critters(state, STEP)
+    assert deer.scared > 0 and any(e.kind == critters.SPOOK for e in state.events)
+
+
+def test_three_pets_befriend_a_species_and_petted_animals_stay_calm():
+    from game.input import Action
+    from game.tools import use_tool
+    from tests.test_gameplay import press
+
+    state = new_run(12)
+    deer = _calm_deer(state, still=2.0)
+    deer.x, deer.y = state.player_x + 1, state.player_y
+    state.world_tiles.meta[(state.player_x, state.player_y)]["type"] = "grass"
+    for _ in range(critters.FRIEND_TRUST):
+        use_tool(press(Action.USE), state)
+    assert "deer" in state.friends and "trusts you" in state.hud_message
+    state.still_for = 0.0
+    update_critters(state, STEP)
+    assert deer.scared == 0  # it knows you now

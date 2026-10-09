@@ -1,4 +1,4 @@
-from game import merchant, stats, trinkets
+from game import critters, merchant, stats, trinkets
 from game.constants import (
     TYPE_LAKE,
     TYPE_LAPIDARY,
@@ -19,7 +19,7 @@ from game.player import set_hud_message
 
 MINEABLE_TYPES = {TYPE_MINEABLE_GRASS, TYPE_MINEABLE_DIRT, TYPE_MINEABLE_ROCK}
 WATER_GEM_TYPES = {TYPE_STREAM, TYPE_LAKE}
-_DIGGABLE = MINEABLE_TYPES | WATER_GEM_TYPES
+DIGGABLE = MINEABLE_TYPES | WATER_GEM_TYPES
 
 
 def update_tools(inp: InputState, state) -> None:
@@ -60,6 +60,10 @@ def use_tool(inp: InputState, state) -> None:
 
     pos = (state.player_x, state.player_y)
 
+    workable = pos in state.world_gems or (tile_type in DIGGABLE and not meta.get("depleted"))
+    if not workable and critters.pet(state):  # digging comes first; petting otherwise
+        return
+
     if merchant.here(state):
         state.shop_cursor = 0
         state.active_scene = "merchant"
@@ -76,7 +80,7 @@ def use_tool(inp: InputState, state) -> None:
         set_hud_message(state, "No tool equipped! Press E to equip.", 2.0)
         return
 
-    if not bag_has_room(state) and (pos in state.world_gems or tile_type in _DIGGABLE):
+    if not bag_has_room(state) and (pos in state.world_gems or tile_type in DIGGABLE):
         set_hud_message(state, "Your bag is full! Sell at the shop.", 2.0)
         emit(state, FULL, "Bag full", LOSS_COLOR, "bag")
         return

@@ -26,6 +26,8 @@ PRESETS = {
                         damping=0.3, up=False),
     "splash": dict(count=7, speed=(1.0, 2.2), life=(0.3, 0.5), size=0.2, gravity=7.0,
                    damping=0.3, up=True),
+    "pet": dict(count=5, speed=(0.6, 1.4), life=(0.6, 0.9), size=0.22, gravity=-2.0,
+                damping=0.5, up=True),
     "heal": dict(count=6, speed=(0.5, 1.5), life=(0.6, 0.9), size=0.25, gravity=-2.5,
                  damping=0.5, up=True),
 }  # fmt: skip

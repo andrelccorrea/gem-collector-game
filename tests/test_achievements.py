@@ -29,6 +29,7 @@ def test_each_condition_can_be_met():
     state.has_won, state.hardcore = True, True
     state.player_x, state.player_y = 190, 40
     state.seen_species = set(achievements.CRITTERS) | {"bear"}
+    state.friends = {"deer", "fox", "rabbit", "owl", "duck"}
     state.game_time = 0.8 * daylight.DAY_SECONDS
     assert set(achievements.newly_unlocked(state, set())) == set(achievements.BY_ID)
 

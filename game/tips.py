@@ -71,6 +71,14 @@ TIPS = [
         lambda: "Tip: streams and lakes can be panned with a Gold Pan from the Shop.",
     ),
     (
+        "animals",
+        lambda s: any(max(abs(c.x - s.player_x), abs(c.y - s.player_y)) <= 3 for c in s.critters),
+        lambda: (
+            f"Tip: stand still and animals come closer. {hint_label(Action.USE, 'Use')}"
+            " beside one to pet it."
+        ),
+    ),
+    (
         "start",
         lambda s: s.game_time > 2.0 and in_town(s.player_x, s.player_y),
         lambda: "Tip: dig for gems outside town and sell them here. Earn $10000 to win!",

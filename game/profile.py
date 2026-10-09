@@ -34,6 +34,7 @@ def new_profile() -> dict:
         "outfit": DEFAULT_OUTFIT,
         "bestiary": {},
         "stats": {},
+        "friends": [],
     }
 
 
@@ -56,6 +57,7 @@ def load_profile() -> dict:
         profile["outfits"] = sorted(set(owned) | {DEFAULT_OUTFIT})
         profile["bestiary"] = {str(k): str(v) for k, v in data.get("bestiary", {}).items()}
         profile["stats"] = {str(k): int(v) for k, v in data.get("stats", {}).items()}
+        profile["friends"] = [str(f) for f in data.get("friends", [])]
         worn = data.get("outfit", DEFAULT_OUTFIT)
         profile["outfit"] = worn if worn in profile["outfits"] else DEFAULT_OUTFIT
         for key in PERKS:
@@ -140,6 +142,13 @@ def add_stats(deltas: dict) -> None:
     profile = load_profile()
     for key, amount in deltas.items():
         profile["stats"][key] = profile["stats"].get(key, 0) + amount
+    save_profile(profile)
+
+
+def record_friends(names) -> None:
+    """Add species the player befriended."""
+    profile = load_profile()
+    profile["friends"] = sorted(set(profile["friends"]) | set(names))
     save_profile(profile)
 
 

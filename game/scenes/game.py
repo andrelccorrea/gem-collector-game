@@ -28,6 +28,7 @@ class GameScene(Scene):
         self.hud_pulse = hud.HudPulse()
         self._tips_saved: set = set()
         self._achieved: set = set()
+        self._friends_saved: set = set()
         self._synced: dict = {}  # state.stats as last added to the profile
         self._synced_run = None
         self._synced_at = 0.0
@@ -44,6 +45,8 @@ class GameScene(Scene):
             self._synced, self._synced_run = dict(state.stats), state.run_id
         state.outfit = saved["outfit"]
         state.seen_species = set(saved["bestiary"])
+        state.friends |= set(saved["friends"])
+        self._friends_saved = set(state.friends)
 
     def update(self, inp: InputState, state, frame_dt: float) -> None:
         self.timestep.run(frame_dt, inp, lambda step_inp, dt: step_game(step_inp, state, dt))
@@ -53,6 +56,9 @@ class GameScene(Scene):
             for name in sorted(sighted):
                 state.seen_species.add(name)
                 bestiary.announce(state, name, len(state.seen_species))
+        if state.friends != self._friends_saved:
+            profile.record_friends(state.friends)
+            self._friends_saved = set(state.friends)
         new = achievements.newly_unlocked(state, self._achieved)
         if new:
             rewards = {a[0]: a[3] for a in achievements.ACHIEVEMENTS}
