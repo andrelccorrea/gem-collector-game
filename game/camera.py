@@ -83,6 +83,11 @@ def _view_cells(state, view: View) -> list:
     if _view_cache.get("key") == key:
         return _view_cache["cells"]
     meta = state.world_tiles.meta
+    # Per tile too: when the view scrolls one step, almost every tile looks as it did.
+    if _tile_cache.get("world") is not state.world_tiles:
+        _tile_cache.clear()
+        _tile_cache["world"] = state.world_tiles
+    looks = _tile_cache.setdefault("looks", {})
     cells = []
     for sy in range(view.height):
         for sx in range(view.width):
@@ -91,14 +96,21 @@ def _view_cells(state, view: View) -> list:
             if tile is None or tile.get("visibility") == "unseen":
                 cells.append((sx, sy, *UNSEEN_APPEARANCE, None))
                 continue
-            deco = landmark_at(state, wx, wy) or decoration(state.seed, wx, wy, tile)
             light = tint_at(state, now, wx, wy)
-            char, color_pair = tile_appearance(tile, deco)
-            ground = _ground_sprite(tile, deco, light, meta, wx, wy)
-            cells.append((sx, sy, char, shade(color_pair, light), ground))
+            sign = (tile.get("visibility"), tile.get("depleted"), light)
+            known = looks.get((wx, wy))
+            if known is None or known[0] != sign:
+                deco = landmark_at(state, wx, wy) or decoration(state.seed, wx, wy, tile)
+                char, color_pair = tile_appearance(tile, deco)
+                ground = _ground_sprite(tile, deco, light, meta, wx, wy)
+                known = looks[(wx, wy)] = (sign, char, shade(color_pair, light), ground)
+            cells.append((sx, sy, known[1], known[2], known[3]))
     # The world itself is kept too, so its id can't be reused by another one meanwhile.
     _view_cache.update(key=key, cells=cells, world=state.world_tiles)
     return cells
+
+
+_tile_cache: dict = {}  # "world", "looks": (x, y) -> (signature, char, colors, ground)
 
 
 def render_viewport(renderer, state, view: View) -> None:

@@ -43,3 +43,17 @@ def test_light_changes_redraw_the_view():
     state.game_time = 0.8 * 360  # night: the lantern's warm glow
     renderer, view = _draw(state)
     assert day[1] is not None and renderer.get_cell(*beside) != day
+
+
+def test_a_tile_seen_again_or_in_new_light_is_redrawn_after_scrolling():
+    state = new_run(7)
+    renderer, view = _draw(state)
+    spot = (view.x + 3, view.y + 3)
+    state.world_tiles.meta[spot]["visibility"] = "explored"
+    state.fog_key = "moved"  # what update_fog does
+    renderer, view = _draw(state)
+    explored = renderer.get_cell(spot[0] - view.x, spot[1] - view.y)
+    state.world_tiles.meta[spot]["visibility"] = "visible"
+    state.fog_key = "moved again"
+    renderer, view = _draw(state)
+    assert renderer.get_cell(spot[0] - view.x, spot[1] - view.y) != explored
