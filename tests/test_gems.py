@@ -17,11 +17,15 @@ def test_catalog_has_17_gems():
     assert len(catalog) == 17
 
 
-def test_all_gems_use_the_gem_glyph():
-    """Every GemDef in the catalog has char == '♦' (colored per gem)."""
+def test_a_gems_shape_tells_its_tier_not_just_its_color():
+    """Glyph and sprite shape follow the tier, so rarity never rests on color alone."""
+    from game.gems import gem_sprite
+
+    shapes = {1: ("●", "gem_round"), 2: ("■", "gem_square"), 3: ("♦", "gem")}
     catalog = build_gem_catalog()
     for name, gem in catalog.items():
-        assert gem.char == "♦", f"{name} has char={gem.char!r}, expected '♦'"
+        assert (gem.char, gem_sprite(name)) == shapes[gem.min_tier], name
+    assert gem_sprite("ruby_polished") == gem_sprite("ruby")
 
 
 def test_all_gems_have_positive_value():

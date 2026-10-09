@@ -14,6 +14,7 @@ from game.constants import (
 )
 from game.daylight import mix, shade, tint_at
 from game.decor import decoration
+from game.gems import gem_sprite
 from game.landmarks import landmark_at
 from game.objects.registry import GEM_CATALOG
 from game.theme import UNSEEN_APPEARANCE, dim, tile_appearance
@@ -202,4 +203,4 @@ def _render_world_gems(renderer, state, view: View) -> None:
         color_pair = shade(color_pair, tint_at(state, now, gx, gy))
         renderer.set_cell(sx, sy, char, color_pair)
         # One gem image, colored like the gem's glyph.
-        renderer.set_sprite(sx, sy, OBJECT, "gem", color_pair[0])
+        renderer.set_sprite(sx, sy, OBJECT, gem_sprite(gem_name), color_pair[0])

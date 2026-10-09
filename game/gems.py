@@ -80,6 +80,15 @@ def add_loot_to_inventory(state, loot_name: str) -> None:
     loot[loot_name] = loot.get(loot_name, 0) + 1
 
 
+GEM_SHAPE_SPRITES = {1: "gem_round", 2: "gem_square", 3: "gem"}
+
+
+def gem_sprite(gem_name: str) -> str:
+    """The sprite of a gem: its shape follows its tier (colorblind-safe)."""
+    gem = GEM_CATALOG.get(gem_name.removesuffix("_polished"))
+    return GEM_SHAPE_SPRITES.get(gem.min_tier, "gem") if gem is not None else "gem"
+
+
 def get_gem_raw_value(gem_name: str) -> int:
     """Return the base (raw) sell value for a gem."""
     if gem_name == GEODE:

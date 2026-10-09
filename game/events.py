@@ -46,7 +46,10 @@ def emit_gem(state, gem_name: str) -> None:
     """A gem (or geode) went into the bag."""
     gem = GEM_CATALOG.get(gem_name)
     color = gem.color[0] if gem is not None else None
-    emit(state, FIND, f"+{gem_name.replace('_', ' ').title()}", GAIN_COLOR, "gem", color)
+    from game.gems import gem_sprite
+
+    label = f"+{gem_name.replace('_', ' ').title()}"
+    emit(state, FIND, label, GAIN_COLOR, gem_sprite(gem_name), color)
 
 
 def take_events(state) -> list:

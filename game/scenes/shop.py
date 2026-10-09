@@ -12,7 +12,7 @@ from game.constants import (
 )
 from game.dog import DOG_COST
 from game.feedback import chime, refuse
-from game.gems import polished_prices
+from game.gems import gem_sprite, polished_prices
 from game.input import Action, InputState
 from game.input import hint as hint_of
 from game.lantern import lantern_capacity
@@ -278,7 +278,7 @@ _LOOT_ICONS = {enemy.loot: name for name, enemy in ENEMY_CATALOG.items() if enem
 
 def _gem_icon(key: str):
     gem = GEM_CATALOG.get(key.removesuffix("_polished"))
-    return ("gem", gem.color[0]) if gem is not None else ("gem", None)
+    return (gem_sprite(key), gem.color[0]) if gem is not None else ("gem", None)
 
 
 def _icon(state, item: dict):

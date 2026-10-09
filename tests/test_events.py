@@ -27,7 +27,7 @@ def test_picking_up_a_gem_floats_it_in_its_color():
     state.world_gems = {(5, 5): "quartz"}
     use_tool(press(Action.USE), state)
     color = GEM_CATALOG["quartz"].color[0]
-    assert take_events(state) == [Event(5, 5, FIND, "+Quartz", GAIN_COLOR, "gem", color)]
+    assert take_events(state) == [Event(5, 5, FIND, "+Quartz", GAIN_COLOR, "gem_round", color)]
     assert state.events == []
 
 
