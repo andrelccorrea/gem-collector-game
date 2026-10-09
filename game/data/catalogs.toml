@@ -322,8 +322,8 @@ interval = 60.0
 [trinkets.clover]
 name = "Lucky Clover"
 cost = 300
-chance = 0.2
-desc = "A dig that finds nothing has a 20% chance to dig again"
+chance = 0.5
+desc = "A dig that finds nothing has a 50% chance to dig again"
 
 [trinkets.night_pin]
 name = "Night Pin"
@@ -333,8 +333,8 @@ desc = "Your lantern burns no fuel at night"
 [trinkets.scale]
 name = "Merchant's Scale"
 cost = 350
-saturation = 0.5
-desc = "Each sale lowers that gem's price half as much"
+saturation = 0.85
+desc = "Each sale lowers that gem's price 15% less"
 
 [trinkets.feather]
 name = "Homing Feather"

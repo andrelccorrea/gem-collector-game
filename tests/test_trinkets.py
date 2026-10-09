@@ -52,14 +52,17 @@ def test_night_pin_saves_fuel_only_at_night():
     assert state.lantern_fuel < lantern_capacity(state)
 
 
-def test_merchants_scale_halves_the_price_drop():
+def test_merchants_scale_softens_the_price_drop():
     plain = make_state()
     plain.inventory["gems"] = {"quartz": 2}
     sell_one(plain, "quartz")
     weighed = make_state(trinket="scale")
     weighed.inventory["gems"] = {"quartz": 2}
     sell_one(weighed, "quartz")
-    assert weighed.market["quartz"] == plain.market["quartz"] / 2
+    from game.objects.registry import TRINKETS
+
+    expected = plain.market["quartz"] * TRINKETS["scale"]["saturation"]
+    assert weighed.market["quartz"] == expected < plain.market["quartz"]
 
 
 def test_homing_feather_recalls_once_a_day_and_trinkets_are_saved():

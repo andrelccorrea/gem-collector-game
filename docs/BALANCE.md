@@ -126,3 +126,24 @@ won 10/10, died 0
 median minutes to win: 13.8
 median gold/min: 738
 ```
+
+## Trinkets, dog training and the merchant (2026-10-09)
+
+Each trinket worn from the start of the run, 10 seeds, median minutes to win (baseline
+14.4). The bot sells everything at once and never recalls, so it shows the strongest
+case for selling trinkets and none for the situational ones:
+
+| setup | median min |
+|---|---|
+| baseline | 14.4 |
+| Lucky Clover, 20% retry | 15.2 (noise: no visible gain) |
+| Merchant's Scale, half the price drop | **10.6 (dominant)** |
+| Night Pin / Homing Feather | 14.4 / 14.4 (situational, unused by the bot) |
+| trained dog (Keen Nose) | 13.9 |
+| Scale at x0.8 / x0.85 | 12.0 / 12.6 |
+| Clover at 35% / 50% | 14.8 / 12.9 |
+
+Chosen: **Scale x0.85** (each sale drops the price 15% less) and **Clover 50%**, so the
+two economic trinkets give a similar gain of about 10% in their niche, and none of them
+dominates. A trinket that changes a number by less than the seed noise reads as useless,
+which is why the clover went up.

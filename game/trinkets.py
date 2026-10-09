@@ -12,7 +12,7 @@ def wearing(state, key: str) -> bool:
 
 
 def sale_saturation(state) -> float:
-    """How much one sale pushes its kind's price down (the Merchant's Scale halves it)."""
+    """How much one sale pushes its kind's price down (the Merchant's Scale softens it)."""
     return TRINKETS["scale"]["saturation"] if wearing(state, "scale") else 1.0
 
 
