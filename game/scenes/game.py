@@ -7,6 +7,7 @@ from game import (
     critters,
     dog,
     enemies,
+    goals,
     hud,
     merchant,
     player,
@@ -16,6 +17,7 @@ from game import (
 )
 from game.input import InputState
 from game.loop import FixedTimestep
+from game.player import set_hud_message
 from game.scenes import Scene
 from game.simulation import step_game
 
@@ -46,6 +48,9 @@ class GameScene(Scene):
         state.outfit = saved["outfit"]
         state.seen_species = set(saved["bestiary"])
         state.friends |= set(saved["friends"])
+        state.goal = max(state.goal, saved["goal"])
+        if state.game_time == 0 and goals.current(state) and not state.hud_message:
+            set_hud_message(state, f"Goal: {goals.current(state)}", 5.0)
         self._friends_saved = set(state.friends)
 
     def update(self, inp: InputState, state, frame_dt: float) -> None:
@@ -56,6 +61,8 @@ class GameScene(Scene):
             for name in sorted(sighted):
                 state.seen_species.add(name)
                 bestiary.announce(state, name, len(state.seen_species))
+        if goals.check(state):
+            profile.record_goal(state.goal)
         if state.friends != self._friends_saved:
             profile.record_friends(state.friends)
             self._friends_saved = set(state.friends)

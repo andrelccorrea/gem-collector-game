@@ -45,7 +45,7 @@ def test_urgent_tips_come_first():
 def test_seen_tips_are_kept_in_the_profile_across_runs():
     scene, state = GameScene(), new_run(3)
     scene.enter(state)
-    for _ in range(int(3 / STEP)):
+    for _ in range(int(8 / STEP)):  # after the run's goal message
         scene.update(EMPTY_INPUT, state, STEP)
     assert "start" in state.tips_seen
     assert "start" in profile.load_profile()["tips"]

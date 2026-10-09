@@ -12,6 +12,7 @@ STATS = {  # key -> label, in display order
     "damage_taken": "Damage taken",
     "contracts": "Contracts delivered",
     "landmarks": "Landmarks visited",
+    "pets": "Animals petted",
 }
 
 

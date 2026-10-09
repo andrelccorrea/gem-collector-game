@@ -163,6 +163,7 @@ def pet(state) -> bool:
         return False
     critter = calm[0]
     critter.trust += 1
+    state.stats["pets"] = state.stats.get("pets", 0) + 1
     name = critter.name.replace("_", " ")
     if critter.trust >= FRIEND_TRUST and critter.name not in state.friends:
         state.friends.add(critter.name)

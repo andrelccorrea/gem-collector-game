@@ -5,7 +5,7 @@ telling explored tile; unexplored blocks stay blank. Markers show the player, th
 landmarks already visited and a dropped bag. Game time is frozen while it is open.
 """
 
-from game import merchant
+from game import goals, merchant
 from game.constants import (
     COLOR_MENU_DIMMED,
     COLOR_MENU_TITLE,
@@ -69,8 +69,9 @@ def _terrain(state, meta, width: int, height: int) -> dict:
 def render_map(renderer, state) -> None:
     clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
     width, height = renderer.width, renderer.height - 2
-    title = "  WORLD MAP  "
-    write_str(renderer, 0, (width - len(title)) // 2, title, COLOR_MENU_TITLE)
+    goal = goals.current(state)
+    title = f"  WORLD MAP   Goal: {goal}  " if goal else "  WORLD MAP  "
+    write_str(renderer, 0, max(0, (width - len(title)) // 2), title[:width], COLOR_MENU_TITLE)
     if state.world_tiles is None:
         return
     meta = state.world_tiles.meta

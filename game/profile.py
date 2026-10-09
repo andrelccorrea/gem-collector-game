@@ -35,6 +35,7 @@ def new_profile() -> dict:
         "bestiary": {},
         "stats": {},
         "friends": [],
+        "goal": 0,
     }
 
 
@@ -58,6 +59,7 @@ def load_profile() -> dict:
         profile["bestiary"] = {str(k): str(v) for k, v in data.get("bestiary", {}).items()}
         profile["stats"] = {str(k): int(v) for k, v in data.get("stats", {}).items()}
         profile["friends"] = [str(f) for f in data.get("friends", [])]
+        profile["goal"] = int(data.get("goal", 0))
         worn = data.get("outfit", DEFAULT_OUTFIT)
         profile["outfit"] = worn if worn in profile["outfits"] else DEFAULT_OUTFIT
         for key in PERKS:
@@ -142,6 +144,12 @@ def add_stats(deltas: dict) -> None:
     profile = load_profile()
     for key, amount in deltas.items():
         profile["stats"][key] = profile["stats"].get(key, 0) + amount
+    save_profile(profile)
+
+
+def record_goal(index: int) -> None:
+    profile = load_profile()
+    profile["goal"] = max(profile["goal"], index)
     save_profile(profile)
 
 
