@@ -816,6 +816,7 @@ class GemCollectorApp(App):
 
     def on_pause(self):
         self.ambience.update(self.state, False, 0.0)
+        self.scenes.scenes["game"].sync_stats(self.state)
         # Android may kill a paused app: keep a run that is being played.
         if persistence.autosave_allowed(self.state):
             persistence.save_game(self.state)

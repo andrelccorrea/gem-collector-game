@@ -98,6 +98,7 @@ def _handle_movement(inp: InputState, state, dt: float) -> None:
 
     state.player_x = new_x
     state.player_y = new_y
+    state.stats["steps"] = state.stats.get("steps", 0) + 1
     state.last_move = action
     state.move_cooldown = MOVE_COOLDOWN * BOOTS["step_multipliers"][state.boots_level]
 

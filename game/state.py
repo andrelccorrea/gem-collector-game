@@ -104,6 +104,7 @@ class GameState:
     has_dog: bool = False
     visited_landmarks: set = field(default_factory=set)  # (x, y) of landmarks seen this run
     contracts_done: set = field(default_factory=set)  # (game day, board slot) delivered
+    stats: dict = field(default_factory=dict)  # this run's counters (game/stats.py); not saved
     dog: Any = None  # {"x", "y", "timer", "bark"} while it follows (game/dog.py); not saved
     dowse_tier: Any = None  # last hot/cold tier of the rod (game/dowsing.py); not saved
     # Run-long bonuses from perks bought between runs (game/profile.py)

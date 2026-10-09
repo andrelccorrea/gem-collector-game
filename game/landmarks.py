@@ -74,6 +74,7 @@ def visit(state) -> None:
     if kind is None or pos in state.visited_landmarks:
         return
     state.visited_landmarks.add(pos)
+    state.stats["landmarks"] = state.stats.get("landmarks", 0) + 1
     name, _, _, _, gold, lore = LANDMARKS[kind]
     found = f" You find {gold} gold." if gold else ""
     set_hud_message(state, f"{name}: {lore}{found}", 5.0)

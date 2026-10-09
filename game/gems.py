@@ -71,6 +71,7 @@ def add_gem_to_inventory(state, gem_name: str) -> None:
     """Add one gem of the given type to inventory."""
     gems = state.inventory.setdefault("gems", {})
     gems[gem_name] = gems.get(gem_name, 0) + 1
+    state.stats["gems_found"] = state.stats.get("gems_found", 0) + 1
 
 
 def add_loot_to_inventory(state, loot_name: str) -> None:

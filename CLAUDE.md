@@ -74,6 +74,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `deals.py` | Deal of the day: one shop item 25% off per game day, picked from (seed, day) with `decor.stable_random` (no gameplay RNG); banner with countdown in the shop |
 | `dog.py` | Companion dog (shop, per run, `has_dog` saved): follows the player, barks (`bark` event + message) when an enemy is within 8 tiles, at most every 10 s; never fights |
 | `dowsing.py` | Dowsing rod gear (`[dowsing]` radii): hot/cold + direction hint to the nearest ground gem in the tile row, a `detect` ping event when the trail gets warmer (clues, not map markers) |
+| `stats.py` | Lifetime statistics: simulation `bump`s run counters in `state.stats` (not saved); `GameScene.sync_stats` adds the deltas to the profile every 15 s, when the run leaves the game scene and on Android pause; Statistics menu screen |
 | `supplies.py` | Consumables (`state.supplies`, data in `catalogs.toml [supplies.*]`): the Item action uses the most needed one (Bandage heals, Lamp Oil refuels) |
 | `daylight.py` | Day/night tint by `game_time` (6-minute day; quantized day/dusk/night/dawn tints keep terminal color pairs bounded) with an elliptical lantern glow around the player at night; `shade`/`mix` apply it in every world draw call. Drawing only |
 | `landmarks.py` | 7 landmark kinds (campfire, tent, well, mine cart, statue, boat, crystal shrine) placed per seed by stable hash on walkable ground, spaced 15 tiles; drawn like decorations; first visit per run shows lore and may give gold (`visited_landmarks` saved) |
@@ -100,7 +101,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy tools/charms, upgrade tools and gear (bag, lantern, armor, boots — `_GEAR`), a description line for the selected row, sell via `market`, Museum donations, Outfits tab: cosmetic palette swaps kept in the profile), `lapidary.py` (LapidaryScene: cutting minigame, geode cracking), `save_point.py` (daily runs can't save), `world_map.py` (M: explored world shrunk to the screen, markers, cached by fog key) |
 | `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
-| `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Achievements, Bestiary, Leaderboard), death, win, daily-end, perks and leaderboard screens |
+| `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Achievements, Bestiary, Statistics, Leaderboard), death, win, daily-end, perks and leaderboard screens |
 
 ### Mobile (`mobile/`)
 
@@ -119,7 +120,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 ### Scene Graph
 
 `state.active_scene` names the current screen; `main.py` hands each frame to `SceneManager.frame()`, which calls `enter()` on a switch, then `update()`, then `render()` (skipped if the update switched away). New screens must be registered in `game/scenes/__init__.py::build_scenes()` (a test checks every name assigned in `game/`).
-`menu` → `game` → `map` / `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `bestiary` / `leaderboard`
+`menu` → `game` → `map` / `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `bestiary` / `stats` / `leaderboard`
 
 ### Key Invariants
 

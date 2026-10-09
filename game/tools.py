@@ -1,3 +1,4 @@
+from game import stats
 from game.constants import (
     TYPE_LAKE,
     TYPE_LAPIDARY,
@@ -165,6 +166,7 @@ def _deplete_tile(state, x: int, y: int) -> None:
     """Mark a tile as depleted and update its visual."""
     if state.world_tiles is None:
         return
+    stats.bump(state, "tiles_dug")
 
     meta = state.world_tiles.meta.get((x, y), {})
     meta["depleted"] = True

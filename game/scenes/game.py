@@ -17,6 +17,8 @@ from game.loop import FixedTimestep
 from game.scenes import Scene
 from game.simulation import step_game
 
+STATS_SYNC_SECONDS = 15.0  # real seconds between lifetime-stat writes while playing
+
 
 class GameScene(Scene):
     def __init__(self):
@@ -24,6 +26,9 @@ class GameScene(Scene):
         self.hud_pulse = hud.HudPulse()
         self._tips_saved: set = set()
         self._achieved: set = set()
+        self._synced: dict = {}  # state.stats as last added to the profile
+        self._synced_run = None
+        self._synced_at = 0.0
 
     def enter(self, state) -> None:
         # Game time is frozen while other scenes are shown; drop the time spent there.
@@ -33,6 +38,8 @@ class GameScene(Scene):
         state.tips_seen |= set(saved["tips"])
         self._tips_saved = set(state.tips_seen)
         self._achieved = set(saved["achievements"])
+        if state.run_id != self._synced_run:  # another run: its counters start afresh
+            self._synced, self._synced_run = dict(state.stats), state.run_id
         state.outfit = saved["outfit"]
         state.seen_species = set(saved["bestiary"])
 
@@ -51,9 +58,21 @@ class GameScene(Scene):
             self._achieved |= set(new)
             for achievement_id in new:
                 achievements.announce(state, achievement_id)
+        self._synced_at += frame_dt
+        if self._synced_at >= STATS_SYNC_SECONDS or state.active_scene != "game":
+            self.sync_stats(state)
         if state.tips_seen != self._tips_saved:
             profile.remember_tips(state.tips_seen)
             self._tips_saved = set(state.tips_seen)
+
+    def sync_stats(self, state) -> None:
+        """Add what the run's counters gained since last time to the lifetime totals."""
+        self._synced_at = 0.0
+        if state.run_id != self._synced_run:
+            self._synced, self._synced_run = {}, state.run_id
+        deltas = {k: v - self._synced.get(k, 0) for k, v in state.stats.items()}
+        profile.add_stats(deltas)
+        self._synced = dict(state.stats)
 
     def render(self, renderer, state) -> None:
         """Draw the world; runs once per frame regardless of simulation steps."""

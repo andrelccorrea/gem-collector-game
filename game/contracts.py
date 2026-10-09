@@ -59,6 +59,7 @@ def deliver(state, index: int) -> int:
     if held[offer["item"]] == 0:
         del held[offer["item"]]
     state.contracts_done.add((day(state), index))
+    state.stats["contracts"] = state.stats.get("contracts", 0) + 1
     state.player_gold += offer["reward"]
     state.lifetime_earnings += offer["reward"]
     return offer["reward"]

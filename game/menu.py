@@ -20,6 +20,7 @@ MENU_ITEMS = [
     ("perks", "Perks"),
     ("achievements", "Achievements"),
     ("bestiary", "Bestiary"),
+    ("stats", "Statistics"),
     ("leaderboard", "Leaderboard"),
 ]
 
@@ -139,6 +140,9 @@ def _select_menu_item(state, save_exists: bool) -> None:
 
     elif choice == "bestiary":
         state.active_scene = "bestiary"
+
+    elif choice == "stats":
+        state.active_scene = "stats"
 
 
 def render_death_screen(renderer, state) -> None:
@@ -292,6 +296,25 @@ def render_bestiary(renderer, state) -> None:
         else:
             line, color = f"{'???':12s} not seen yet", COLOR_MENU_DIMMED
         write_str(renderer, 3 + i, 2, line[: renderer.width - 3], color)
+    hint = f"{hint_of(Action.CANCEL)}: Back to Menu"
+    write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+
+
+def render_stats(renderer, state) -> None:
+    from game.stats import STATS
+
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    mid_x = math.floor(renderer.width) // 2
+    saved = profile.load_profile()
+    title = "  LIFETIME STATISTICS  "
+    write_str(renderer, 2, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
+    rows = [(label, saved["stats"].get(key, 0)) for key, label in STATS.items()]
+    rows += [("Runs finished", saved["runs_finished"]), ("Reputation", saved["reputation"]),
+             ("Creatures in the bestiary", len(saved["bestiary"])),
+             ("Achievements", len(saved["achievements"]))]  # fmt: skip
+    for i, (label, value) in enumerate(rows):
+        write_str(renderer, 5 + i, mid_x - 22, f"{label:28s}", COLOR_MENU_DIMMED)
+        write_str(renderer, 5 + i, mid_x + 6, f"{value:>10,}", COLOR_MENU_TITLE)
     hint = f"{hint_of(Action.CANCEL)}: Back to Menu"
     write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 

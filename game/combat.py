@@ -1,3 +1,4 @@
+from game import stats
 from game.constants import PLAYER_ATTACK_COOLDOWN
 from game.events import FULL, GAIN_COLOR, HIT, HURT, LOOT, LOSS_COLOR, emit
 from game.input import Action, InputState
@@ -61,6 +62,7 @@ def _kill_enemy(state, enemy) -> None:
     from game import gems as gems_module
 
     state.enemies.remove(enemy)
+    stats.bump(state, "creatures_defeated")
 
     # Loot is the only reward; it is worth its value when sold at the shop.
     loot_name = (enemy.loot or "").replace("_", " ")
@@ -97,6 +99,7 @@ def enemy_attacks(state, dt: float) -> None:
         enemy.attack_cooldown = enemy.attack_cooldown_max
         damage = max(1, enemy.attack - ARMOR["reductions"][state.armor_level])
         state.player_hp -= damage
+        stats.bump(state, "damage_taken", damage)
         state.last_combat_time = state.game_time
         emit(state, HURT, f"-{damage}", LOSS_COLOR, "heart")
 
