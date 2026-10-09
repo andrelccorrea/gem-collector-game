@@ -1,4 +1,4 @@
-from game import daylight
+from game import daylight, weather
 from game.constants import (
     COLOR_HUD_BG,
     COLOR_HUD_HP_HIGH,
@@ -85,9 +85,11 @@ def render_hud(renderer, state, pulse: HudPulse | None = None) -> None:
         f"  Biome:{biome}"
         f"  Light:{round(fuel_share(state) * 100)}%" + (_daily_clock(state) if state.daily else "")
     )
-    time_of_day = daylight.phase(state)[0]
-    if time_of_day != "day" and len(row1) + len(time_of_day) + 2 <= width:
-        row1 += f"  {time_of_day.title()}"
+    sky = daylight.phase(state)[0].title() if daylight.phase(state)[0] != "day" else ""
+    if weather.rain_here(state):
+        sky = f"{sky} rain".strip().capitalize()
+    if sky and len(row1) + len(sky) + 2 <= width:
+        row1 += f"  {sky}"
     carried, capacity = bag_count(state), bag_capacity(state)
     row2 = (
         " "

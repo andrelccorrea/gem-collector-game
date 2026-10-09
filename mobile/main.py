@@ -53,7 +53,7 @@ from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
 from sprites import facing, frame_at, sprite_rgba, walk_frame  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
-from game import camera, persistence  # noqa: E402
+from game import camera, persistence, weather  # noqa: E402
 from game.constants import FPS, HUD_ROWS, MOVE_COOLDOWN  # noqa: E402
 from game.events import COIN, DENIED, FIND, HIT, HURT, take_events  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
@@ -509,6 +509,42 @@ def _glide(track, now: float) -> tuple:
     return from_x + (to_x - from_x) * t, from_y + (to_y - from_y) * t
 
 
+class RainLayer:
+    """Rain over the world: thin streaks falling with a little wind, and small splashes
+    flickering on the ground. Screen-space and stateless: positions come from time."""
+
+    STREAKS = 110
+    SPLASHES = 40
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        rng = random.Random(7)
+        self._streaks = [
+            (rng.random(), rng.random(), rng.uniform(0.8, 1.2)) for _ in range(self.STREAKS)
+        ]
+        self._splashes = [(rng.random(), rng.random(), rng.random()) for _ in range(self.SPLASHES)]
+
+    def draw(self, raining: bool, now: float) -> None:
+        if not raining:
+            return
+        grid, overlay = self.grid, self.grid.overlay
+        cw, ch = grid.cell_size()
+        left, width = grid.x, grid.width
+        height = WORLD_ROWS * ch
+        bottom = grid.top - height
+        overlay.add(Color(0.75, 0.85, 1.0, 0.45))
+        for x0, y0, speed in self._streaks:
+            fall = (y0 + now * 1.6 * speed) % 1.0  # screens per second
+            y = grid.top - fall * height
+            x = left + ((x0 - fall * 0.08) % 1.0) * width  # wind: drift left as it falls
+            overlay.add(Rectangle(pos=(round(x), round(y)), size=(max(1, round(cw / 8)), ch * 0.6)))
+        overlay.add(Color(0.85, 0.92, 1.0, 0.6))
+        for x0, y0, phase in self._splashes:
+            if (now * 3 + phase) % 1.0 < 0.25:  # each splash shows for a moment
+                pos = (round(left + x0 * width), round(bottom + y0 * height))
+                overlay.add(Rectangle(pos=pos, size=(round(cw / 3), max(1, round(cw / 8)))))
+
+
 class ParticleLayer:
     """Draws mobile/particles.py bursts as small square pixels over the world."""
 
@@ -599,6 +635,7 @@ class GemCollectorApp(App):
         self.floats = FloatingTexts(self.grid)
         self.particles = ParticleLayer(self.grid)
         self.entity_layer = EntityLayer(self.grid)
+        self.rain = RainLayer(self.grid)
         self.shake = ScreenShake(self.grid)
         self.slide = WorldSlide(self.grid)
         root.add_widget(self._controls())
@@ -692,6 +729,7 @@ class GemCollectorApp(App):
         entities, self.renderer.entities = self.renderer.entities, {}
         self.entity_layer.draw(entities, view, now)
         self.particles.draw(view, now)  # under the texts
+        self.rain.draw(view is not None and weather.rain_here(self.state), now)
         self.floats.draw(view, now)
         if self.state.quit_requested:
             self.stop()

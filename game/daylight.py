@@ -21,12 +21,14 @@ LANTERN_GLOW = GLOW_RINGS[0][2]
 
 
 def phase(state) -> tuple:
-    """(name, tint) of the time of day."""
+    """(name, tint) of the time of day; rain adds an overcast grey to the tint."""
+    from game.weather import OVERCAST, rain_here
+
     share = (state.game_time % DAY_SECONDS) / DAY_SECONDS
-    for end, name, tint in PHASES:
-        if share < end:
-            return name, tint
-    return PHASES[-1][1], PHASES[-1][2]
+    name, tint = next(((n, t) for end, n, t in PHASES if share < end), PHASES[-1][1:])
+    if rain_here(state):
+        tint = mix(tint, OVERCAST)
+    return name, tint
 
 
 def tint_at(state, now: tuple, x: int, y: int):
