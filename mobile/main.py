@@ -37,6 +37,7 @@ from kivy.graphics import (  # noqa: E402
     PopMatrix,
     PushMatrix,
     Rectangle,
+    Rotate,
     Scale,
     Translate,
 )
@@ -58,7 +59,7 @@ from sprites import facing, frame_at, sprite_rgba, walk_frame  # noqa: E402
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, daylight, persistence, weather  # noqa: E402
 from game.constants import FPS, HUD_ROWS, MOVE_COOLDOWN  # noqa: E402
-from game.events import COIN, DENIED, FIND, HIT, HURT, take_events  # noqa: E402
+from game.events import COIN, DENIED, FIND, HIT, HURT, MISS, take_events  # noqa: E402
 from game.geography import biome_at  # noqa: E402
 from game.input import Action, InputState, map_keys, set_hints  # noqa: E402
 from game.scenes import SceneManager, build_scenes  # noqa: E402
@@ -374,20 +375,27 @@ class FloatingTexts:
                 continue
             age = (now - born) / FLOAT_SECONDS
             alpha = 1.0 if age < 0.6 else (1.0 - age) / 0.4
-            label = self._label(event.text, max(ch * 0.8, 8))
+            # The overlay is magnified with the world: render the text at its size on
+            # screen and draw it 1/zoom as big, so it stays sharp and readable.
+            zoom = grid.zoom
+            on_screen = 1.0 if zoom == 1 else 1.5  # a little larger than a cell's text
+            label = self._label(event.text, max(ch * 0.8 * on_screen, 8))
+            text_w, text_h = label.width / zoom, label.height / zoom
             icon = _sprite_texture(event.icon) if event.icon else None
-            icon_w = cw * 1.4 if icon else 0
-            width = icon_w + label.width
+            icon_h = ch * 1.4 * on_screen / zoom
+            icon_w = cw * 1.4 * on_screen / zoom if icon else 0
+            width = icon_w + text_w
             center_x = grid.x + (event.x - view.x + 0.5) * cw + grid.scroll.x
             left = min(max(center_x - width / 2, grid.x), grid.right - width)
-            bottom = grid.top - (event.y - view.y) * ch + (slot + age * FLOAT_RISE) * ch
-            bottom += grid.scroll.y
+            rise = slot * icon_h + age * FLOAT_RISE * ch
+            bottom = grid.top - (event.y - view.y) * ch + rise + grid.scroll.y
             if icon:
                 overlay.add(Color(*_rgba(event.color or _WHITE)[:3], alpha))
-                overlay.add(Rectangle(texture=icon, pos=(left, bottom), size=(icon_w, ch * 1.4)))
+                overlay.add(Rectangle(texture=icon, pos=(left, bottom), size=(icon_w, icon_h)))
             overlay.add(Color(*_rgba(event.text_color)[:3], alpha))
-            text_y = bottom + (ch * 1.4 - label.height) / 2
-            overlay.add(Rectangle(texture=label, pos=(left + icon_w, text_y), size=label.size))
+            text_y = bottom + (icon_h - text_h) / 2
+            text_pos = (left + icon_w, text_y)
+            overlay.add(Rectangle(texture=label, pos=text_pos, size=(text_w, text_h)))
 
 
 SLIDE_SECONDS = MOVE_COOLDOWN  # one step's slide ends as the next step may begin
@@ -591,6 +599,72 @@ class RainLayer:
                 overlay.add(Rectangle(pos=pos, size=(round(cw / 3), max(1, round(cw / 8)))))
 
 
+# Tool swing, as (seconds, angle in degrees from upright, leaning forward = positive):
+# a short windup back, a fast strike, a held follow-through, then recovery.
+SWING_KEYS = [(0.0, 0), (0.06, -40), (0.10, 75), (0.18, 75), (0.26, 0)]
+SHAKE_KEYS = [(0.0, 0), (0.05, -20), (0.10, 20), (0.15, -20), (0.20, 20), (0.25, 0)]
+
+
+def _keyed(keys, t: float) -> float:
+    """The angle at time ``t`` of a keyframed motion (linear between keys)."""
+    for (t0, a0), (t1, a1) in zip(keys, keys[1:], strict=False):
+        if t <= t1:
+            return a0 + (a1 - a0) * (t - t0) / (t1 - t0)
+    return keys[-1][1]
+
+
+class ToolSwing:
+    """The equipped tool swinging beside the player when it digs, pans or hits: picks
+    and shovels chop, the pan is shaken, the drill rattles. Drawing only; the game has
+    already resolved the action."""
+
+    def __init__(self, grid: GridView):
+        self.grid = grid
+        self.swing = None  # (tool, style, start, facing)
+
+    def react(self, events, state, entity_layer, now: float) -> None:
+        tool = state.equipped_tool
+        if tool is None:
+            return
+        for event in events:
+            at_player = (event.x, event.y) == (state.player_x, state.player_y)
+            if event.kind in (FIND, MISS) and at_player or event.kind == HIT:
+                track = entity_layer.tracks.get("player")
+                facing = track[6] if track else 1
+                if event.kind == HIT and event.x != state.player_x:
+                    facing = 1 if event.x > state.player_x else -1
+                style = {"gold_pan": "shake", "drill": "rattle"}.get(tool, "swing")
+                self.swing = (tool, style, now, facing)
+
+    def draw(self, anchor, now: float) -> None:
+        if self.swing is None or anchor is None or PREFS["reduce_motion"]:
+            return
+        tool, style, start, facing = self.swing
+        t = now - start
+        if t > SWING_KEYS[-1][0]:
+            self.swing = None
+            return
+        texture = _sprite_texture(f"tool_{tool}")
+        if texture is None:
+            return
+        cw, ch = self.grid.cell_size()
+        overlay = self.grid.overlay
+        hand = (anchor[0] + facing * cw * 0.45, anchor[1] - ch * 0.15)
+        if style == "rattle":
+            angle = 0.0
+            hand = (hand[0] + math.sin(t * 90) * cw * 0.08, hand[1])
+        else:
+            angle = _keyed(SWING_KEYS if style == "swing" else SHAKE_KEYS, t)
+        overlay.add(PushMatrix())
+        # Kivy turns counter-clockwise; leaning toward the facing side is clockwise for 1.
+        overlay.add(Rotate(angle=-angle * facing, origin=hand))
+        overlay.add(Color(1, 1, 1, 1))
+        coords = _MIRRORED if facing < 0 else _UPRIGHT
+        overlay.add(Rectangle(texture=texture, pos=(hand[0] - cw / 2, hand[1] - ch * 0.1),
+                              size=(cw, ch), tex_coords=coords))  # fmt: skip
+        overlay.add(PopMatrix())
+
+
 class ParticleLayer:
     """Draws mobile/particles.py bursts as small square pixels over the world."""
 
@@ -729,6 +803,7 @@ class GemCollectorApp(App):
         self.floats = FloatingTexts(self.grid)
         self.particles = ParticleLayer(self.grid)
         self.entity_layer = EntityLayer(self.grid)
+        self.tool_swing = ToolSwing(self.grid)
         self.rain = RainLayer(self.grid)
         self.shake = ScreenShake(self.grid)
         self.slide = WorldSlide(self.grid)
@@ -835,6 +910,7 @@ class GemCollectorApp(App):
         self.floats.add(events, now)
         self.particles.add(events)
         self.entity_layer.react(events, now)
+        self.tool_swing.react(events, self.state, self.entity_layer, now)
         self.sfx.play(events)
         self.shake.update(events, now)
         in_world = self.state.active_scene == "game"
@@ -844,6 +920,7 @@ class GemCollectorApp(App):
         self.grid.overlay.clear()
         entities, self.renderer.entities = self.renderer.entities, {}
         self.entity_layer.draw(entities, view, now)
+        self.tool_swing.draw(self._player_anchor(view, now), now)
         self.particles.draw(view, now)  # under the texts
         self.rain.draw(view is not None and weather.rain_here(self.state), now)
         self.ambience.update(self.state, view is not None, now)
