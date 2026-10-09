@@ -14,7 +14,7 @@ import wave
 
 RATE = 22050
 VOLUME = 0.45
-VERSION = 5  # bump when a sound changes, so cached WAV files are rendered again
+VERSION = 6  # bump when a sound changes, so cached WAV files are rendered again
 
 # Each sound is a list of segments: (wave, start Hz, end Hz, seconds, loudness).
 # The pitch slides from start to end; every segment fades out (a "pluck").
@@ -44,6 +44,7 @@ SOUNDS = {
         ("silence", 0, 0, 0.05, 0),
         ("square", 330, 220, 0.07, 0.4),
     ],
+    "splash": [("noise", 0, 0, 0.06, 0.18)],
     "detect": [("sine", 1050, 1050, 0.05, 0.3), ("sine", 1400, 1400, 0.08, 0.3)],
     # Ambience: looping beds and one-shots scattered over them (played by the frontend).
     "rain": [("hiss", 0, 0, 2.0, 0.5)],

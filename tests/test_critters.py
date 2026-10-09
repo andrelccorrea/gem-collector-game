@@ -116,3 +116,43 @@ def test_a_scared_hedgehog_curls_up_instead_of_running():
     for _ in range(int(1.0 / STEP)):
         update_critters(state, STEP)
     assert hog.scared > 0 and (hog.x, hog.y) == spot
+
+
+def _meadow_spots(state, xs, y=30):
+    return [(x, y) for x in xs if critters._can_stand(state, x, y, "land")]
+
+
+def test_a_straggler_walks_back_to_its_herd():
+    state = new_run(12)
+    state.enemies = []
+    state.player_x, state.player_y = 5, 5  # far away: nothing is scared
+    herd = [Critter("deer", x, y, move_timer=99) for x, y in _meadow_spots(state, range(40, 43))]
+    straggler = Critter("deer", 47, 30)
+    state.critters = [*herd, straggler]
+    start = abs(straggler.x - 41)
+    for _ in range(int(6 / STEP)):
+        critters._step(state, straggler, critters.random.Random(1))
+    assert abs(straggler.x - 41) < start
+
+
+def test_startled_birds_fly_off_over_anything_and_are_gone():
+    state = new_run(12)
+    state.enemies = []
+    state.player_x, state.player_y = 25, 30
+    bird = Critter("bird", 27, 30)
+    state.critters = [bird]
+    for _ in range(int(3 / STEP)):
+        update_critters(state, STEP)
+    assert bird not in state.critters
+
+
+def test_fish_jump_now_and_then():
+    state = new_run(12)
+    fish = Critter("fish", 0, 0)
+    water = next(p for p, t in state.world_tiles.meta.items() if t["type"] == "lake")
+    fish.x, fish.y = water
+    state.critters, state.player_x, state.player_y = [fish], 0, 0
+    rng = critters.random.Random(2)
+    for _ in range(300):
+        critters._step(state, fish, rng)
+    assert any(e.kind == critters.SPLASH for e in state.events)

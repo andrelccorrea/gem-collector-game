@@ -417,6 +417,7 @@ flee_seconds = 0.12
 
 [[critters]]
 name = "bird"
+flies = true
 rain = "avoids"
 char = "w"
 color = [[240, 240, 230], [0, 30, 0]]
@@ -443,6 +444,7 @@ flee_seconds = 0.2
 
 [[critters]]
 name = "fish"
+jumps = true
 char = ">"
 color = [[150, 210, 255], [0, 0, 80]]
 biomes = ["river"]
@@ -518,6 +520,7 @@ desc = "Purple robe and a golden crown"
 
 [[critters]]
 name = "butterfly"
+flies = true
 rain = "avoids"
 char = "%"
 color = [[255, 170, 220], [0, 30, 0]]
@@ -544,6 +547,7 @@ flee_seconds = 0.12
 
 [[critters]]
 name = "owl"
+flies = true
 weight = 0.5
 char = "o"
 color = [[200, 170, 120], [0, 30, 0]]
@@ -606,6 +610,8 @@ wander_seconds = 2.5
 flee_seconds = 2.5
 
 # curls = true: when scared it rolls into a ball and stays put instead of running.
+# flies = true: when scared it takes off over any ground and leaves; jumps = true: now
+# and then it leaps out of the water with a splash.
 [[critters]]
 name = "hedgehog"
 rain = "likes"

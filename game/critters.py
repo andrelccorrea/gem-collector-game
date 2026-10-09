@@ -23,6 +23,7 @@ from game.constants import (
     TYPE_STREAM,
 )
 from game.daylight import mix, shade, tint_at
+from game.events import emit
 from game.geography import biome_at, in_town
 from game.objects.registry import CRITTERS
 
@@ -32,6 +33,10 @@ SPAWN_MIN, SPAWN_MAX = 8, 24  # distance from the player (Chebyshev) of a new he
 DESPAWN_DISTANCE = 32
 FLEE_SECONDS = 2.0  # how long a scared animal keeps running once out of range
 HERD_RADIUS = 4  # herd mates this close bolt together
+HERD_SPREAD = 3  # a herd member farther than this from its mates walks back to them
+FLOWN_OFF = 10  # a startled flier this far from the player has left for good
+JUMP_CHANCE = 0.04  # per wander step of a jumping fish
+SPLASH = "splash"
 WATER = {TYPE_STREAM, TYPE_LAKE, TYPE_SHALLOW, TYPE_DEEP}
 _STEPS = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, -1), (-1, 1), (1, 1)]
 
@@ -114,22 +119,48 @@ def _spawn(state, rng: random.Random) -> None:
 
 
 def _step(state, critter: Critter, rng: random.Random) -> None:
-    habitat = critter.kind["habitat"]
+    kind = critter.kind
+    flying = critter.scared > 0 and kind.get("flies")
     options = [
         (critter.x + dx, critter.y + dy)
         for dx, dy in _STEPS
-        if _can_stand(state, critter.x + dx, critter.y + dy, habitat)
+        if (_in_map(critter.x + dx, critter.y + dy) if flying
+            else _can_stand(state, critter.x + dx, critter.y + dy, kind["habitat"]))
         and not _occupied(state, critter.x + dx, critter.y + dy)
-    ]
+    ]  # fmt: skip
     if not options:
         return
-    if critter.scared > 0 and critter.kind.get("curls"):
+    if critter.scared > 0 and kind.get("curls"):
         return  # rolled into a ball: it waits it out
-    if critter.scared > 0:  # run: the step that gets furthest from the player
+    if critter.scared > 0:  # run (or fly): the step that gets furthest from the player
         px, py = state.player_x, state.player_y
         critter.x, critter.y = max(options, key=lambda p: max(abs(p[0] - px), abs(p[1] - py)))
+        return
+    center = _herd_center(state, critter)
+    if center is not None:  # strayed from its herd: head back (cohesion)
+        critter.x, critter.y = min(options, key=lambda p: max(abs(p[0] - center[0]),
+                                                              abs(p[1] - center[1])))  # fmt: skip
     elif rng.random() < 0.6:  # wander, or just graze in place
         critter.x, critter.y = rng.choice(options)
+    if kind.get("jumps") and rng.random() < JUMP_CHANCE:
+        emit(state, SPLASH, "", (150, 200, 255), at=(critter.x, critter.y))
+
+
+def _in_map(x: int, y: int) -> bool:
+    return 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT
+
+
+def _herd_center(state, critter: Critter):
+    """The middle of its herd mates nearby, when it is more than HERD_SPREAD from it."""
+    mates = [c for c in state.critters if c is not critter and c.name == critter.name
+             and max(abs(c.x - critter.x), abs(c.y - critter.y)) <= HERD_RADIUS * 2]  # fmt: skip
+    if not mates:
+        return None
+    cx = round(sum(c.x for c in mates) / len(mates))
+    cy = round(sum(c.y for c in mates) / len(mates))
+    if max(abs(cx - critter.x), abs(cy - critter.y)) <= HERD_SPREAD:
+        return None
+    return cx, cy
 
 
 def update_critters(state, dt: float) -> None:
@@ -159,8 +190,12 @@ def update_critters(state, dt: float) -> None:
             critter.move_timer = kind["flee_seconds"] if critter.scared else kind["wander_seconds"]
             _step(state, critter, rng)
     state.critters = [
-        c for c in state.critters if max(abs(c.x - px), abs(c.y - py)) <= DESPAWN_DISTANCE
-    ]
+        c
+        for c in state.critters
+        if max(abs(c.x - px), abs(c.y - py)) <= DESPAWN_DISTANCE
+        and not (c.scared > 0 and c.kind.get("flies")
+                 and max(abs(c.x - px), abs(c.y - py)) >= FLOWN_OFF)
+    ]  # fmt: skip
 
 
 def render_critters(renderer, state, view) -> None:
