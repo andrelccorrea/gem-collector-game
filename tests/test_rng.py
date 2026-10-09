@@ -3,7 +3,7 @@ import random
 from clingine.renderer import StubRenderer
 from game.input import Action, InputState
 from game.loop import STEP, FixedTimestep
-from game.menu import _select_menu_item
+from game.menu import _menu_ids, _select_menu_item
 from game.scenes.game import GameScene
 from game.scenes.lapidary import _build_lapidary_items, render_lapidary
 from game.simulation import new_run, step_game
@@ -97,7 +97,7 @@ def test_new_game_after_a_played_run_matches_a_fresh_run(monkeypatch):
     _replay(played, [STEP] * 900)
     played.lapidary_level = 3
     played.active_scene = "menu"
-    played.menu_cursor = 0
+    played.menu_cursor = _menu_ids().index("new")
 
     monkeypatch.setattr(random, "randint", lambda a, b: 1234)
     _select_menu_item(played, save_exists=False)

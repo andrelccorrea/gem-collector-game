@@ -139,6 +139,9 @@ class GameState:
     still_for: float = 0.0  # seconds since the player last stepped (animals trust stillness)
     friends: set = field(default_factory=set)  # species befriended (kept in the profile)
     goal: int = 0  # index of the current starter goal (game/goals.py; kept in the profile)
+    pause_cursor: int = 0
+    run_open: bool = False  # left to the main menu from pause: the run can be resumed
+    abandon_armed: Any = None  # menu choice that would abandon the open run, once warned
     critter_rng: Any = None
     critter_timer: float = 0.0
     # World events not yet shown by the frontend (game/events.py); never saved

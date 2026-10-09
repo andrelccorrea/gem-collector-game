@@ -100,7 +100,7 @@ def has_save() -> bool:
 
 
 # Scenes in which a run is being played (the only ones an automatic save may capture).
-PLAY_SCENES = frozenset({"game", "shop", "lapidary", "save_point"})
+PLAY_SCENES = frozenset({"game", "shop", "lapidary", "save_point", "pause", "merchant", "map"})
 
 
 def autosave_allowed(state) -> bool:

@@ -13,6 +13,7 @@ from game.ui import clear_screen, write_str
 
 # (id, label); "continue" is only selectable when a save exists
 MENU_ITEMS = [
+    ("resume", "Resume Run"),
     ("new", "New Game"),
     ("new_hardcore", "New Game (Hardcore)"),
     ("daily", "Daily Run"),
@@ -29,8 +30,19 @@ def _menu_ids() -> list:
     return [item_id for item_id, _ in MENU_ITEMS]
 
 
-def _enabled(item_id: str, save_exists: bool) -> bool:
+def _enabled(item_id: str, save_exists: bool, run_open: bool = False) -> bool:
+    if item_id == "resume":
+        return run_open
     return item_id != "continue" or save_exists
+
+
+def _settle_cursor(state, save_exists: bool) -> None:
+    """Keep the cursor on a selectable entry (the first one if it is not)."""
+    ids = _menu_ids()
+    if not _enabled(ids[state.menu_cursor], save_exists, state.run_open):
+        state.menu_cursor = next(
+            i for i, item_id in enumerate(ids) if _enabled(item_id, save_exists, state.run_open)
+        )
 
 
 def render_menu(renderer, state) -> None:
@@ -46,12 +58,13 @@ def render_menu(renderer, state) -> None:
     write_str(renderer, mid_y - 4, mid_x - len(subtitle) // 2, subtitle, COLOR_MENU_NORMAL)
 
     save_exists = persistence.has_save()
+    _settle_cursor(state, save_exists)
     for i, (item_id, item) in enumerate(MENU_ITEMS):
-        row = mid_y - 2 + i
+        row = mid_y - 3 + i
         label = f"  {item}  "
         col = mid_x - len(label) // 2
 
-        if not _enabled(item_id, save_exists):
+        if not _enabled(item_id, save_exists, state.run_open):
             cp = COLOR_MENU_DIMMED
         elif i == state.menu_cursor:
             cp = COLOR_MENU_SELECTED
@@ -62,25 +75,26 @@ def render_menu(renderer, state) -> None:
 
     if state.menu_notice:
         notice = state.menu_notice[: math.floor(renderer.width) - 2]
-        write_str(renderer, mid_y + 5, mid_x - len(notice) // 2, notice, COLOR_MENU_TITLE)
+        write_str(renderer, renderer.height - 3, mid_x - len(notice) // 2, notice, COLOR_MENU_TITLE)
 
     hint = (
         f"{hint_of(Action.MOVE_UP)}/{hint_of(Action.MOVE_DOWN)}: Navigate  |  "
         f"{hint_of(Action.CONFIRM)}: Select  |  {hint_of(Action.CANCEL)}: Quit"
     )
-    write_str(renderer, mid_y + 7, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+    write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 
 def update_menu(inp: InputState, state) -> None:
     save_exists = persistence.has_save()
     pressed = inp.pressed
+    _settle_cursor(state, save_exists)
 
     step = (Action.MOVE_DOWN in pressed) - (Action.MOVE_UP in pressed)
     if step:
         # Move to the next selectable entry in that direction, if any.
         ids = _menu_ids()
         i = state.menu_cursor + step
-        while 0 <= i < len(ids) and not _enabled(ids[i], save_exists):
+        while 0 <= i < len(ids) and not _enabled(ids[i], save_exists, state.run_open):
             i += step
         if 0 <= i < len(ids):
             state.menu_cursor = i
@@ -99,6 +113,18 @@ def _replace_state(state, new_state) -> None:
 
 def _select_menu_item(state, save_exists: bool) -> None:
     choice = _menu_ids()[state.menu_cursor]
+
+    if choice == "resume":
+        if state.run_open:
+            state.run_open = False
+            state.active_scene = "game"
+        return
+    # Starting or loading another run abandons the open one: warn once, then go ahead.
+    if state.run_open and choice in ("new", "new_hardcore", "daily", "continue"):
+        if state.abandon_armed != choice:
+            state.abandon_armed = choice
+            state.menu_notice = "This abandons your open run. Choose it again to confirm."
+            return
 
     if choice in ("new", "new_hardcore"):
         import random

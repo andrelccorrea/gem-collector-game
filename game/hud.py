@@ -103,7 +103,7 @@ def render_hud(renderer, state, pulse: HudPulse | None = None) -> None:
                 (Action.ATTACK, "Attack"),
                 (Action.CYCLE_TOOL, "Tool"),
                 (Action.RECALL, "Recall"),
-                (Action.CANCEL, "Menu"),
+                (Action.CANCEL, "Pause"),
             )
         )
         + f"  |  Bag:{carried}/{capacity}  Earned:${state.lifetime_earnings}"

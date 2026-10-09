@@ -83,7 +83,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     tips.check_tips(state)
 
     if Action.CANCEL in inp.pressed:
-        state.active_scene = "menu"
+        state.active_scene = "pause"
     elif Action.MAP in inp.pressed:
         state.active_scene = "map"
 
