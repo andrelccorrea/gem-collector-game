@@ -11,7 +11,7 @@ from game.constants import (
     RECALL_CHARM_COST,
 )
 from game.dog import DOG_COST
-from game.events import COIN, DENIED, DULL_COLOR, GAIN_COLOR, emit
+from game.feedback import chime, refuse
 from game.gems import polished_prices
 from game.input import Action, InputState
 from game.input import hint as hint_of
@@ -334,16 +334,6 @@ _GEAR_DESC = {
 }
 
 
-def _refuse(state, message: str) -> None:
-    set_hud_message(state, message, 1.5)
-    emit(state, DENIED, "", DULL_COLOR)
-
-
-def _chime(state) -> None:
-    """A purchase or sale went through (frontends play a coin sound)."""
-    emit(state, COIN, "", GAIN_COLOR)
-
-
 def _describe(item: dict) -> str:
     """One line on what the selected shop row is for ("" if nothing to add)."""
     action, key = item["action"], item["key"]
@@ -481,83 +471,83 @@ def update_shop(inp: InputState, state) -> None:
 
     if action == "buy_charm":
         if state.player_gold < item["cost"]:
-            _refuse(state, "Not enough gold!")
+            refuse(state, "Not enough gold!")
         else:
             state.player_gold -= item["cost"]
             state.recall_charms += 1
             set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
-            _chime(state)
+            chime(state)
 
     elif action == "buy_dog":
         if state.has_dog:
-            _refuse(state, "Already owned!")
+            refuse(state, "Already owned!")
         elif state.player_gold < item["cost"]:
-            _refuse(state, "Not enough gold!")
+            refuse(state, "Not enough gold!")
         else:
             state.player_gold -= item["cost"]
             state.has_dog = True
             set_hud_message(state, "A dog joins you! It will warn you of danger.", 2.5)
-            _chime(state)
+            chime(state)
 
     elif action == "contract":
         reward = contracts.deliver(state, item["key"])
         if not reward:
-            _refuse(state, "You don't have what this contract asks for.")
+            refuse(state, "You don't have what this contract asks for.")
         else:
             set_hud_message(state, f"Contract done: +${reward}!", 2.5)
-            _chime(state)
+            chime(state)
             check_win(state)
 
     elif action == "outfit":
         if not item["enabled"]:
-            _refuse(state, "Not enough gold!" if item["cost"] else "Already wearing it!")
+            refuse(state, "Not enough gold!" if item["cost"] else "Already wearing it!")
         else:
             state.player_gold -= item["cost"]
             profile.wear_outfit(item["key"])
             state.outfit = item["key"]
             set_hud_message(state, f"Now wearing: {OUTFITS[item['key']]['label']}!", 2.0)
-            _chime(state)
+            chime(state)
 
     elif action == "buy_supply":
         if state.player_gold < item["cost"]:
-            _refuse(state, "Not enough gold!")
+            refuse(state, "Not enough gold!")
         else:
             state.player_gold -= item["cost"]
             state.supplies[item["key"]] = state.supplies.get(item["key"], 0) + 1
             set_hud_message(state, f"Bought {SUPPLIES[item['key']]['name']}!", 1.5)
-            _chime(state)
+            chime(state)
 
     elif action == "buy_tool":
         tool_name = item["key"]
         cost = item["cost"]
         if tool_name in state.inventory.get("tools", {}):
-            _refuse(state, "Already owned!")
+            refuse(state, "Already owned!")
         elif state.player_gold < cost:
-            _refuse(state, "Not enough gold!")
+            refuse(state, "Not enough gold!")
         else:
             state.player_gold -= cost
             state.inventory.setdefault("tools", {})[tool_name] = {"level": 1}
             set_hud_message(state, f"Bought {_tool_label(tool_name)}!", 2.0)
-            _chime(state)
+            chime(state)
 
     elif action == "upgrade_tool":
         tool_name = item["key"]
         cost = item["cost"]
         tools = state.inventory.get("tools", {})
         if tool_name not in tools:
-            _refuse(state, "Tool not owned!")
+            refuse(state, "Tool not owned!")
         elif tools[tool_name].get("level", 1) >= TOOL_MAX_LEVEL:
-            _refuse(state, "Already at max level!")
+            refuse(state, "Already at max level!")
         elif not item["enabled"] and state.player_gold >= cost:
-            _refuse(state, "Not available yet: earn more first!")
+            refuse(state, "Not available yet: earn more first!")
         elif state.player_gold < cost:
-            _refuse(state, "Not enough gold!")
+            refuse(state, "Not enough gold!")
         else:
             state.player_gold -= cost
             tools[tool_name]["level"] += 1
             new_level = tools[tool_name]["level"]
             set_hud_message(state, f"{_tool_label(tool_name)} upgraded to Lv{new_level}!", 2.0)
-            _chime(state)
+            chime(state)
 
     elif action == "donate":
         gem_key = item["key"]
@@ -567,12 +557,12 @@ def update_shop(inp: InputState, state) -> None:
             del gems[gem_key]
         state.museum.append(gem_key)
         set_hud_message(state, f"The museum thanks you for the {gem_key.replace('_', ' ')}!", 2.5)
-        _chime(state)
+        chime(state)
 
     elif action == "upgrade_gear":
         gear = item["key"]
         if not item["enabled"]:
-            _refuse(state, f"Can't buy a better {gear} yet!")
+            refuse(state, f"Can't buy a better {gear} yet!")
         else:
             attr = _GEAR[gear][0]
             state.player_gold -= item["cost"]
@@ -580,21 +570,21 @@ def update_shop(inp: InputState, state) -> None:
             if gear == "lantern":
                 state.lantern_fuel = lantern_capacity(state)
             set_hud_message(state, f"Bought a better {gear}!", 2.0)
-            _chime(state)
+            chime(state)
 
     elif action in ("sell_gem", "sell_loot"):
         price = market.sell_one(state, item["key"])
         if price == 0:
-            _refuse(state, "None left!")
+            refuse(state, "None left!")
             return
         set_hud_message(state, f"Sold for ${price}!", 2.0)
-        _chime(state)
+        chime(state)
         check_win(state)
 
     elif action in ("sell_all_gems", "sell_all_loot"):
         total = market.sell_all(state, loot=action == "sell_all_loot")
         kind = "loot" if action == "sell_all_loot" else "gems"
         set_hud_message(state, f"Sold all {kind} for ${total}!", 2.5)
-        _chime(state)
+        chime(state)
         state.shop_cursor = 0
         check_win(state)

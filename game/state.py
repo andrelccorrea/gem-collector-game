@@ -136,6 +136,8 @@ class GameState:
     shop_cursor: int = 0
     shop_tab: int = 0  # 0=buy_tools, 1=upgrade_tools, 2=sell_gems, 3=sell_loot
     lapidary_cursor: int = 0
+    cut_streak: int = 0  # consecutive Excellent-or-better cuts (not saved)
+    cut_result: Any = None  # the last cut, shown for a moment: {"text", "position", ...}
 
     # Gem being cut in the lapidary minigame: {"gem": name, "elapsed": seconds} or None
     cutting: Any = None

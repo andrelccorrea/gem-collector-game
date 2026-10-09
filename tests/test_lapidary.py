@@ -181,3 +181,41 @@ def test_the_minigame_is_drawn_while_cutting():
     render_lapidary(renderer, state)
     screen = _screen(renderer)
     assert "stop the marker" in screen and "^" in screen
+
+
+def test_each_quality_has_its_own_cue_and_the_result_stays_on_screen():
+    from game.scenes.lapidary import CUT_SOUNDS, RESULT_SECONDS
+
+    state = GameState(player_gold=10_000)
+    state.inventory["gems"] = {"quartz": 2}
+    _cut(state, "quartz")  # dead center
+    assert state.events[-1].kind == CUT_SOUNDS["Flawless"]
+    assert state.cut_result["quality"] == "Flawless"
+    renderer = StubRenderer(79, 23)
+    render_lapidary(renderer, state)
+    assert "Flawless cut (dead center)" in _screen(renderer)
+    update_lapidary(EMPTY_INPUT, state, RESULT_SECONDS + 0.1)
+    assert state.cut_result is None
+    _cut(state, "quartz", elapsed=0.0)  # left edge
+    assert state.events[-1].kind == CUT_SOUNDS["Poor"]
+    assert "off center" in state.cut_result["text"]
+
+
+def test_great_cuts_in_a_row_earn_a_streak_bonus():
+    from game.scenes.lapidary import STREAK_BONUS
+
+    state = GameState(player_gold=10_000, rng=random.Random(1))
+    state.inventory["gems"] = {"quartz": 3}
+    _cut(state, "quartz")
+    _cut(state, "quartz")
+    assert state.cut_streak == 2 and "Streak +5%" in state.hud_message
+    _cut(state, "quartz", elapsed=0.0)
+    assert state.cut_streak == 0
+    assert STREAK_BONUS == 0.05
+
+
+def test_refusals_sound_like_refusals():
+    state = GameState(player_gold=0)
+    state.inventory["gems"] = {"quartz": 1}
+    _cut(state, "quartz")
+    assert state.events and state.events[-1].kind == "denied"

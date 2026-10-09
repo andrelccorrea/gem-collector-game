@@ -10,6 +10,8 @@ from game.constants import (
     LAPIDARY_CUT_FEE_RATIO,
     LAPIDARY_UPGRADES,
 )
+from game.events import ACHIEVE, COIN, FIND, GAIN_COLOR, MISS, emit
+from game.feedback import chime, refuse
 from game.gems import (
     GEODE,
     GEODE_CRACK_FEE,
@@ -37,6 +39,18 @@ CUT_QUALITIES = [
     ("Good", 9, (0.25, 0.6)),
     ("Poor", CUT_BAR_WIDTH, (0.0, 0.25)),
 ]
+# How each quality looks on the bar and sounds (an event kind with a fitting cue).
+CUT_ZONE_COLORS = {
+    "Flawless": ((255, 215, 0), (60, 45, 0)),
+    "Excellent": ((80, 220, 80), (0, 40, 0)),
+    "Good": ((230, 200, 60), (40, 35, 0)),
+    "Poor": ((200, 70, 60), (40, 0, 0)),
+}
+CUT_SOUNDS = {"Flawless": ACHIEVE, "Excellent": FIND, "Good": COIN, "Poor": MISS}
+# Consecutive Excellent-or-better cuts add STREAK_BONUS each to the cut's value.
+STREAK_BONUS = 0.05
+STREAK_MAX = 4
+RESULT_SECONDS = 2.5
 
 
 def marker_position(elapsed: float) -> int:
@@ -159,7 +173,9 @@ def render_lapidary(renderer, state) -> None:
     state.lapidary_cursor = cursor
 
     render_list(renderer, items, cursor, top=5, bottom=16)
-    if state.hud_message:
+    if state.cut_result is not None:
+        _render_cut_result(renderer, state.cut_result)
+    elif state.hud_message:
         write_str(renderer, 18, 2, state.hud_message, COLOR_MENU_TITLE)
 
     hint = (
@@ -178,6 +194,10 @@ def render_lapidary(renderer, state) -> None:
 def update_lapidary(inp: InputState, state, dt: float = 0.0) -> None:
     """Handle input for the lapidary scene (and the cutting minigame while it runs)."""
     pressed = inp.pressed
+    if state.cut_result is not None:
+        state.cut_result["left"] -= dt
+        if state.cut_result["left"] <= 0:
+            state.cut_result = None
 
     if state.cutting is not None:
         _update_cutting(pressed, state, dt)
@@ -213,18 +233,18 @@ def update_lapidary(inp: InputState, state, dt: float = 0.0) -> None:
         gems = state.inventory.get("gems", {})
 
         if gems.get(gem_key, 0) <= 0:
-            set_hud_message(state, "No gems to cut!", 1.5)
+            refuse(state, "No gems to cut!")
         elif state.player_gold < cut_fee:
-            set_hud_message(state, "Not enough gold for the cut fee!", 1.5)
+            refuse(state, "Not enough gold for the cut fee!")
         else:
             state.cutting = {"gem": gem_key, "fee": cut_fee, "elapsed": 0.0}
 
     elif action == "crack_geode":
         gems = state.inventory["gems"]
         if gems.get(GEODE, 0) <= 0:
-            set_hud_message(state, "No geodes to crack!", 1.5)
+            refuse(state, "No geodes to crack!")
         elif state.player_gold < GEODE_CRACK_FEE:
-            set_hud_message(state, "Not enough gold for the crack fee!", 1.5)
+            refuse(state, "Not enough gold for the crack fee!")
         else:
             state.player_gold -= GEODE_CRACK_FEE
             gems[GEODE] -= 1
@@ -233,21 +253,23 @@ def update_lapidary(inp: InputState, state, dt: float = 0.0) -> None:
             found = crack_geode(_best_tier(state), state.rng)
             gems[found] = gems.get(found, 0) + 1
             set_hud_message(state, f"The geode held a {found.replace('_', ' ').title()}!", 3.0)
+            emit(state, FIND, "", GAIN_COLOR)
 
     elif action == "upgrade_lapidary":
         upgrade_cost = item["cut_fee"]
         max_level = max(LAPIDARY_UPGRADES.keys())
 
         if state.lapidary_level >= max_level:
-            set_hud_message(state, "Already at max level!", 1.5)
+            refuse(state, "Already at max level!")
         elif not item["enabled"] and state.player_gold >= upgrade_cost:
-            set_hud_message(state, "Not available yet: earn more first!", 1.5)
+            refuse(state, "Not available yet: earn more first!")
         elif state.player_gold < upgrade_cost:
-            set_hud_message(state, "Not enough gold!", 1.5)
+            refuse(state, "Not enough gold!")
         else:
             state.player_gold -= upgrade_cost
             state.lapidary_level += 1
             set_hud_message(state, f"Lapidary upgraded to level {state.lapidary_level}!", 2.5)
+            chime(state)
 
 
 def _best_tier(state) -> int:
@@ -268,7 +290,8 @@ def _update_cutting(pressed, state, dt: float) -> None:
 
     # Stop the marker: pay the fee, use up the raw gem, add the polished one.
     gem_key = cut["gem"]
-    name, _distance, band = cut_quality(marker_position(cut["elapsed"]))
+    position = marker_position(cut["elapsed"])
+    name, _distance, band = cut_quality(position)
     state.cutting = None
     gems = state.inventory["gems"]
     state.player_gold -= cut["fee"]
@@ -276,10 +299,19 @@ def _update_cutting(pressed, state, dt: float) -> None:
     if gems[gem_key] == 0:
         del gems[gem_key]
     value = roll_cut_value(gem_key, state.lapidary_level, band, state.rng)
+    great = name in ("Flawless", "Excellent")
+    state.cut_streak = min(state.cut_streak + 1, STREAK_MAX) if great else 0
+    bonus = STREAK_BONUS * max(0, state.cut_streak - 1)
+    value = round(value * (1 + bonus))
     add_polished_gem(state, gem_key, value)
-    set_hud_message(
-        state, f"{name} cut! Polished {gem_key.replace('_', ' ').title()} worth ${value}.", 3.0
-    )
+    streak = f" Streak +{round(bonus * 100)}%!" if bonus else ""
+    gem_name = gem_key.replace("_", " ").title()
+    set_hud_message(state, f"{name} cut! Polished {gem_name} worth ${value}.{streak}", 3.0)
+    off = abs(position - CUT_BAR_WIDTH // 2)
+    where = "dead center" if off == 0 else f"{off} off center"
+    state.cut_result = {"text": f"{name} cut ({where}): ${value}.{streak}", "position": position,
+                        "quality": name, "left": RESULT_SECONDS}  # fmt: skip
+    emit(state, CUT_SOUNDS[name], "", CUT_ZONE_COLORS[name][0])
 
 
 def _render_cutting(renderer, state) -> None:
@@ -290,15 +322,27 @@ def _render_cutting(renderer, state) -> None:
     left = (width - CUT_BAR_WIDTH) // 2
     center = CUT_BAR_WIDTH // 2
     for x in range(CUT_BAR_WIDTH):
-        distance = abs(x - center)
         name, _d, _band = cut_quality(x)
         char = "=" if name in ("Flawless", "Excellent") else "-"
-        color = COLOR_MENU_TITLE if distance <= 1 else COLOR_MENU_NORMAL
-        write_str(renderer, 9, left + x, char, color)
+        write_str(renderer, 9, left + x, char, CUT_ZONE_COLORS[name])
+    write_str(renderer, 8, left + center, "v", COLOR_MENU_TITLE)  # where to stop
     marker = marker_position(cut["elapsed"])
     write_str(renderer, 10, left + marker, "^", COLOR_MENU_SELECTED)
     hint = f"[{hint_of(Action.CONFIRM)}] Cut   [{hint_of(Action.CANCEL)}] Cancel (no fee)"
     write_str(renderer, 12, (width - len(hint)) // 2, hint, COLOR_MENU_DIMMED)
+
+
+def _render_cut_result(renderer, result: dict) -> None:
+    """The last cut: where the marker stopped on the zoned bar, and how it went."""
+    left = (renderer.width - CUT_BAR_WIDTH) // 2
+    for x in range(CUT_BAR_WIDTH):
+        name = cut_quality(x)[0]
+        char = "=" if name in ("Flawless", "Excellent") else "-"
+        write_str(renderer, 17, left + x, char, CUT_ZONE_COLORS[name])
+    write_str(renderer, 17, left + result["position"], "^", COLOR_MENU_SELECTED)
+    text = result["text"][: renderer.width - 4]
+    color = CUT_ZONE_COLORS[result["quality"]]
+    write_str(renderer, 18, (renderer.width - len(text)) // 2, text, color)
 
 
 class LapidaryScene(Scene):
