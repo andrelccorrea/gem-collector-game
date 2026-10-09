@@ -11,6 +11,7 @@ from game import (
     merchant,
     player,
     profile,
+    townsfolk,
     weather,
 )
 from game.input import InputState
@@ -81,6 +82,7 @@ class GameScene(Scene):
         camera.render_viewport(renderer, state, view)
         critters.render_critters(renderer, state, view)
         dog.render_dog(renderer, state, view)
+        townsfolk.render_townsfolk(renderer, state, view)
         merchant.render_cart(renderer, state, view)
         enemies.render_enemies(renderer, state, view)
         player.render_player(renderer, state, view)

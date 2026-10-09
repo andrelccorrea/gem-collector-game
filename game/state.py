@@ -134,6 +134,8 @@ class GameState:
     last_tip_time: float = float("-inf")
     # Peaceful animals (game/critters.py) and their own RNG; never saved
     critters: list = field(default_factory=list)
+    townsfolk: list = field(default_factory=list)  # villagers (game/townsfolk.py); not saved
+    town_rng: Any = None
     critter_rng: Any = None
     critter_timer: float = 0.0
     # World events not yet shown by the frontend (game/events.py); never saved

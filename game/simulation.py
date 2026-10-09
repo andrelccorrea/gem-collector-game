@@ -23,6 +23,7 @@ from game import (
     supplies,
     tips,
     tools,
+    townsfolk,
     world,
 )
 from game.input import Action, InputState
@@ -52,6 +53,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
     enemies.spawn_enemies(state, dt)
     enemies.update_enemies(state, dt)
     critters.update_critters(state, dt)
+    townsfolk.update_townsfolk(state, dt)
     dog.update_dog(state, dt)
 
     # Combat: enemy auto-attacks

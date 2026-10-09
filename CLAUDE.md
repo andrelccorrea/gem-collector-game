@@ -83,6 +83,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `decor.py` | Cosmetic decorations (flowers, glowcaps, crystals, reeds, lily pads, pebbles): `decoration(seed, x, y, tile)` hashes the cell, in patches; never stored, so worldgen/saves/simulation are unaffected. Drawn by `camera.render_viewport` (theme `DECOR_APPEARANCE`, sprite = decoration id) and named in the tile row |
 | `tile_info.py` | `describe_here(state)`: tile name, what Use does there (enter, dig/pan with which tools, worked out), gem and dropped bag on the tile |
 | `player.py` | `init_player`, `update_player` (movement via held move actions, HP regen in town, death check), `render_player`, `set_hud_message` |
+| `townsfolk.py` | 4 villagers: wander the town square by day, home at night; greet with hint lines when the player is beside them (12 s cooldown), chat with each other (`talk` events); own RNG, not saved; sprites are palette swaps of the player |
 | `tools.py` | E cycles tools; Space recovers a dropped bag, picks up visible gems, digs/pans (refused when the bag is full) and rolls drops with the equipped tool's effective tier |
 | `gems.py` | `effective_tier(tool, level)`, `roll_gem_drop(biome, tier, rng)` (gems need `min_tier`), bag capacity/count, polished prices (one per gem, highest first), `roll_cut_value`, geodes (`GEODE`, `crack_geode`) |
 | `regrow.py` | Worked-out tiles regrow one game day after they were dug/panned (`state.depleted_at`, oldest first), so the world can't run dry before the goal |

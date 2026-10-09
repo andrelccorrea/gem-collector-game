@@ -104,6 +104,7 @@ ASCII_FALLBACK = {
     "π": "n",
     "Ω": "&",
     "‡": "#",
+    "☺": "v",
 }
 UNSEEN_APPEARANCE = (" ", None)
 

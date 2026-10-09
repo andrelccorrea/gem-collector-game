@@ -1456,6 +1456,23 @@ OUTFIT_PALETTES = {
 }
 
 
+# Townsfolk (game/townsfolk.py): the player's art and animations in their own colors
+# (H hat or hair, u shirt, j trousers, s skin).
+VILLAGER_PALETTES = {
+    "ada": {"H": "Y", "u": "3", "j": "U"},  # straw hat, green smock
+    "bram": {"H": "Z", "u": "S", "j": "Z"},  # dark hair, red apron
+    "pip": {"H": "8", "u": "Y", "j": "u"},  # child: yellow shirt
+    "mo": {"H": "L", "u": "v", "j": "l"},  # grey hair, purple coat
+}
+for _who, _swap_map in VILLAGER_PALETTES.items():
+    _name = f"villager_{_who}"
+    _recolor = lambda rows, m=_swap_map: ["".join(m.get(c, c) for c in row) for row in rows]  # noqa: E731
+    SPRITES[_name] = _recolor(SPRITES["player"])
+    FRAMES[_name] = [_recolor(frame) for frame in FRAMES["player"]]
+    FPS[_name], WALK[_name], IDLE[_name] = FPS["player"], WALK["player"], IDLE["player"]
+    BLINK[_name], HOP[_name] = BLINK["player"], HOP["player"]
+
+
 def _base(sprite_id: str) -> str:
     """The sprite an id is drawn from: "stream#5" is a stream with shore on N and S,
     "player~miner" the player in the miner's outfit."""
