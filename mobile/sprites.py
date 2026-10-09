@@ -1117,17 +1117,24 @@ def _shore(rows: list[str], mask: int) -> list[str]:
     return ["".join(row) for row in grid]
 
 
+_cycles: dict = {}  # sprite id -> (idle frames, fps), worked out once per id
+
+
 def frame_count(sprite_id: str) -> int:
     return 1 + len(FRAMES.get(_base(sprite_id), ()))
 
 
 def frame_at(sprite_id: str, seconds: float, phase: int = 0) -> int:
     """Which frame of the sprite shows at time ``seconds`` (``phase`` shifts a cell's cycle)."""
-    base = _base(sprite_id)
-    frames = IDLE.get(base) or range(frame_count(base))
-    if len(frames) == 1:
+    cycle = _cycles.get(sprite_id)
+    if cycle is None:
+        base = _base(sprite_id)
+        frames = tuple(IDLE.get(base) or range(frame_count(base)))
+        cycle = _cycles[sprite_id] = (frames, FPS.get(base, 1))
+    frames, fps = cycle
+    if len(frames) == 1:  # most sprites stand still: answer at once
         return 0
-    return frames[(int(seconds * FPS[base]) + phase) % len(frames)]
+    return frames[(int(seconds * fps) + phase) % len(frames)]
 
 
 def sprite_rows(sprite_id: str, frame: int = 0) -> list[str] | None:

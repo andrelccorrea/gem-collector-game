@@ -72,6 +72,7 @@ class GameState:
     # Depleted tiles: set of (x, y) tuples
     depleted_tiles: set = field(default_factory=set)
     depleted_at: dict = field(default_factory=dict)  # tile -> game time worked out (regrow.py)
+    tiles_version: int = 0  # bumped whenever a tile changes (drawing caches key on it)
 
     # Visible gems on the map: (x, y) -> gem_name (string)
     world_gems: dict = field(default_factory=dict)

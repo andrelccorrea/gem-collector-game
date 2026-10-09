@@ -66,27 +66,50 @@ def render_view(state, renderer) -> View:
     )
 
 
-def render_viewport(renderer, state, view: View) -> None:
-    if state.world_tiles is None:
-        return
+_view_cache: dict = {}
 
-    meta = state.world_tiles.meta
+
+def _view_cells(state, view: View) -> list:
+    """[(sx, sy, char, color_pair, (sprite, tint) or None)] for the view's ground.
+
+    Working out a tile's look (decoration, light, shore) is the costly part of a frame,
+    so the result is kept until something it depends on changes: the view, the fog, the
+    light (and, at night, where the player's glow is) or the tiles themselves.
+    """
     now = daylight.phase(state)
+    glow = (state.player_x, state.player_y) if now[0] == "night" else None
+    key = (id(state.world_tiles), view, state.fog_key, now, glow, state.tiles_version)
+    if _view_cache.get("key") == key:
+        return _view_cache["cells"]
+    meta = state.world_tiles.meta
+    cells = []
     for sy in range(view.height):
         for sx in range(view.width):
             wx, wy = view.x + sx, view.y + sy
             tile = meta.get((wx, wy))
             if tile is None or tile.get("visibility") == "unseen":
-                char, color_pair, deco, light = *UNSEEN_APPEARANCE, None, None
-            else:
-                deco = landmark_at(state, wx, wy) or decoration(state.seed, wx, wy, tile)
-                light = tint_at(state, now, wx, wy)
-                char, color_pair = tile_appearance(tile, deco)
-                color_pair = shade(color_pair, light)
-            _set_ground_sprite(renderer, sx, sy, tile, deco, light, meta, wx, wy)
-            # Only touch cells that changed, so the frontend redraws as little as possible.
-            if renderer.get_cell(sx, sy) != (char, color_pair):
-                renderer.set_cell(sx, sy, char, color_pair)
+                cells.append((sx, sy, *UNSEEN_APPEARANCE, None))
+                continue
+            deco = landmark_at(state, wx, wy) or decoration(state.seed, wx, wy, tile)
+            light = tint_at(state, now, wx, wy)
+            char, color_pair = tile_appearance(tile, deco)
+            ground = _ground_sprite(tile, deco, light, meta, wx, wy)
+            cells.append((sx, sy, char, shade(color_pair, light), ground))
+    # The world itself is kept too, so its id can't be reused by another one meanwhile.
+    _view_cache.update(key=key, cells=cells, world=state.world_tiles)
+    return cells
+
+
+def render_viewport(renderer, state, view: View) -> None:
+    if state.world_tiles is None:
+        return
+
+    for sx, sy, char, color_pair, ground in _view_cells(state, view):
+        if ground is not None:
+            renderer.set_sprite(sx, sy, GROUND, *ground)
+        # Only touch cells that changed, so the frontend redraws as little as possible.
+        if renderer.get_cell(sx, sy) != (char, color_pair):
+            renderer.set_cell(sx, sy, char, color_pair)
 
     _render_world_gems(renderer, state, view)
     _render_dropped_bag(renderer, state, view)
@@ -107,17 +130,15 @@ def shore_mask(meta: dict, x: int, y: int) -> int:
     return mask
 
 
-def _set_ground_sprite(renderer, sx, sy, tile, deco, light, meta, wx, wy) -> None:
-    visibility = "unseen" if tile is None else tile.get("visibility", "visible")
-    if visibility == "unseen":
-        return
+def _ground_sprite(tile, deco, light, meta, wx, wy):
+    """(sprite, tint) for a seen tile's ground."""
     sprite = deco or ("depleted" if tile.get("depleted") else tile["type"])
     if sprite in _WATER:
         mask = shore_mask(meta, wx, wy)
         if mask:
             sprite = f"{sprite}#{mask}"
-    fog = None if visibility == "visible" else EXPLORED_TINT
-    renderer.set_sprite(sx, sy, GROUND, sprite, mix(fog, light))
+    fog = None if tile.get("visibility", "visible") == "visible" else EXPLORED_TINT
+    return sprite, mix(fog, light)
 
 
 def _render_dropped_bag(renderer, state, view: View) -> None:

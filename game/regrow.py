@@ -19,6 +19,7 @@ def update_regrowth(state) -> None:
             return
         del state.depleted_at[pos]
         state.depleted_tiles.discard(pos)
+        state.tiles_version += 1
         tile = state.world_tiles.meta.get(pos)
         if tile is not None:
             tile["depleted"] = False
