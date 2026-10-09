@@ -66,6 +66,7 @@ def build_scenes() -> dict:
         "leaderboard": FunctionScene(menu.update_leaderboard, menu.render_leaderboard),
         # Shares the leaderboard's update: Back returns to the menu.
         "achievements": FunctionScene(menu.update_leaderboard, menu.render_achievements),
+        "bestiary": FunctionScene(menu.update_leaderboard, menu.render_bestiary),
         "daily_end": FunctionScene(menu.update_daily_end, menu.render_daily_end),
         "perks": FunctionScene(menu.update_perks, menu.render_perks),
     }

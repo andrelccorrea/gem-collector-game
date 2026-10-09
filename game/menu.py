@@ -19,6 +19,7 @@ MENU_ITEMS = [
     ("continue", "Continue"),
     ("perks", "Perks"),
     ("achievements", "Achievements"),
+    ("bestiary", "Bestiary"),
     ("leaderboard", "Leaderboard"),
 ]
 
@@ -135,6 +136,9 @@ def _select_menu_item(state, save_exists: bool) -> None:
 
     elif choice == "achievements":
         state.active_scene = "achievements"
+
+    elif choice == "bestiary":
+        state.active_scene = "bestiary"
 
 
 def render_death_screen(renderer, state) -> None:
@@ -271,6 +275,24 @@ def render_achievements(renderer, state) -> None:
         color = COLOR_MENU_NORMAL if done else COLOR_MENU_DIMMED
         write_str(renderer, 3 + i, 2, line[: renderer.width - 3], color)
     hint = f"{hint_of(Action.CANCEL)}: Back to Menu   (rewards are reputation, spent on Perks)"
+    write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
+
+
+def render_bestiary(renderer, state) -> None:
+    from game.bestiary import ENTRIES
+
+    clear_screen(renderer, ((0, 0, 0), (0, 0, 0)))
+    mid_x = math.floor(renderer.width) // 2
+    seen = profile.load_profile()["bestiary"]
+    title = f"  BESTIARY  {len(seen.keys() & ENTRIES.keys())}/{len(ENTRIES)}  "
+    write_str(renderer, 1, mid_x - len(title) // 2, title, COLOR_MENU_TITLE)
+    for i, (name, (label, desc)) in enumerate(ENTRIES.items()):
+        if name in seen:
+            line, color = f"{label:12s} {desc}  ({seen[name]})", COLOR_MENU_NORMAL
+        else:
+            line, color = f"{'???':12s} not seen yet", COLOR_MENU_DIMMED
+        write_str(renderer, 3 + i, 2, line[: renderer.width - 3], color)
+    hint = f"{hint_of(Action.CANCEL)}: Back to Menu"
     write_str(renderer, renderer.height - 2, mid_x - len(hint) // 2, hint, COLOR_MENU_DIMMED)
 
 

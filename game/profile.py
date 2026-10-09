@@ -32,6 +32,7 @@ def new_profile() -> dict:
         "achievements": [],
         "outfits": [DEFAULT_OUTFIT],
         "outfit": DEFAULT_OUTFIT,
+        "bestiary": {},
     }
 
 
@@ -52,6 +53,7 @@ def load_profile() -> dict:
         profile["achievements"] = [str(a) for a in data.get("achievements", [])]
         owned = [str(o) for o in data.get("outfits", []) if o in OUTFITS]
         profile["outfits"] = sorted(set(owned) | {DEFAULT_OUTFIT})
+        profile["bestiary"] = {str(k): str(v) for k, v in data.get("bestiary", {}).items()}
         worn = data.get("outfit", DEFAULT_OUTFIT)
         profile["outfit"] = worn if worn in profile["outfits"] else DEFAULT_OUTFIT
         for key in PERKS:
@@ -127,6 +129,14 @@ def remember_tips(tips) -> None:
     if not set(tips) <= known:
         profile["tips"] = sorted(known | set(tips))
         save_profile(profile)
+
+
+def record_sightings(names, where: str) -> None:
+    """Add first sightings to the bestiary, with where and when they happened."""
+    profile = load_profile()
+    for name in names:
+        profile["bestiary"].setdefault(name, where)
+    save_profile(profile)
 
 
 def wear_outfit(name: str) -> None:

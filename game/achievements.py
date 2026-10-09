@@ -8,7 +8,7 @@ live in the profile; the game scene checks them as the run goes on.
 from game import daylight
 from game.events import ACHIEVE, emit
 from game.geography import in_town
-from game.objects.registry import ARMOR, BOOTS, TOOL_CATALOG
+from game.objects.registry import ARMOR, BOOTS, CRITTERS, TOOL_CATALOG
 from game.player import set_hud_message
 
 GOLD = (255, 215, 90)
@@ -36,6 +36,10 @@ ACHIEVEMENTS = [
      2, lambda s: len(s.museum) >= 5),
     ("deep_delver", "Deep Delver", "Reach the far end of the caves",
      2, lambda s: s.player_x >= 185),
+    ("field_notes", "Field Notes", "See 10 kinds of creatures",
+     2, lambda s: len(s.seen_species) >= 10),
+    ("naturalist", "Naturalist", "See every peaceful animal",
+     3, lambda s: set(CRITTERS) <= s.seen_species),
     ("tycoon", "Tycoon", "Earn $5,000 in one run",
      3, lambda s: s.lifetime_earnings >= 5000),
     ("fully_geared", "Fully Geared", "Own every tool, the best armor and the best boots",

@@ -2,6 +2,7 @@
 
 from game import (
     achievements,
+    bestiary,
     camera,
     critters,
     dog,
@@ -33,9 +34,16 @@ class GameScene(Scene):
         self._tips_saved = set(state.tips_seen)
         self._achieved = set(saved["achievements"])
         state.outfit = saved["outfit"]
+        state.seen_species = set(saved["bestiary"])
 
     def update(self, inp: InputState, state, frame_dt: float) -> None:
         self.timestep.run(frame_dt, inp, lambda step_inp, dt: step_game(step_inp, state, dt))
+        sighted = bestiary.seen_now(state) - state.seen_species
+        if sighted:
+            profile.record_sightings(sighted, bestiary.context(state))
+            for name in sorted(sighted):
+                state.seen_species.add(name)
+                bestiary.announce(state, name, len(state.seen_species))
         new = achievements.newly_unlocked(state, self._achieved)
         if new:
             rewards = {a[0]: a[3] for a in achievements.ACHIEVEMENTS}

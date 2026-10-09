@@ -120,6 +120,8 @@ class GameState:
     tips_seen: set = field(default_factory=set)
     # Outfit worn (cosmetic, kept in the profile; loaded by the game scene)
     outfit: str = "prospector"
+    # Creature kinds in the profile's bestiary (loaded by the game scene)
+    seen_species: set = field(default_factory=set)
     last_tip_time: float = float("-inf")
     # Peaceful animals (game/critters.py) and their own RNG; never saved
     critters: list = field(default_factory=list)

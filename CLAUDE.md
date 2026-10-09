@@ -88,6 +88,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `daily.py` | Daily run: seed from the date, 15-minute game-time limit, `daily_end` scene |
 | `profile.py` | Progress between runs (`profile.json`): reputation from wins, daily runs and hardcore deaths; first-time tips already shown; outfits owned/worn (`wear_outfit`); perks bought in the Perks menu (`apply_perks` on new normal/hardcore runs, never daily) |
 | `achievements.py` | 12 achievements (easy/intermediate/hard, reputation reward proportional to effort), checked by `GameScene` each update, stored in the profile (`unlock_achievements` pays once), announced with a message + `achievement` event; listed in the menu's Achievements screen |
+| `bestiary.py` | First sightings of every creature (17 entries) recorded in the profile with where/when (`record_sightings`), announced by `GameScene`; Bestiary menu screen; feeds the Field Notes / Naturalist achievements via `state.seen_species` |
 | `bot.py` | Headless greedy bot that plays through `step_game` for balance runs (`scripts/balance_sim.py`, results in `docs/BALANCE.md`) |
 | `geography.py` | `in_town(x, y, margin)`, `biome_at(x, y)`, `region_name(x, y)` — the single definition of the town rectangle and biome regions |
 | `enemies.py` | `Enemy` class; `find_path_bfs` (parent-pointer BFS, depth cap, falls back to the reachable tile closest to the target, optional `blocked`); `spawn_enemies` (ring around the player: off-screen, out of town, 10 tiles inside the despawn distance), `update_enemies`, `render_enemies`; difficulty scaling |
@@ -97,7 +98,7 @@ Needs a terminal of at least 80×24; 256 colors recommended (16/8-color terminal
 | `scenes/` | `SceneManager` + `build_scenes()` registry (one `Scene` per `active_scene` name: `enter`/`update`/`render`); `game.py` (GameScene: fixed-step sim + world drawing), `shop.py` (buy tools/charms, upgrade tools and gear (bag, lantern, armor, boots — `_GEAR`), a description line for the selected row, sell via `market`, Museum donations, Outfits tab: cosmetic palette swaps kept in the profile), `lapidary.py` (LapidaryScene: cutting minigame, geode cracking), `save_point.py` (daily runs can't save) |
 | `ui.py` | `write_str`, `clear_screen`, `render_list` (paged list with ^/v markers) shared by menus and building screens |
 | `persistence.py` | `save_game` (atomic, returns an error message or None), `load_game` (migrates, regenerates world from seed, re-applies depleted tiles/fog; raises `SaveLoadError`), `data_dir()`, leaderboard |
-| `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Achievements, Leaderboard), death, win, daily-end, perks and leaderboard screens |
+| `menu.py` | Main menu (New Game, Hardcore, Daily Run, Continue, Perks, Achievements, Bestiary, Leaderboard), death, win, daily-end, perks and leaderboard screens |
 
 ### Mobile (`mobile/`)
 
@@ -116,7 +117,7 @@ Center (100,40): Town — Shop(S), Lapidary(L), Save(P)
 ### Scene Graph
 
 `state.active_scene` names the current screen; `main.py` hands each frame to `SceneManager.frame()`, which calls `enter()` on a switch, then `update()`, then `render()` (skipped if the update switched away). New screens must be registered in `game/scenes/__init__.py::build_scenes()` (a test checks every name assigned in `game/`).
-`menu` → `game` → `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `leaderboard`
+`menu` → `game` → `shop` / `lapidary` / `save_point` / `death` / `win` / `daily_end`; `menu` → `perks` / `achievements` / `bestiary` / `leaderboard`
 
 ### Key Invariants
 
