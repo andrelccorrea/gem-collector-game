@@ -1,6 +1,6 @@
 """General Store: buy and upgrade tools, sell gems and loot."""
 
-from game import deals, market, profile
+from game import contracts, deals, market, profile
 from game.buildings import check_win
 from game.constants import (
     COLOR_MENU_DIMMED,
@@ -35,7 +35,7 @@ from game.objects.registry import (
 from game.player import set_hud_message
 from game.ui import clear_screen, render_list, write_str
 
-SHOP_TABS = ["Buy", "Upgrade", "Sell Gems", "Sell Loot", "Museum", "Outfits"]
+SHOP_TABS = ["Buy", "Upgrade", "Sell Gems", "Sell Loot", "Museum", "Outfits", "Contracts"]
 
 
 def _build_shop_items(state) -> list:
@@ -171,6 +171,26 @@ def _build_shop_items(state) -> list:
             display_name = loot_key.replace("_", " ").title()
             items.append(_sell_row(state, loot_key, display_name, count, "sell_loot"))
         _add_sell_all_row(items, state, list(loot), "sell_all_loot", "Loot")
+
+    elif tab == 6:  # Contracts (today's board)
+        for i, offer in enumerate(contracts.offers(state)):
+            name = offer["item"].replace("_", " ").title()
+            held = state.inventory.get("loot" if offer["loot"] else "gems", {})
+            have = held.get(offer["item"], 0)
+            if (contracts.day(state), i) in state.contracts_done:
+                status = "(Done)"
+            else:
+                status = f"pays ${offer['reward']}  (have {have})"
+            items.append(
+                {
+                    "label": f"  Deliver {offer['count']} {name:16s}  {status}",
+                    "enabled": contracts.can_deliver(state, i),
+                    "action": "contract",
+                    "key": i,
+                    "cost": 0,
+                    "value": offer["reward"],
+                }
+            )
 
     elif tab == 5:  # Outfits (cosmetic, kept across runs)
         owned = set(profile.load_profile()["outfits"])
@@ -339,6 +359,8 @@ def _describe(item: dict) -> str:
         return f"{SUPPLIES[key]['desc']}. [{hint_of(Action.USE_ITEM)}] uses the most needed supply"
     if action == "buy_dog":
         return "A loyal dog: follows you and barks when an enemy comes near (for this run)"
+    if action == "contract":
+        return "Paid above market and never lowers prices; a new board each day"
     if action == "outfit":
         return f"{OUTFITS[key]['desc']} (cosmetic only, kept for every run)"
     return ""
@@ -381,7 +403,7 @@ def render_shop(renderer, state) -> None:
     title = "=== GENERAL STORE ==="
     write_str(renderer, 0, (width - len(title)) // 2, title, COLOR_MENU_TITLE)
 
-    tab_labels = [f"[ {name} ]" for name in SHOP_TABS]
+    tab_labels = [f"[{name}]" for name in SHOP_TABS]
     tab_x = 2
     for i, label in enumerate(tab_labels):
         color = COLOR_MENU_SELECTED if i == state.shop_tab else COLOR_MENU_NORMAL
@@ -476,6 +498,15 @@ def update_shop(inp: InputState, state) -> None:
             state.has_dog = True
             set_hud_message(state, "A dog joins you! It will warn you of danger.", 2.5)
             _chime(state)
+
+    elif action == "contract":
+        reward = contracts.deliver(state, item["key"])
+        if not reward:
+            _refuse(state, "You don't have what this contract asks for.")
+        else:
+            set_hud_message(state, f"Contract done: +${reward}!", 2.5)
+            _chime(state)
+            check_win(state)
 
     elif action == "outfit":
         if not item["enabled"]:

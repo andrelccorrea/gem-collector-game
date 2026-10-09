@@ -46,7 +46,7 @@ def test_museum_tab_shows_progress_and_bonus():
     screen = "\n".join("".join(renderer.get_cell(x, y)[0] for x in range(80)) for y in range(24))
     assert f"Donated {2 * MUSEUM_MILESTONE}/{len(GEM_CATALOG)}" in screen
     assert f"+{round(2 * MUSEUM_BONUS * 100)}%" in screen
-    assert "[ Museum ]" in screen
+    assert "[Museum]" in screen
 
 
 def test_museum_is_saved():
