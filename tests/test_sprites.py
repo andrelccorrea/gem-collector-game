@@ -136,3 +136,10 @@ def test_every_outfit_has_a_palette_swap_of_the_player():
             assert rows != sprites.sprite_rows("player", frame)
             assert all(letter in sprites.PALETTE for row in rows for letter in row)
         assert sprites.walk_frame(sprite, 0.0) == sprites.walk_frame("player", 0.0)
+
+
+def test_depth_marks_fliers_hoppers_and_shadowless_things():
+    assert sprites.depth("bird")[0] > 0 and sprites.depth("rabbit")[1] > 0
+    assert sprites.depth("fish")[2] is False and sprites.depth("deer")[2] is True
+    assert sprites.depth("player~royal") == sprites.depth("player")
+    assert set(sprites.ALTITUDE) | set(sprites.HOP) | sprites.NO_SHADOW <= set(sprites.SPRITES)

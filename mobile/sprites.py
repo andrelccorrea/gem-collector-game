@@ -1140,6 +1140,21 @@ IDLE = {"player": [0, 1]}
 FACING = {"deer": -1, "fish": -1, "snake": 1, "dog": 1, "duck": -1, "fox": 1, "goat": -1}
 
 
+# Depth: fliers are drawn above their shadow (gap = altitude, in cells); hoppers rise
+# along an arc as they step between cells (peak height, in cells); things in water or
+# that glow cast no shadow.
+ALTITUDE = {"bird": 0.45, "butterfly": 0.35, "cave_bat": 0.4}
+HOP = {"rabbit": 0.3, "frog": 0.35, "goat": 0.15, "deer": 0.12, "fox": 0.1, "dog": 0.1,
+       "player": 0.06}  # fmt: skip
+NO_SHADOW = {"fish", "duck", "firefly", "glowworm"}
+
+
+def depth(sprite_id: str) -> tuple:
+    """(altitude, hop height, casts a shadow) for a sprite."""
+    base = _base(sprite_id)
+    return ALTITUDE.get(base, 0.0), HOP.get(base, 0.0), base not in NO_SHADOW
+
+
 def walk_frame(sprite_id: str, seconds: float, phase: int = 0):
     """(frame, mirrored) to show while the sprite moves, or None if it has no walk."""
     cycle = WALK.get(_base(sprite_id))

@@ -33,6 +33,7 @@ from kivy.core.text import Label as CoreLabel  # noqa: E402
 from kivy.core.window import Window  # noqa: E402
 from kivy.graphics import (  # noqa: E402
     Color,
+    Ellipse,
     InstructionGroup,
     PopMatrix,
     PushMatrix,
@@ -54,7 +55,7 @@ from particles import burst, step  # noqa: E402
 from sfx import write_sounds  # noqa: E402
 from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
 from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
-from sprites import facing, frame_at, sprite_rgba, walk_frame  # noqa: E402
+from sprites import depth, facing, frame_at, sprite_rgba, walk_frame  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, daylight, persistence, weather  # noqa: E402
@@ -544,9 +545,21 @@ class EntityLayer:
             texture = _sprite_texture(sprite, frame)
             if texture is None:
                 continue
+            # Depth: a shadow on the ground, the body above it by its altitude, plus a
+            # hop arc while it moves between cells.
+            altitude, hop, shadow = depth(sprite)
+            if hop and walking and not PREFS["reduce_motion"]:
+                glide = min(1.0, (now - track[4]) / track[5])
+                altitude += hop * math.sin(math.pi * glide)
+            ground_x = grid.x + (x - view.x) * cw + grid.scroll.x
+            ground_y = grid.top - (y - view.y + 1) * ch + grid.scroll.y
+            if shadow:
+                spread = cw * 0.7 * (1 - 0.35 * min(altitude, 1.0))
+                overlay.add(Color(0, 0, 0, 0.45))
+                overlay.add(Ellipse(pos=(ground_x + (cw - spread) / 2, ground_y + ch * 0.02),
+                                    size=(spread, ch * 0.16)))  # fmt: skip
             overlay.add(Color(*_rgba(tint or _WHITE)[:3], 1))
-            pos = (grid.x + (x - view.x) * cw + grid.scroll.x,
-                   grid.top - (y - view.y + 1) * ch + grid.scroll.y)  # fmt: skip
+            pos = (ground_x, ground_y + altitude * ch)
             coords = _MIRRORED if mirrored else _UPRIGHT
             overlay.add(Rectangle(texture=texture, pos=pos, size=(cw, ch), tex_coords=coords))
         self.tracks = tracks
