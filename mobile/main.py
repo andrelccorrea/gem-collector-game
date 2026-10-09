@@ -25,6 +25,7 @@ from kivy.config import Config  # noqa: E402
 # Esc / the Android back button closes screens in the game instead of the app.
 Config.set("kivy", "exit_on_escape", "0")
 
+import settings  # noqa: E402
 from kivy.app import App  # noqa: E402
 from kivy.clock import Clock  # noqa: E402
 from kivy.core.audio import SoundLoader  # noqa: E402
@@ -45,6 +46,7 @@ from kivy.storage.jsonstore import JsonStore  # noqa: E402
 from kivy.uix.boxlayout import BoxLayout  # noqa: E402
 from kivy.uix.button import Button  # noqa: E402
 from kivy.uix.gridlayout import GridLayout  # noqa: E402
+from kivy.uix.popup import Popup  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
 from particles import burst, step  # noqa: E402
 from sfx import write_sounds  # noqa: E402
@@ -64,6 +66,8 @@ from game.theme import ASCII_FALLBACK  # noqa: E402
 from game.touch import TouchController  # noqa: E402
 
 COLS, ROWS = 80, 24
+# The player's preferences (mobile/settings.py), loaded at start; every layer reads them.
+PREFS = dict(settings.DEFAULTS)
 WORLD_ROWS = ROWS - HUD_ROWS  # the world view; the HUD rows below never scroll
 # On-screen hints name the touch buttons instead of keys.
 TOUCH_HINTS = {
@@ -376,6 +380,8 @@ class WorldSlide:
                 self.origin = (0.0, 0.0)
         self.last = view
         left = 1.0 - min(1.0, (now - self.start) / SLIDE_SECONDS)
+        if PREFS["reduce_motion"]:  # the world simply steps
+            left = 0.0
         self.grid.scroll.xy = (self.origin[0] * left, self.origin[1] * left)
 
 
@@ -396,7 +402,9 @@ class ScreenShake:
         if any(event.kind == HURT for event in events):
             self.until = now + SHAKE_SECONDS
         left = max(0.0, self.until - now) / SHAKE_SECONDS
-        amplitude = SHAKE_CELLS * self.grid.cell_size()[0] * left**2
+        amplitude = SHAKE_CELLS * self.grid.cell_size()[0] * left**2 * PREFS["shake"] / 100
+        if PREFS["reduce_motion"]:
+            amplitude = 0.0
         self.grid.shake.xy = (
             self._rng.uniform(-amplitude, amplitude),
             self._rng.uniform(-amplitude, amplitude),
@@ -439,7 +447,7 @@ class EntityLayer:
         """Melee feedback: the player lunges at what it hits, and the target recoils."""
         player = self.tracks.get("player")
         for event in events:
-            if event.kind != HIT or player is None:
+            if event.kind != HIT or player is None or PREFS["reduce_motion"]:
                 continue
             dx = (event.x > player[2]) - (event.x < player[2])
             dy = (event.y > player[3]) - (event.y < player[3])
@@ -479,7 +487,7 @@ class EntityLayer:
                 heading = track[6] if wx == track[2] else (1 if wx > track[2] else -1)
                 track = [x, y, wx, wy, now, gap, heading]
             tracks[entity] = track
-            x, y = _glide(track, now)
+            x, y = (wx, wy) if PREFS["reduce_motion"] else _glide(track, now)
             nx, ny = self._nudge(entity, now)
             x, y = x + nx, y + ny
             phase = hash(entity) % 7
@@ -582,10 +590,9 @@ class ParticleLayer:
 
 class SoundEffects:
     """Plays the synthesized effect of each event kind (mobile/sfx.py) and a short
-    vibration for the important ones; both can be turned off together."""
+    vibration for the important ones; each follows its own preference."""
 
-    def __init__(self, folder: str, enabled: bool):
-        self.enabled = enabled
+    def __init__(self, folder: str):
         self.vibrator = _android_vibrator()
         self.sounds = {}
         for kind, path in write_sounds(folder).items():
@@ -596,21 +603,19 @@ class SoundEffects:
     def tap(self) -> None:
         """The short click of a touch button."""
         sound = self.sounds.get("tap")
-        if self.enabled and sound is not None:
+        if PREFS["clicks"] and sound is not None:
             sound.stop()
             sound.play()
 
     def play(self, events) -> None:
-        if not self.enabled:
-            return
         kinds = {event.kind for event in events}
-        for kind in kinds:
+        for kind in kinds if PREFS["sound"] else ():
             sound = self.sounds.get(kind)
             if sound is not None:
                 sound.stop()  # restart if it is still playing
                 sound.play()
         buzz = max((VIBRATE_MS.get(kind, 0) for kind in kinds), default=0)
-        if buzz and self.vibrator is not None:
+        if buzz and PREFS["vibration"] and self.vibrator is not None:
             self.vibrator.vibrate(buzz)
 
 
@@ -642,7 +647,7 @@ class Ambience:
         self.bed = name
 
     def update(self, state, in_world: bool, now: float) -> None:
-        if not (in_world and self.sfx.enabled):
+        if not (in_world and PREFS["ambience"]):
             self._set_bed(None)
             return
         underground = biome_at(state.player_x, state.player_y) == "cave"
@@ -672,10 +677,14 @@ class GemCollectorApp(App):
         self.renderer = GridRenderer()
         self.touch = TouchController()
         self.keys: set = set()
-        # Frontend preferences (not part of the game's save).
-        self.settings = JsonStore(os.path.join(self.user_data_dir, "settings.json"))
-        sound_on = self.settings.get("sound")["on"] if self.settings.exists("sound") else True
-        self.sfx = SoundEffects(os.path.join(self.user_data_dir, "sfx"), sound_on)
+        # Frontend preferences (not part of the game's save). The older settings.json kept
+        # only one sound-and-vibration switch; it seeds the first load.
+        old = JsonStore(os.path.join(self.user_data_dir, "settings.json"))
+        legacy = old.get("sound")["on"] if old.exists("sound") else None
+        self.prefs_path = os.path.join(self.user_data_dir, "preferences.json")
+        PREFS.update(settings.load(self.prefs_path, legacy))
+        self.paused = False
+        self.sfx = SoundEffects(os.path.join(self.user_data_dir, "sfx"))
         self.ambience = Ambience(self.sfx)
 
         root = BoxLayout(orientation="horizontal")
@@ -708,9 +717,9 @@ class GemCollectorApp(App):
             button.bind(on_press=lambda _b, a=action: self.touch.press(a))
             button.bind(on_press=lambda _b: self.sfx.tap())
             actions.add_widget(button)
-        self.sound_button = Button(text=self._sound_label())
-        self.sound_button.bind(on_press=lambda _b: self._toggle_sound())
-        actions.add_widget(self.sound_button)
+        settings_button = Button(text="Settings")
+        settings_button.bind(on_press=lambda _b: self._open_settings())
+        actions.add_widget(settings_button)
         pad = GridLayout(cols=3, spacing=dp(6), size_hint_y=3 / 8)
         for label, action in [("", None), ("^", Action.MOVE_UP), ("", None),
                               ("<", Action.MOVE_LEFT), ("", None), (">", Action.MOVE_RIGHT),
@@ -730,13 +739,31 @@ class GemCollectorApp(App):
         panel.add_widget(pad)
         return panel
 
-    def _sound_label(self):
-        return "Sound/Vib: on" if self.sfx.enabled else "Sound/Vib: off"
+    def _open_settings(self):
+        """Preferences in a popup; the game is paused while it is open."""
+        grid = GridLayout(cols=1, spacing=dp(6), padding=dp(6))
+        for key in settings.DEFAULTS:
+            button = Button(text=settings.label(key, PREFS[key]))
+            button.bind(on_press=lambda b, k=key: self._change_setting(k, b))
+            grid.add_widget(button)
+        close = Button(text="Close")
+        grid.add_widget(close)
+        popup = Popup(title="Settings", content=grid, size_hint=(0.5, 0.9))
+        close.bind(on_press=lambda _b: popup.dismiss())
+        popup.bind(on_dismiss=lambda _p: self._resume())
+        self.paused = True
+        self.ambience.update(self.state, False, 0.0)
+        popup.open()
 
-    def _toggle_sound(self):
-        self.sfx.enabled = not self.sfx.enabled
-        self.settings.put("sound", on=self.sfx.enabled)
-        self.sound_button.text = self._sound_label()
+    def _change_setting(self, key, button):
+        PREFS[key] = settings.next_value(key, PREFS[key])
+        settings.save(self.prefs_path, PREFS)
+        button.text = settings.label(key, PREFS[key])
+
+    def _resume(self):
+        self.paused = False
+        # Time spent in the settings must not be simulated.
+        self.scenes.scenes["game"].timestep.reset()
 
     def _dpad_down(self, action):
         self.touch.press(action)
@@ -759,6 +786,8 @@ class GemCollectorApp(App):
     # ── Frame loop and lifecycle ──────────────────────────────────────────────
 
     def _frame(self, dt):
+        if self.paused:
+            return
         touch_inp = self.touch.poll(self.state)
         key_inp = map_keys(self.keys)
         self.keys.clear()

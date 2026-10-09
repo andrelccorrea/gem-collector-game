@@ -15,6 +15,7 @@ from game.tile_info import describe_here
 # A changed counter blinks for PULSE_FRAMES drawn frames (~0.5 s at 30 FPS), in the
 # color of its change: key -> (color when it went up, color when it went down).
 PULSE_FRAMES = 15
+BLINK_FRAMES = 6
 _PULSE_COLORS = {
     "HP:": (((0, 0, 0), (60, 220, 60)), ((255, 255, 255), (200, 0, 0))),
     "Gold:": (((0, 0, 0), (255, 200, 0)), ((0, 0, 0), (230, 120, 0))),
@@ -48,7 +49,9 @@ class HudPulse:
     def color(self, key: str) -> tuple | None:
         """The counter's highlight this frame, or None (also during the blink's off beat)."""
         pulse = self._active.get(key)
-        if pulse is None or ((PULSE_FRAMES - pulse[0]) // 4) % 2 == 1:
+        # Half a blink lasts BLINK_FRAMES: 2.5 flashes a second at 30 FPS, under the
+        # 3-per-second limit for flashing content.
+        if pulse is None or ((PULSE_FRAMES - pulse[0]) // BLINK_FRAMES) % 2 == 1:
             return None
         up, down = _PULSE_COLORS[key]
         return up if pulse[1] else down
