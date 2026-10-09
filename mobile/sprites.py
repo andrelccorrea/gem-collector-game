@@ -89,6 +89,8 @@ PALETTE = {
     "=": (240, 230, 120),
     "*": (150, 255, 200),
     "^": (230, 90, 60),
+    "%": (150, 120, 95),
+    "&": (110, 85, 65),
 }
 
 SPRITES = {
@@ -1212,6 +1214,115 @@ SPRITES = {
         "........",
         "........",
     ],
+    # ── More animals ─────────────────────────────────────────────────────────
+    "hedgehog": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "..%&%&..",
+        ".%&%&%&.",
+        "%&%&%&%s",
+        "&%&%&%sZ",
+        ".ssssss.",
+        "..s..s..",
+        "........",
+        "........",
+    ],
+    "hedgehog_curled": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "..%&%&..",
+        ".&%&%&%.",
+        "%&%&%&%&",
+        ".&%&%&%.",
+        "..%&%&..",
+        "........",
+        "........",
+    ],
+    "squirrel": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        ".88.....",
+        "8888..8.",
+        "88888.8Z",
+        ".8888888",
+        ".888888.",
+        "..88.88.",
+        "..8..8..",
+        "........",
+        "........",
+    ],
+    "heron": [
+        "........",
+        "........",
+        "........",
+        "....99..",
+        "...9ZS..",
+        "...99...",
+        "...9....",
+        "..99....",
+        ".9999...",
+        ".99999..",
+        "..999...",
+        "...l....",
+        "...l....",
+        "...l....",
+        "..l.l...",
+        "........",
+    ],
+    "lizard": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "......3.",
+        "3.333333",
+        "33Z3333.",
+        "..3..3..",
+        "........",
+        "........",
+        "........",
+    ],
+    "snail": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "........",
+        "..%&%...",
+        ".%&&&%..",
+        ".%&%&%..",
+        "4444444.",
+        "4Z......",
+        "........",
+        "........",
+    ],
     "bear": [
         "........",
         "........",
@@ -1364,6 +1475,11 @@ FRAMES = {
     "goat": [_swap(SPRITES["goat"], {12: "..7.7.7.", 13: "..Z.Z.Z."})],
     "crab": [_swap(SPRITES["crab"], {8: "........", 9: "^^...^^."})],
     "glowworm": [_swap(SPRITES["glowworm"], {7: "........", 8: "...*....", 9: "..***..."})],
+    "hedgehog": [_swap(SPRITES["hedgehog"], {13: "..s.s..."})],
+    "squirrel": [_swap(SPRITES["squirrel"], {7: "........", 8: ".88...8.", 9: "88888.8Z"})],
+    "heron": [_swap(SPRITES["heron"], {3: "........", 4: "....99..", 5: "...9ZS.."})],
+    "lizard": [_swap(SPRITES["lizard"], {11: ".3....3."})],
+    "snail": [_shifted(SPRITES["snail"], 1)],
     "dog": [
         _swap(SPRITES["dog"], {12: "..8.8..8", 13: "..8.8..8", 14: "..O.O..O", 8: "O....888"}),
         _swap(SPRITES["dog"], {7: "O....8Z8", 8: ".....888"}),  # tail wag (frame 2)
@@ -1373,7 +1489,8 @@ FPS = {"stream": 4, "shallow": 4, "lake": 2, "deep": 2, "tree": 1, "rich_ore": 2
        "gem": 3, "player": 2, "bear": 2, "cave_bat": 6, "snake": 2, "rabbit": 2,
        "deer": 1, "bird": 6, "frog": 1, "fish": 3, "firefly": 3, "beetle": 4, "dog": 2,
        "campfire": 5, "butterfly": 6, "duck": 2, "owl": 1, "fox": 2, "goat": 1,
-       "crab": 2, "glowworm": 2}  # fmt: skip
+       "crab": 2, "glowworm": 2, "hedgehog": 1, "squirrel": 3, "heron": 1, "lizard": 1,
+       "snail": 1}  # fmt: skip
 
 
 # Frames shown while a thing moves, as (frame, mirrored) at WALK_FPS. The player's
@@ -1391,6 +1508,17 @@ for _name in (
     "bird",
     "cave_bat",
     "dog",
+    "butterfly",
+    "duck",
+    "owl",
+    "fox",
+    "goat",
+    "crab",
+    "hedgehog",
+    "squirrel",
+    "heron",
+    "lizard",
+    "snail",
 ):
     WALK[_name] = [(0, False), (1, False)]
 # Frames of the idle cycle, where they are not all of the sprite's frames.
@@ -1401,15 +1529,28 @@ BLINK = {"player": 4}
 SPECIAL = {"player": [5, 0, 5], "deer": [2, 2, 2, 0], "rabbit": [2, 0, 2], "dog": [2, 0, 2, 0]}
 # Which way a sprite looks as drawn (1 = right, -1 = left, 0 = symmetric): it is
 # mirrored to face the way it moves.
-FACING = {"deer": -1, "fish": -1, "snake": 1, "dog": 1, "duck": -1, "fox": 1, "goat": -1}
+FACING = {
+    "deer": -1,
+    "fish": -1,
+    "snake": 1,
+    "dog": 1,
+    "duck": -1,
+    "fox": 1,
+    "goat": -1,
+    "hedgehog": 1,
+    "squirrel": 1,
+    "heron": 1,
+    "lizard": -1,
+    "snail": -1,
+}
 
 
 # Depth: fliers are drawn above their shadow (gap = altitude, in cells); hoppers rise
 # along an arc as they step between cells (peak height, in cells); things in water or
 # that glow cast no shadow.
 ALTITUDE = {"bird": 0.45, "butterfly": 0.35, "cave_bat": 0.4}
-HOP = {"rabbit": 0.3, "frog": 0.35, "goat": 0.15, "deer": 0.12, "fox": 0.1, "dog": 0.1,
-       "player": 0.06}  # fmt: skip
+HOP = {"squirrel": 0.25, "rabbit": 0.3, "frog": 0.35, "goat": 0.15, "deer": 0.12,
+       "fox": 0.1, "dog": 0.1, "player": 0.06}  # fmt: skip
 NO_SHADOW = {"fish", "duck", "firefly", "glowworm"}
 
 

@@ -104,3 +104,15 @@ def test_rare_animals_are_rarer():
     rng = critters.random.Random(4)
     picks = [critters._species_for(state, 25, 30, rng) for _ in range(2000)]
     assert 0 < picks.count("fox") < picks.count("deer")
+
+
+def test_a_scared_hedgehog_curls_up_instead_of_running():
+    state = new_run(12)
+    state.enemies = []
+    state.player_x, state.player_y = 25, 30
+    spot = next((x, 30) for x in range(26, 30) if critters._can_stand(state, x, 30, "land"))
+    hog = Critter("hedgehog", *spot)
+    state.critters = [hog]
+    for _ in range(int(1.0 / STEP)):
+        update_critters(state, STEP)
+    assert hog.scared > 0 and (hog.x, hog.y) == spot

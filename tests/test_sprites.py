@@ -187,3 +187,10 @@ def test_grass_overlaps_lower_ground_with_a_ragged_edge():
     plain = sprites.sprite_rows("path")
     assert set(north[0]) <= {"G", "g"} and north[1] != north[0] and north[5:] == plain[5:]
     assert sprites.frame_count("dirt+15") == 1
+
+
+def test_every_animal_has_a_walk_cycle():
+    from game.objects.registry import CRITTERS
+
+    still = {"firefly", "glowworm"}  # they drift, they don't walk
+    assert set(CRITTERS) - still <= set(sprites.WALK)

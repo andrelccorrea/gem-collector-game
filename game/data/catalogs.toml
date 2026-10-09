@@ -604,3 +604,70 @@ herd = [2, 4]
 flee_range = 0
 wander_seconds = 2.5
 flee_seconds = 2.5
+
+# curls = true: when scared it rolls into a ball and stays put instead of running.
+[[critters]]
+name = "hedgehog"
+rain = "likes"
+curls = true
+weight = 0.7
+char = "h"
+color = [[170, 140, 110], [0, 30, 0]]
+biomes = ["meadow"]
+habitat = "land"
+active = "night"
+herd = [1, 1]
+flee_range = 2
+wander_seconds = 1.4
+flee_seconds = 1.4
+
+[[critters]]
+name = "squirrel"
+char = "q"
+color = [[200, 110, 50], [0, 30, 0]]
+biomes = ["meadow"]
+habitat = "land"
+active = "day"
+herd = [1, 2]
+flee_range = 4
+wander_seconds = 0.6
+flee_seconds = 0.08
+
+[[critters]]
+name = "heron"
+weight = 0.6
+char = "H"
+color = [[200, 210, 225], [0, 0, 80]]
+biomes = ["river"]
+habitat = "land"
+active = "day"
+herd = [1, 1]
+flee_range = 5
+wander_seconds = 2.5
+flee_seconds = 0.1
+
+[[critters]]
+name = "lizard"
+rain = "avoids"
+char = "l"
+color = [[120, 190, 90], [40, 40, 40]]
+biomes = ["hillside"]
+habitat = "land"
+active = "day"
+herd = [1, 1]
+flee_range = 2
+wander_seconds = 2.0
+flee_seconds = 0.1
+
+[[critters]]
+name = "snail"
+rain = "likes"
+char = "@"
+color = [[210, 180, 120], [0, 30, 0]]
+biomes = ["meadow", "river"]
+habitat = "land"
+active = "any"
+herd = [1, 2]
+flee_range = 0
+wander_seconds = 4.0
+flee_seconds = 4.0

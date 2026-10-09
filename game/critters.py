@@ -123,6 +123,8 @@ def _step(state, critter: Critter, rng: random.Random) -> None:
     ]
     if not options:
         return
+    if critter.scared > 0 and critter.kind.get("curls"):
+        return  # rolled into a ball: it waits it out
     if critter.scared > 0:  # run: the step that gets furthest from the player
         px, py = state.player_x, state.player_y
         critter.x, critter.y = max(options, key=lambda p: max(abs(p[0] - px), abs(p[1] - py)))
@@ -175,4 +177,7 @@ def render_critters(renderer, state, view) -> None:
         light = None if kind.get("glow") else tint_at(state, now, critter.x, critter.y)
         color = (tuple(kind["color"][0]), tuple(kind["color"][1]))
         renderer.set_cell(sx, sy, kind["char"], shade(color, light))
-        renderer.set_sprite(sx, sy, OBJECT, critter.name, mix(None, light), entity=id(critter))
+        sprite = critter.name
+        if kind.get("curls") and critter.scared > 0:
+            sprite = f"{critter.name}_curled"
+        renderer.set_sprite(sx, sy, OBJECT, sprite, mix(None, light), entity=id(critter))
