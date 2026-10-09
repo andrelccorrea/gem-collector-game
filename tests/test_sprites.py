@@ -6,6 +6,7 @@ from game import camera
 from game.constants import TILE_PROPS
 from game.decor import DECOR_NAMES
 from game.enemies import HIT_TINT, Enemy
+from game.landmarks import LANDMARKS
 from game.objects.registry import CRITTERS, ENEMY_CATALOG
 from game.scenes.game import GameScene
 from game.simulation import new_run
@@ -32,7 +33,7 @@ class SpriteRecorder(StubRenderer):
 def test_every_sprite_the_game_draws_has_pixel_art():
     needed = set(TILE_PROPS) | {"depleted", "player", "gem", "bag"} | set(ENEMY_CATALOG)
     needed |= set(DECOR_NAMES)
-    needed |= set(CRITTERS) | {"dog"}
+    needed |= set(CRITTERS) | {"dog"} | set(LANDMARKS)
     assert needed <= set(sprites.SPRITES)
 
 

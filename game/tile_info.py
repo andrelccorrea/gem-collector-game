@@ -27,6 +27,7 @@ from game.constants import (
 from game.death import bag_here
 from game.decor import DECOR_NAMES, decoration
 from game.input import Action, hint_label
+from game.landmarks import LANDMARKS, landmark_at
 from game.objects.registry import TOOL_CATALOG
 from game.tools import MINEABLE_TYPES, WATER_GEM_TYPES
 
@@ -73,8 +74,11 @@ def describe_here(state) -> str:
     meta = state.world_tiles.meta.get((state.player_x, state.player_y), {})
     tile_type = meta.get("type", "")
     parts = [f"Here: {TILE_NAMES.get(tile_type, tile_type.replace('_', ' ').title())}"]
+    landmark = landmark_at(state, state.player_x, state.player_y)
     deco = decoration(state.seed, state.player_x, state.player_y, meta) if meta else None
-    if deco is not None:
+    if landmark is not None:
+        parts[0] += f", {LANDMARKS[landmark][0].lower()}"
+    elif deco is not None:
         parts[0] += f", {DECOR_NAMES[deco]}"
 
     if tile_type in _BUILDINGS:

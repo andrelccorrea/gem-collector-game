@@ -1,9 +1,10 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 14, compact JSON):
+Save format (``schema_version`` 15, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
     lapidary_level, bag_level, armor_level, boots_level, dowsing_level, has_dog,
+    visited_landmarks [[x, y]...],
     market {kind: saturation},
     lantern {level, fuel}, hardcore, dropped_bag {x, y, gems, loot, polished} or null,
     recall_charms, supplies {key: count}, museum,
@@ -25,7 +26,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 DAILY_NAME = "daily.json"
@@ -263,6 +264,12 @@ def _migrate_v13_to_v14(data: dict) -> dict:
     return data
 
 
+def _migrate_v14_to_v15(data: dict) -> dict:
+    """v15 remembers visited landmarks; older saves have visited none."""
+    data["visited_landmarks"] = []
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -279,6 +286,7 @@ MIGRATIONS = {
     11: _migrate_v11_to_v12,
     12: _migrate_v12_to_v13,
     13: _migrate_v13_to_v14,
+    14: _migrate_v14_to_v15,
 }
 
 
@@ -329,6 +337,7 @@ def save_game(state) -> str | None:
         "boots_level": state.boots_level,
         "dowsing_level": state.dowsing_level,
         "has_dog": state.has_dog,
+        "visited_landmarks": sorted(list(p) for p in state.visited_landmarks),
         "market": state.market,
         "lantern": {"level": state.lantern_level, "fuel": state.lantern_fuel},
         "run_id": state.run_id,
@@ -430,6 +439,7 @@ def _state_from_save(data: dict):
     state.boots_level = data["boots_level"]
     state.dowsing_level = data["dowsing_level"]
     state.has_dog = bool(data["has_dog"])
+    state.visited_landmarks = {(int(x), int(y)) for x, y in data["visited_landmarks"]}
     state.market = data["market"]
     state.lantern_level = data["lantern"]["level"]
     state.lantern_fuel = data["lantern"]["fuel"]

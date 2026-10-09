@@ -1,6 +1,7 @@
 from collections import Counter
 
 from game.decor import DECOR, DECOR_NAMES, decoration
+from game.landmarks import LANDMARKS
 from game.simulation import new_run
 from game.theme import ASCII_FALLBACK, DECOR_APPEARANCE
 
@@ -30,6 +31,7 @@ def test_worked_out_ground_is_bare():
 
 def test_every_decoration_has_a_name_and_a_terminal_look():
     names = {name for options in DECOR.values() for name, *_ in options}
-    assert names == set(DECOR_NAMES) == set(DECOR_APPEARANCE)
+    assert names == set(DECOR_NAMES)
+    assert set(DECOR_APPEARANCE) == names | set(LANDMARKS)  # landmarks are drawn the same way
     for char, _ in DECOR_APPEARANCE.values():
         assert char.isascii() or char in ASCII_FALLBACK

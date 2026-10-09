@@ -14,6 +14,7 @@ from game.constants import (
 )
 from game.daylight import mix, shade, tint_at
 from game.decor import decoration
+from game.landmarks import landmark_at
 from game.objects.registry import GEM_CATALOG
 from game.theme import UNSEEN_APPEARANCE, dim, tile_appearance
 
@@ -78,7 +79,7 @@ def render_viewport(renderer, state, view: View) -> None:
             if tile is None or tile.get("visibility") == "unseen":
                 char, color_pair, deco, light = *UNSEEN_APPEARANCE, None, None
             else:
-                deco = decoration(state.seed, wx, wy, tile)
+                deco = landmark_at(state, wx, wy) or decoration(state.seed, wx, wy, tile)
                 light = tint_at(state, now, wx, wy)
                 char, color_pair = tile_appearance(tile, deco)
                 color_pair = shade(color_pair, light)

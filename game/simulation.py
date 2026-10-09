@@ -15,6 +15,7 @@ from game import (
     dowsing,
     enemies,
     fog,
+    landmarks,
     lantern,
     market,
     player,
@@ -74,6 +75,7 @@ def step_game(inp: InputState, state, dt: float) -> bool:
         # than with rendering (which may run a different number of times).
         camera.update_camera(state)
 
+    landmarks.visit(state)
     tips.check_tips(state)
 
     if Action.CANCEL in inp.pressed:
