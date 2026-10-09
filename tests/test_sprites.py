@@ -155,3 +155,25 @@ def test_idle_variety_blinks_and_special_idles():
     for sprite_id, frames in sprites.SPECIAL.items():
         assert max(frames) < sprites.frame_count(sprite_id)
     assert sprites.idle_frame("player~miner", 0.0, 0.0, True) == sprites.BLINK["player"]
+
+
+def test_every_shop_row_icon_has_pixel_art():
+    from game.objects.registry import ENEMY_CATALOG, GEM_CATALOG
+    from game.scenes.shop import SHOP_TABS, _build_shop_items
+    from game.simulation import new_run
+
+    state = new_run(2)
+    state.player_gold = 99_999
+    state.inventory["gems"] = {name: 1 for name in GEM_CATALOG}
+    state.inventory["gems"]["quartz_polished"] = 1
+    state.polished_gem_values["quartz_polished"] = [50]
+    state.inventory["loot"] = {e.loot: 1 for e in ENEMY_CATALOG.values() if e.loot}
+    seen = 0
+    for tab in range(len(SHOP_TABS)):
+        state.shop_tab = tab
+        for item in _build_shop_items(state):
+            icon = item.get("icon")
+            if icon and icon[0]:
+                assert sprites.sprite_rows(icon[0]) is not None, (tab, item["label"], icon)
+                seen += 1
+    assert seen > 30

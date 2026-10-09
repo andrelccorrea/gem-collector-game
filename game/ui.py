@@ -42,6 +42,9 @@ def render_list(renderer, items: list, cursor: int, top: int, bottom: int) -> No
         else:
             color = COLOR_MENU_NORMAL
         write_str(renderer, row, 0, item["label"], color)
+        icon = item.get("icon")
+        if icon and icon[0]:  # graphical frontends show it in the label's margin
+            renderer.set_sprite(1, row, "object", icon[0], icon[1])
 
     marker_x = renderer.width - 2
     if page.start > 0:

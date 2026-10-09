@@ -22,7 +22,9 @@ from game.objects.registry import (
     BAG_COSTS,
     BAG_UNLOCK_AT,
     BOOTS,
+    DEFAULT_OUTFIT,
     DOWSING,
+    ENEMY_CATALOG,
     GEM_CATALOG,
     LANTERN,
     OUTFITS,
@@ -240,7 +242,44 @@ def _build_shop_items(state) -> list:
                     }
                 )
 
+    for item in items:
+        item["icon"] = _icon(state, item)
     return items
+
+
+_GEAR_ICONS = {"bag": "bag", "lantern": "icon_lantern", "armor": "icon_armor",
+               "boots": "icon_boots", "dowsing rod": "icon_rod"}  # fmt: skip
+_LOOT_ICONS = {enemy.loot: name for name, enemy in ENEMY_CATALOG.items() if enemy.loot}
+
+
+def _gem_icon(key: str):
+    gem = GEM_CATALOG.get(key.removesuffix("_polished"))
+    return ("gem", gem.color[0]) if gem is not None else ("gem", None)
+
+
+def _icon(state, item: dict):
+    """(sprite, tint) shown before a row in graphical frontends, or None."""
+    action, key = item["action"], item["key"]
+    if action in ("buy_tool", "upgrade_tool"):
+        return f"tool_{key}", None
+    if action == "upgrade_gear":
+        return _GEAR_ICONS.get(key), None
+    if action == "buy_charm":
+        return "icon_charm", None
+    if action == "buy_supply":
+        return {"bandage": "icon_bandage", "lamp_oil": "icon_oil"}.get(key), None
+    if action == "buy_dog":
+        return "dog", None
+    if action == "outfit":
+        return ("player" if key == DEFAULT_OUTFIT else f"player~{key}"), None
+    if action in ("sell_gem", "donate"):
+        return _gem_icon(key)
+    if action == "sell_loot":
+        return _LOOT_ICONS.get(key), None
+    if action == "contract":
+        offer = contracts.offers(state)[key]
+        return (_LOOT_ICONS.get(offer["item"]), None) if offer["loot"] else _gem_icon(offer["item"])
+    return None
 
 
 def _sell_row(state, key: str, name: str, count: int, action: str) -> dict:
