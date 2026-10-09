@@ -177,3 +177,13 @@ def test_every_shop_row_icon_has_pixel_art():
                 assert sprites.sprite_rows(icon[0]) is not None, (tab, item["label"], icon)
                 seen += 1
     assert seen > 30
+
+
+def test_grass_overlaps_lower_ground_with_a_ragged_edge():
+    meta = {(1, 1): {"type": "path"}, (1, 0): {"type": "grass"}, (2, 1): {"type": "dirt"},
+            (0, 1): {"type": "tree"}}  # fmt: skip
+    assert camera._side_mask(meta, 1, 1, camera._GRASSY) == 1 | 8
+    north = sprites.sprite_rows("path+1")
+    plain = sprites.sprite_rows("path")
+    assert set(north[0]) <= {"G", "g"} and north[1] != north[0] and north[5:] == plain[5:]
+    assert sprites.frame_count("dirt+15") == 1

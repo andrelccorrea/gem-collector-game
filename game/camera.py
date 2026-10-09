@@ -119,6 +119,22 @@ _WATER = {TYPE_STREAM, TYPE_LAKE, TYPE_SHALLOW, TYPE_DEEP}
 _SIDES = ((0, -1, 1), (1, 0, 2), (0, 1, 4), (-1, 0, 8))  # (dx, dy, bit): N, E, S, W
 
 
+# Grass overlaps onto lower ground around it (path, dirt, sand, the town square), so
+# their boundary is a ragged edge of tufts rather than a straight grid line.
+_GRASSY = {"grass", "mineable_grass", "tree"}
+_UNDER_GRASS = {"path", "dirt", "bank", "town"}
+
+
+def _side_mask(meta: dict, x: int, y: int, kinds: set) -> int:
+    """Bits N=1, E=2, S=4, W=8 for the neighbours whose type is in ``kinds``."""
+    mask = 0
+    for dx, dy, bit in _SIDES:
+        neighbour = meta.get((x + dx, y + dy))
+        if neighbour is not None and neighbour["type"] in kinds:
+            mask |= bit
+    return mask
+
+
 def shore_mask(meta: dict, x: int, y: int) -> int:
     """Which sides of a water tile touch land, as bits N=1, E=2, S=4, W=8 (4-bit
     autotiling); off the map counts as water, so map edges get no shore."""
@@ -137,6 +153,10 @@ def _ground_sprite(tile, deco, light, meta, wx, wy):
         mask = shore_mask(meta, wx, wy)
         if mask:
             sprite = f"{sprite}#{mask}"
+    elif sprite in _UNDER_GRASS:
+        mask = _side_mask(meta, wx, wy, _GRASSY)
+        if mask:
+            sprite = f"{sprite}+{mask}"
     fog = None if tile.get("visibility", "visible") == "visible" else EXPLORED_TINT
     return sprite, mix(fog, light)
 

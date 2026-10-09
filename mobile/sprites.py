@@ -1459,7 +1459,7 @@ OUTFIT_PALETTES = {
 def _base(sprite_id: str) -> str:
     """The sprite an id is drawn from: "stream#5" is a stream with shore on N and S,
     "player~miner" the player in the miner's outfit."""
-    return sprite_id.split("#", 1)[0].split("~", 1)[0]
+    return sprite_id.split("#", 1)[0].split("~", 1)[0].split("+", 1)[0]
 
 
 def facing(sprite_id: str) -> int:
@@ -1491,6 +1491,28 @@ def _shore(rows: list[str], mask: int) -> list[str]:
 _cycles: dict = {}  # sprite id -> (idle frames, fps), worked out once per id
 
 
+def _grass_edge(rows: list[str], mask: int) -> list[str]:
+    """Grass tufts overlapping from the grassy sides (bits N=1, E=2, S=4, W=8): a full
+    edge, then a ragged second and third line so the border is not a straight cut."""
+    grid = [list(row) for row in rows]
+    h, w = len(grid), len(grid[0])
+    ragged = ["GgGGGgGG", "G.Gg.GG.", "..G...g."]  # depth 0, 1, 2 from the edge
+    for depth, pattern in enumerate(ragged):
+        for i in range(max(h, w)):
+            mark = pattern[i % len(pattern)]
+            if mark == ".":
+                continue
+            if mask & 1 and i < w:
+                grid[depth][i] = mark
+            if mask & 4 and i < w:
+                grid[h - 1 - depth][(i + 3) % w] = mark
+            if mask & 8 and i < h:
+                grid[i][depth] = mark
+            if mask & 2 and i < h:
+                grid[(i + 5) % h][w - 1 - depth] = mark
+    return ["".join(row) for row in grid]
+
+
 def frame_count(sprite_id: str) -> int:
     return 1 + len(FRAMES.get(_base(sprite_id), ()))
 
@@ -1519,6 +1541,8 @@ def sprite_rows(sprite_id: str, frame: int = 0) -> list[str] | None:
     rows = rows * (HEIGHT // len(rows))
     if "#" in sprite_id:
         rows = _shore(rows, int(sprite_id.split("#", 1)[1]))
+    if "+" in sprite_id:
+        rows = _grass_edge(rows, int(sprite_id.split("+", 1)[1]))
     if "~" in sprite_id:
         swap = OUTFIT_PALETTES[sprite_id.split("~", 1)[1]]
         rows = ["".join(swap.get(letter, letter) for letter in row) for row in rows]
