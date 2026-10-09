@@ -17,7 +17,7 @@ from game.daylight import shade, tint_at
 from game.events import HEAL, HEAL_COLOR, emit
 from game.geography import in_town
 from game.input import Action, InputState
-from game.objects.registry import BOOTS
+from game.objects.registry import BOOTS, DEFAULT_OUTFIT, OUTFITS
 
 
 def init_player(state) -> None:
@@ -142,8 +142,12 @@ def render_player(renderer, state, view) -> None:
     if view.contains(state.player_x, state.player_y):
         sx, sy = state.player_x - view.x, state.player_y - view.y
         light = tint_at(state, daylight.phase(state), state.player_x, state.player_y)
-        renderer.set_cell(sx, sy, PLAYER_CHAR, shade(COLOR_PLAYER, light))
-        renderer.set_sprite(sx, sy, OBJECT, "player", light, entity="player")
+        outfit = OUTFITS.get(state.outfit, OUTFITS[DEFAULT_OUTFIT])
+        color = (tuple(outfit["color"]), COLOR_PLAYER[1])
+        renderer.set_cell(sx, sy, PLAYER_CHAR, shade(color, light))
+        # The outfit is a palette swap of the player's sprite: "player~miner".
+        sprite = "player" if outfit["name"] == DEFAULT_OUTFIT else f"player~{outfit['name']}"
+        renderer.set_sprite(sx, sy, OBJECT, sprite, light, entity="player")
 
 
 def set_hud_message(state, msg: str, duration: float = 2.0) -> None:

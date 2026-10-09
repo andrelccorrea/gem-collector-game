@@ -122,3 +122,16 @@ def test_shore_sprites_add_foam_on_their_land_sides():
     assert all(row[0] == "A" for row in west)
     assert sprites.frame_count("stream#8") == sprites.frame_count("stream")
     assert sprites.frame_at("lake#15", 0.6) == sprites.frame_at("lake", 0.6)
+
+
+def test_every_outfit_has_a_palette_swap_of_the_player():
+    from game.objects.registry import DEFAULT_OUTFIT, OUTFITS
+
+    assert set(sprites.OUTFIT_PALETTES) == set(OUTFITS) - {DEFAULT_OUTFIT}
+    for outfit in sprites.OUTFIT_PALETTES:
+        sprite = f"player~{outfit}"
+        for frame in range(sprites.frame_count(sprite)):
+            rows = sprites.sprite_rows(sprite, frame)
+            assert rows != sprites.sprite_rows("player", frame)
+            assert all(letter in sprites.PALETTE for row in rows for letter in row)
+        assert sprites.walk_frame(sprite, 0.0) == sprites.walk_frame("player", 0.0)

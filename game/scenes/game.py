@@ -22,6 +22,7 @@ class GameScene(Scene):
         state.tips_seen |= set(saved["tips"])
         self._tips_saved = set(state.tips_seen)
         self._achieved = set(saved["achievements"])
+        state.outfit = saved["outfit"]
 
     def update(self, inp: InputState, state, frame_dt: float) -> None:
         self.timestep.run(frame_dt, inp, lambda step_inp, dt: step_game(step_inp, state, dt))

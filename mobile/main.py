@@ -48,9 +48,9 @@ from kivy.uix.gridlayout import GridLayout  # noqa: E402
 from kivy.uix.widget import Widget  # noqa: E402
 from particles import burst, step  # noqa: E402
 from sfx import write_sounds  # noqa: E402
-from sprites import FACING, frame_at, sprite_rgba, walk_frame  # noqa: E402
 from sprites import HEIGHT as SPRITE_HEIGHT  # noqa: E402
 from sprites import WIDTH as SPRITE_WIDTH  # noqa: E402
+from sprites import facing, frame_at, sprite_rgba, walk_frame  # noqa: E402
 
 from clingine.renderer import Renderer  # noqa: E402
 from game import camera, persistence  # noqa: E402
@@ -474,8 +474,8 @@ class EntityLayer:
             elif (wx, wy) != (track[2], track[3]):
                 x, y = _glide(track, now)
                 gap = min(max(now - track[4], TWEEN_MIN), TWEEN_MAX)
-                facing = track[6] if wx == track[2] else (1 if wx > track[2] else -1)
-                track = [x, y, wx, wy, now, gap, facing]
+                heading = track[6] if wx == track[2] else (1 if wx > track[2] else -1)
+                track = [x, y, wx, wy, now, gap, heading]
             tracks[entity] = track
             x, y = _glide(track, now)
             nx, ny = self._nudge(entity, now)
@@ -485,7 +485,7 @@ class EntityLayer:
             walking = now - track[4] < track[5] + 0.1
             step = walk_frame(sprite, now, phase) if walking else None
             frame, mirrored = step if step else (frame_at(sprite, now, phase), False)
-            if FACING.get(sprite, 0) * track[6] < 0:
+            if facing(sprite) * track[6] < 0:
                 mirrored = not mirrored
             texture = _sprite_texture(sprite, frame)
             if texture is None:

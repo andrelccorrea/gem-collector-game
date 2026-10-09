@@ -439,3 +439,41 @@ herd = [1, 2]
 flee_range = 2
 wander_seconds = 1.5
 flee_seconds = 0.15
+
+# Outfits: cosmetic only (no effect on play), bought once and kept across runs in the
+# profile. color is the player's glyph color in the terminal; the Kivy frontend swaps
+# the sprite's palette (mobile/sprites.py OUTFIT_PALETTES).
+[[outfits]]
+name = "prospector"
+label = "Prospector"
+cost = 0
+color = [255, 255, 255]
+desc = "Blue work shirt, the original"
+
+[[outfits]]
+name = "miner"
+label = "Miner"
+cost = 150
+color = [255, 170, 60]
+desc = "Orange vest and a yellow hard hat"
+
+[[outfits]]
+name = "ranger"
+label = "Ranger"
+cost = 300
+color = [120, 210, 110]
+desc = "Green coat and a brown hat"
+
+[[outfits]]
+name = "night"
+label = "Night Owl"
+cost = 500
+color = [150, 150, 230]
+desc = "Dark cloak for digs after sunset"
+
+[[outfits]]
+name = "royal"
+label = "Royal"
+cost = 1200
+color = [220, 130, 255]
+desc = "Purple robe and a golden crown"

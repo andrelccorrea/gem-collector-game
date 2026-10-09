@@ -760,15 +760,30 @@ FACING = {"deer": -1, "fish": -1, "snake": 1}
 
 def walk_frame(sprite_id: str, seconds: float, phase: int = 0):
     """(frame, mirrored) to show while the sprite moves, or None if it has no walk."""
-    cycle = WALK.get(sprite_id)
+    cycle = WALK.get(_base(sprite_id))
     if cycle is None:
         return None
     return cycle[(int(seconds * WALK_FPS) + phase) % len(cycle)]
 
 
+# Outfits (game catalogs.toml [[outfits]]): palette swaps of the player, as
+# {letter in the player sprite: letter to draw instead} (H hat, u shirt, j trousers).
+OUTFIT_PALETTES = {
+    "miner": {"H": "Y", "u": "8"},
+    "ranger": {"H": "U", "u": "3", "j": "O"},
+    "night": {"H": "Z", "u": "v", "j": "Z"},
+    "royal": {"H": "$", "u": "V", "j": "v"},
+}
+
+
 def _base(sprite_id: str) -> str:
-    """The sprite an id is drawn from: "stream#5" is a stream with shore on N and S."""
-    return sprite_id.split("#", 1)[0]
+    """The sprite an id is drawn from: "stream#5" is a stream with shore on N and S,
+    "player~miner" the player in the miner's outfit."""
+    return sprite_id.split("#", 1)[0].split("~", 1)[0]
+
+
+def facing(sprite_id: str) -> int:
+    return FACING.get(_base(sprite_id), 0)
 
 
 def _shore(rows: list[str], mask: int) -> list[str]:
@@ -815,8 +830,11 @@ def sprite_rows(sprite_id: str, frame: int = 0) -> list[str] | None:
     if frame:
         rows = FRAMES[base][frame - 1]
     rows = rows * (HEIGHT // len(rows))
-    if base != sprite_id:
+    if "#" in sprite_id:
         rows = _shore(rows, int(sprite_id.split("#", 1)[1]))
+    if "~" in sprite_id:
+        swap = OUTFIT_PALETTES[sprite_id.split("~", 1)[1]]
+        rows = ["".join(swap.get(letter, letter) for letter in row) for row in rows]
     return rows
 
 

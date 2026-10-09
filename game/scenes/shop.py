@@ -1,6 +1,6 @@
 """General Store: buy and upgrade tools, sell gems and loot."""
 
-from game import deals, market
+from game import deals, market, profile
 from game.buildings import check_win
 from game.constants import (
     COLOR_MENU_DIMMED,
@@ -24,6 +24,7 @@ from game.objects.registry import (
     DOWSING,
     GEM_CATALOG,
     LANTERN,
+    OUTFITS,
     SUPPLIES,
     TOOL_CATALOG,
     TOOL_MAX_LEVEL,
@@ -33,7 +34,7 @@ from game.objects.registry import (
 from game.player import set_hud_message
 from game.ui import clear_screen, render_list, write_str
 
-SHOP_TABS = ["Buy", "Upgrade", "Sell Gems", "Sell Loot", "Museum"]
+SHOP_TABS = ["Buy", "Upgrade", "Sell Gems", "Sell Loot", "Museum", "Outfits"]
 
 
 def _build_shop_items(state) -> list:
@@ -56,13 +57,13 @@ def _build_shop_items(state) -> list:
             owned = tool_name in state.inventory.get("tools", {})
             cost = deals.price(state, tool_name, tool_def.cost)
             if owned:
-                label = f"  {tool_name.title():16s}  (Owned)"
+                label = f"  {_tool_label(tool_name):16s}  (Owned)"
                 enabled = False
             elif cost == 0:
-                label = f"  {tool_name.title():16s}  FREE"
+                label = f"  {_tool_label(tool_name):16s}  FREE"
                 enabled = True
             else:
-                label = f"  {tool_name.title():16s}  {_price_tag(cost, tool_def.cost)}"
+                label = f"  {_tool_label(tool_name):16s}  {_price_tag(cost, tool_def.cost)}"
                 enabled = state.player_gold >= cost
             items.append(
                 {
@@ -109,7 +110,7 @@ def _build_shop_items(state) -> list:
         for tool_name, tool_info in owned_tools.items():
             level = tool_info.get("level", 1)
             if level >= TOOL_MAX_LEVEL:
-                label = f"  {tool_name.title():16s}  Lv{level}  (Max Level)"
+                label = f"  {_tool_label(tool_name):16s}  Lv{level}  (Max Level)"
                 enabled = False
                 cost = 0
             else:
@@ -117,10 +118,11 @@ def _build_shop_items(state) -> list:
                 cost = TOOL_UPGRADE_COSTS.get(next_level, 9999)
                 unlock = TOOL_UPGRADE_UNLOCK_AT.get(next_level, 0)
                 if state.lifetime_earnings < unlock:
-                    label = f"  {tool_name.title():16s}  Lv{next_level} unlocks at ${unlock} earned"
+                    name = _tool_label(tool_name)
+                    label = f"  {name:16s}  Lv{next_level} unlocks at ${unlock} earned"
                     enabled = False
                 else:
-                    label = f"  {tool_name.title():16s}  Lv{level} -> Lv{next_level}  ${cost}"
+                    label = f"  {_tool_label(tool_name):16s}  Lv{level} -> Lv{next_level}  ${cost}"
                     enabled = state.player_gold >= cost
             items.append(
                 {
@@ -156,6 +158,26 @@ def _build_shop_items(state) -> list:
             display_name = loot_key.replace("_", " ").title()
             items.append(_sell_row(state, loot_key, display_name, count, "sell_loot"))
         _add_sell_all_row(items, state, list(loot), "sell_all_loot", "Loot")
+
+    elif tab == 5:  # Outfits (cosmetic, kept across runs)
+        owned = set(profile.load_profile()["outfits"])
+        for name, outfit in OUTFITS.items():
+            if name == state.outfit:
+                tag, enabled = "(Wearing)", False
+            elif name in owned:
+                tag, enabled = "Wear", True
+            else:
+                tag, enabled = f"${outfit['cost']}", state.player_gold >= outfit["cost"]
+            items.append(
+                {
+                    "label": f"  {outfit['label']:16s}  {tag}",
+                    "enabled": enabled,
+                    "action": "outfit",
+                    "key": name,
+                    "cost": 0 if name in owned else outfit["cost"],
+                    "value": 0,
+                }
+            )
 
     elif tab == 4:  # Museum
         bonus = round((market.museum_bonus(state) - 1) * 100)
@@ -302,7 +324,13 @@ def _describe(item: dict) -> str:
         return f"One use: {hint_of(Action.RECALL)} takes you back to town from anywhere"
     if action == "buy_supply":
         return f"{SUPPLIES[key]['desc']}. [{hint_of(Action.USE_ITEM)}] uses the most needed supply"
+    if action == "outfit":
+        return f"{OUTFITS[key]['desc']} (cosmetic only, kept for every run)"
     return ""
+
+
+def _tool_label(name: str) -> str:
+    return name.replace("_", " ").title()
 
 
 def _price_tag(cost: int, base: int) -> str:
@@ -423,6 +451,16 @@ def update_shop(inp: InputState, state) -> None:
             set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
             _chime(state)
 
+    elif action == "outfit":
+        if not item["enabled"]:
+            _refuse(state, "Not enough gold!" if item["cost"] else "Already wearing it!")
+        else:
+            state.player_gold -= item["cost"]
+            profile.wear_outfit(item["key"])
+            state.outfit = item["key"]
+            set_hud_message(state, f"Now wearing: {OUTFITS[item['key']]['label']}!", 2.0)
+            _chime(state)
+
     elif action == "buy_supply":
         if state.player_gold < item["cost"]:
             _refuse(state, "Not enough gold!")
@@ -442,7 +480,7 @@ def update_shop(inp: InputState, state) -> None:
         else:
             state.player_gold -= cost
             state.inventory.setdefault("tools", {})[tool_name] = {"level": 1}
-            set_hud_message(state, f"Bought {tool_name.title()}!", 2.0)
+            set_hud_message(state, f"Bought {_tool_label(tool_name)}!", 2.0)
             _chime(state)
 
     elif action == "upgrade_tool":
@@ -461,7 +499,7 @@ def update_shop(inp: InputState, state) -> None:
             state.player_gold -= cost
             tools[tool_name]["level"] += 1
             new_level = tools[tool_name]["level"]
-            set_hud_message(state, f"{tool_name.title()} upgraded to Lv{new_level}!", 2.0)
+            set_hud_message(state, f"{_tool_label(tool_name)} upgraded to Lv{new_level}!", 2.0)
             _chime(state)
 
     elif action == "donate":

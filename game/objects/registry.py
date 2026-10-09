@@ -67,5 +67,7 @@ ARMOR: dict = _DATA["armor"]
 BOOTS: dict = _DATA["boots"]
 SUPPLIES: dict = _DATA["supplies"]
 DOWSING: dict = _DATA["dowsing"]
+OUTFITS: dict[str, dict] = {o["name"]: o for o in _DATA["outfits"]}
+DEFAULT_OUTFIT = _DATA["outfits"][0]["name"]
 PERKS: dict = _DATA["perks"]
 REPUTATION: dict = _DATA["reputation"]

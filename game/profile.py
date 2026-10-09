@@ -9,7 +9,7 @@ import json
 import os
 
 from game import persistence
-from game.objects.registry import PERKS, REPUTATION
+from game.objects.registry import DEFAULT_OUTFIT, OUTFITS, PERKS, REPUTATION
 
 PROFILE_NAME = "profile.json"
 
@@ -30,6 +30,8 @@ def new_profile() -> dict:
         "rewarded_runs": [],
         "tips": [],
         "achievements": [],
+        "outfits": [DEFAULT_OUTFIT],
+        "outfit": DEFAULT_OUTFIT,
     }
 
 
@@ -48,6 +50,10 @@ def load_profile() -> dict:
         profile["rewarded_runs"] = [str(r) for r in data.get("rewarded_runs", [])]
         profile["tips"] = [str(t) for t in data.get("tips", [])]
         profile["achievements"] = [str(a) for a in data.get("achievements", [])]
+        owned = [str(o) for o in data.get("outfits", []) if o in OUTFITS]
+        profile["outfits"] = sorted(set(owned) | {DEFAULT_OUTFIT})
+        worn = data.get("outfit", DEFAULT_OUTFIT)
+        profile["outfit"] = worn if worn in profile["outfits"] else DEFAULT_OUTFIT
         for key in PERKS:
             profile["perks"][key] = int(data.get("perks", {}).get(key, 0))
     except (OSError, ValueError, TypeError, AttributeError, KeyError):
@@ -121,6 +127,15 @@ def remember_tips(tips) -> None:
     if not set(tips) <= known:
         profile["tips"] = sorted(known | set(tips))
         save_profile(profile)
+
+
+def wear_outfit(name: str) -> None:
+    """Own (if new) and wear an outfit."""
+    profile = load_profile()
+    if name not in profile["outfits"]:
+        profile["outfits"] = sorted(set(profile["outfits"]) | {name})
+    profile["outfit"] = name
+    save_profile(profile)
 
 
 def unlock_achievements(ids, rewards: dict) -> int:

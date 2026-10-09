@@ -115,6 +115,8 @@ class GameState:
     # First-time tips already shown (game/tips.py), kept in the profile, and when the
     # last one was shown
     tips_seen: set = field(default_factory=set)
+    # Outfit worn (cosmetic, kept in the profile; loaded by the game scene)
+    outfit: str = "prospector"
     last_tip_time: float = float("-inf")
     # Peaceful animals (game/critters.py) and their own RNG; never saved
     critters: list = field(default_factory=list)
