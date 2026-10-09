@@ -58,3 +58,42 @@ def test_the_dog_is_bought_once_and_saved():
     assert state.player_gold == gold  # only one dog
     assert save_game(state) is None
     assert load_game().has_dog
+
+
+def test_a_trained_dog_digs_up_gems_now_and_then():
+    from game.objects.registry import DOG_TRAINING
+    from game.simulation import new_run
+
+    found = 0
+    for seed in range(20):
+        state = new_run(seed)
+        state.has_dog, state.dog_training = True, 2
+        state.player_x, state.player_y = 30, 30  # out in the meadow
+        state.enemies = []
+        dog.update_dog(state, STEP)
+        state.game_time += DOG_TRAINING["interval"]
+        dog.update_dog(state, STEP)
+        found += sum(state.inventory["gems"].values())
+    assert 3 <= found <= 19  # about 60% of tries (some rolls find nothing)
+
+
+def test_an_untrained_dog_never_digs():
+    state = _with_dog()
+    state.game_time += 1000
+    dog.update_dog(state, STEP)
+    assert not state.inventory["gems"]
+
+
+def test_training_is_bought_in_order_and_saved():
+    state = new_run(3)
+    state.active_scene, state.shop_tab, state.player_gold = "shop", 0, 2000
+    state.has_dog = True
+    for level in (1, 2):
+        items = _build_shop_items(state)
+        state.shop_cursor = next(i for i, it in enumerate(items) if it["key"] == "dog_training")
+        update_shop(press(Action.CONFIRM), state)
+        assert state.dog_training == level
+    items = _build_shop_items(state)
+    assert "(Best)" in next(it for it in items if it["key"] == "dog_training")["label"]
+    assert save_game(state) is None
+    assert load_game().dog_training == 2

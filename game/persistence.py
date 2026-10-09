@@ -1,9 +1,10 @@
 """Save slot and leaderboard storage.
 
-Save format (``schema_version`` 19, compact JSON):
+Save format (``schema_version`` 20, compact JSON):
     schema_version, worldgen_version, seed, player{...}, inventory{...},
     polished_gem_values {"<gem>_polished": [price per gem, highest first]},
     lapidary_level, bag_level, armor_level, boots_level, dowsing_level, has_dog,
+    dog_training,
     visited_landmarks [[x, y]...], contracts_done [[day, slot]...],
     trinkets [key...], trinket, feather_day, merchant_log [[day, key]...],
     market {kind: saturation},
@@ -27,7 +28,7 @@ from datetime import date
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
 
-SCHEMA_VERSION = 19
+SCHEMA_VERSION = 20
 SAVE_NAME = "save.json"
 LEADERBOARD_NAME = "leaderboard.json"
 DAILY_NAME = "daily.json"
@@ -298,6 +299,12 @@ def _migrate_v18_to_v19(data: dict) -> dict:
     return data
 
 
+def _migrate_v19_to_v20(data: dict) -> dict:
+    """v20 adds dog training; older dogs are untrained."""
+    data["dog_training"] = 0
+    return data
+
+
 # MIGRATIONS[n] upgrades a version-n save to version n + 1.
 MIGRATIONS = {
     0: _migrate_v0_to_v1,
@@ -319,6 +326,7 @@ MIGRATIONS = {
     16: _migrate_v16_to_v17,
     17: _migrate_v17_to_v18,
     18: _migrate_v18_to_v19,
+    19: _migrate_v19_to_v20,
 }
 
 
@@ -369,6 +377,7 @@ def save_game(state) -> str | None:
         "boots_level": state.boots_level,
         "dowsing_level": state.dowsing_level,
         "has_dog": state.has_dog,
+        "dog_training": state.dog_training,
         "trinkets": state.trinkets,
         "trinket": state.trinket,
         "feather_day": state.feather_day,
@@ -478,6 +487,7 @@ def _state_from_save(data: dict):
     state.boots_level = data["boots_level"]
     state.dowsing_level = data["dowsing_level"]
     state.has_dog = bool(data["has_dog"])
+    state.dog_training = int(data["dog_training"])
     from game.objects.registry import TRINKETS
 
     state.trinkets = [str(t) for t in data["trinkets"] if t in TRINKETS]

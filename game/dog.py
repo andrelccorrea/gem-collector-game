@@ -6,7 +6,10 @@ the shop for the run; its position is not saved (it appears beside the player).
 """
 
 from game.constants import MAP_HEIGHT, MAP_WIDTH
-from game.events import emit
+from game.events import emit, emit_gem
+from game.gems import add_gem_to_inventory, bag_has_room, roll_gem_drop
+from game.geography import biome_at, in_town
+from game.objects.registry import DOG_TRAINING
 from game.player import set_hud_message
 
 DOG_COST = 250
@@ -55,11 +58,32 @@ def update_dog(state, dt: float) -> None:
         if options:
             px, py = state.player_x, state.player_y
             dog["x"], dog["y"] = min(options, key=lambda p: max(abs(p[0] - px), abs(p[1] - py)))
+    _fetch(state, dog)
     near = any(max(abs(e.x - dog["x"]), abs(e.y - dog["y"])) <= BARK_RANGE for e in state.enemies)
     if near and state.game_time - dog["bark"] >= BARK_COOLDOWN:
         dog["bark"] = state.game_time
         emit(state, BARK, "Woof!", (255, 240, 200), at=(dog["x"], dog["y"]))
         set_hud_message(state, "Your dog barks: something is coming!", 2.0)
+
+
+def _fetch(state, dog) -> None:
+    """A trained dog now and then digs something up where it stands."""
+    level = state.dog_training
+    if not level or in_town(dog["x"], dog["y"]):
+        return
+    dog.setdefault("fetch_at", state.game_time + DOG_TRAINING["interval"])
+    if state.game_time < dog["fetch_at"]:
+        return
+    dog["fetch_at"] = state.game_time + DOG_TRAINING["interval"]
+    if state.rng.random() >= DOG_TRAINING["chances"][level] or not bag_has_room(state):
+        return
+    gem = roll_gem_drop(biome_at(dog["x"], dog["y"]), DOG_TRAINING["tiers"][level], state.rng)
+    if gem is None:
+        return
+    add_gem_to_inventory(state, gem)
+    emit_gem(state, gem)
+    state.events[-1] = state.events[-1]._replace(x=dog["x"], y=dog["y"])
+    set_hud_message(state, f"Your dog dug up a {gem.replace('_', ' ').title()}!", 3.0)
 
 
 def render_dog(renderer, state, view) -> None:

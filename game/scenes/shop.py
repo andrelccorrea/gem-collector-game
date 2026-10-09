@@ -23,6 +23,7 @@ from game.objects.registry import (
     BAG_UNLOCK_AT,
     BOOTS,
     DEFAULT_OUTFIT,
+    DOG_TRAINING,
     DOWSING,
     ENEMY_CATALOG,
     GEM_CATALOG,
@@ -106,6 +107,8 @@ def _build_shop_items(state) -> list:
                 "value": 0,
             }
         )
+        if state.has_dog:
+            items.append(_dog_training_row(state))
         for key, trinket in TRINKETS.items():
             if key == state.trinket:
                 tag = "(Worn)"
@@ -289,7 +292,7 @@ def _icon(state, item: dict):
         return "icon_charm", None
     if action == "buy_supply":
         return {"bandage": "icon_bandage", "lamp_oil": "icon_oil"}.get(key), None
-    if action == "buy_dog":
+    if action in ("buy_dog", "train_dog"):
         return "dog", None
     if action == "trinket":
         return f"icon_{key}", None
@@ -411,6 +414,8 @@ def _describe(item: dict) -> str:
         return f"{SUPPLIES[key]['desc']}. [{hint_of(Action.USE_ITEM)}] uses the most needed supply"
     if action == "trinket":
         return f"{TRINKETS[key]['desc']} (one trinket worn at a time)"
+    if action == "train_dog":
+        return "Your dog digs up a gem now and then; better training, better finds"
     if action == "buy_dog":
         return "A loyal dog: follows you and barks when an enemy comes near (for this run)"
     if action == "contract":
@@ -422,6 +427,16 @@ def _describe(item: dict) -> str:
 
 def _tool_label(name: str) -> str:
     return name.replace("_", " ").title()
+
+
+def _dog_training_row(state) -> dict:
+    level, names = state.dog_training, DOG_TRAINING["names"]
+    row = {"action": "train_dog", "key": "dog_training", "cost": 0, "value": 0}
+    if level + 1 >= len(names):
+        return {**row, "label": f"  {'Dog: ' + names[level]:16s}  (Best)", "enabled": False}
+    cost = DOG_TRAINING["costs"][level + 1]
+    label = f"  {'Dog training':16s}  {names[level + 1]}  ${cost}"
+    return {**row, "label": label, "cost": cost, "enabled": state.player_gold >= cost}
 
 
 def _price_tag(cost: int, base: int) -> str:
@@ -540,6 +555,16 @@ def update_shop(inp: InputState, state) -> None:
             state.player_gold -= item["cost"]
             state.recall_charms += 1
             set_hud_message(state, "Bought a Recall Charm (press R to return to town).", 2.0)
+            chime(state)
+
+    elif action == "train_dog":
+        if not item["enabled"]:
+            refuse(state, "Not enough gold!" if item["cost"] else "Already fully trained!")
+        else:
+            state.player_gold -= item["cost"]
+            state.dog_training += 1
+            name = DOG_TRAINING["names"][state.dog_training]
+            set_hud_message(state, f"Your dog learned: {name}!", 2.0)
             chime(state)
 
     elif action == "trinket":
